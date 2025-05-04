@@ -3,14 +3,11 @@
 import { BrowserRouter } from "react-router-dom"; // Importa BrowserRouter aquí
 import Header from "./components/Header";
 import AppRouter from "./routes/AppRouter"; // Importa el componente que define las rutas
-import useExampleStore from "./store/exampleStore"; // Importa el store de Zustand
+// import useExampleStore from "./store/exampleStore"; // Importa el store de Zustand
 
 const App = () => {
   // Ejemplo de cómo usar el store de Zustand en App (o cualquier componente)
-  const messageFromZustand = useExampleStore((state) => state.message);
-  const zustandSetter = useExampleStore((state) => state.setMessage); // Ejemplo de cómo obtener el setter
-
-  console.log("Mensaje desde Zustand:", messageFromZustand);
+  // const { message, setMessage, fetchMessage } = useExampleStore();
 
   return (
     <BrowserRouter>
@@ -18,7 +15,13 @@ const App = () => {
         <Header />
 
         <main className="flex-grow">
-          {/* <p>Zustand dice: {messageFromZustand}</p> */}
+          {/* <p>Zustand dice: {message}</p>
+          <button onClick={() => setMessage("Nuevo mensaje desde App!")} className="bg-blue-500 text-white p-2 rounded">
+            Cambiar mensaje en Zustand
+          </button>
+          <button onClick={fetchMessage} className="bg-green-500 text-white p-2 rounded">
+            Obtener mensaje (simulación API)
+          </button> */}
           <AppRouter />
         </main>
       </div>
