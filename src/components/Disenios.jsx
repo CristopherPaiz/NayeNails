@@ -14,9 +14,6 @@ import "lightgallery/css/lg-thumbnail.css";
 import lgThumbnail from "lightgallery/plugins/thumbnail";
 import lgZoom from "lightgallery/plugins/zoom";
 
-const mobileFadeHeight = "h-[250px]";
-const desktopFadeHeight = "sm:h-[600px]";
-
 const shuffleArray = (array) => {
   const newArray = [...array];
   let currentIndex = newArray.length,
@@ -104,7 +101,7 @@ const Disenios = memo(({ images = [] }) => {
   const finalImageClassName = "w-full h-auto block rounded shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out";
 
   return (
-    <div className="container mx-auto px-2 sm:px-4 relative">
+    <div className="container mx-auto px-2 sm:px-4 relative overflow-hidden max-h-[900px]">
       <h2 className="text-2xl md:text-3xl text-textPrimary font-bold text-center my-6 md:my-8">Nuestros Diseños</h2>
 
       <LightGallery
@@ -120,37 +117,13 @@ const Disenios = memo(({ images = [] }) => {
         elementClassNames="lightgallery-custom-wrapper"
         isMobile={true}
       >
-        <div ref={masonryContainerRef} className="masonry-wrapper-internal relative -m-1 sm:-m-1.5">
+        <div ref={masonryContainerRef} className="masonry-wrapper-internal relative -m-1 sm:-m-1.5 overflow-hidden">
           <div className={`${gridSizerClass} grid-sizer p-1 sm:p-1.5`} aria-hidden="true"></div>
           {shuffledItems.map((item) => (
             <GalleryItem key={item.id} item={item} itemClassName={galleryItemClassName} imageClassName={finalImageClassName} />
           ))}
         </div>
       </LightGallery>
-
-      <div
-        className={`
-          absolute -bottom-3 left-0 right-0 z-10
-          ${mobileFadeHeight} ${desktopFadeHeight}
-          bg-gradient-to-t from-background via-background to-transparent
-          dark:from-primary dark:via-primary dark:to-transparent
-          pointer-events-none
-        `}
-        aria-hidden="true"
-      >
-        <Link
-          to="/nails"
-          className={`w-1/2 sm:w-1/3
-            absolute z-20 bottom-16 sm:bottom-36 left-1/2 -translate-x-1/2
-            pointer-events-auto cursor-pointer
-            bg-primary text-white dark:bg-white dark:text-primary
-            px-5 py-3 rounded-full shadow-md
-            hover:opacity-80 transition-opacity duration-200 text-sm text-center
-          `}
-        >
-          Ver más
-        </Link>
-      </div>
     </div>
   );
 });

@@ -5,7 +5,7 @@ import { BUSINESS_NAME, NAV_ITEMS } from "../constants/navbar.jsx";
 import CRButton from "./UI/CRButton.jsx";
 import { useTheme } from "../context/ThemeProvider.jsx";
 import { DynamicIcon } from "../utils/DynamicIcon.jsx";
-import useExampleStore from "../store/exampleStore";
+import useExampleStore from "../store/store.js";
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
