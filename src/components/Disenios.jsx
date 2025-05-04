@@ -1,7 +1,9 @@
+// src/components/Disenios.jsx
 import React, { useEffect, useState, useRef, memo } from "react";
 import LightGallery from "lightgallery/react";
 import Masonry from "masonry-layout";
 import imagesLoaded from "imagesloaded";
+import { Link } from "react-router-dom";
 
 import GalleryItem from "./subcomponents/GalleryItem";
 
@@ -136,20 +138,18 @@ const Disenios = memo(({ images = [] }) => {
         `}
         aria-hidden="true"
       >
-        <button
+        <Link
+          to="/nails"
           className={`w-1/2 sm:w-1/3
             absolute z-20 bottom-16 sm:bottom-36 left-1/2 -translate-x-1/2
             pointer-events-auto cursor-pointer
             bg-primary text-white dark:bg-white dark:text-primary
             px-5 py-3 rounded-full shadow-md
-            hover:opacity-80 transition-opacity duration-200 text-sm
+            hover:opacity-80 transition-opacity duration-200 text-sm text-center
           `}
-          onClick={() => {
-            window.location.href = "/nails";
-          }}
         >
           Ver más
-        </button>
+        </Link>
       </div>
     </div>
   );

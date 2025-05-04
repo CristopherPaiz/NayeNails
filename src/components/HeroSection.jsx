@@ -1,3 +1,4 @@
+// src/components/HeroSection.jsx
 import CRCarousel from "./UI/CRCarousel";
 
 const images = [

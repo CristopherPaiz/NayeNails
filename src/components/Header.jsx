@@ -1,8 +1,11 @@
+// src/components/Header.jsx
 import React, { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom"; // Importa Link
 import { BUSINESS_NAME, NAV_ITEMS } from "../constants/navbar.jsx";
 import CRButton from "./UI/CRButton.jsx";
 import { useTheme } from "../context/ThemeProvider.jsx";
 import { DynamicIcon } from "../utils/DynamicIcon.jsx";
+import useExampleStore from "../store/exampleStore";
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -11,6 +14,7 @@ const Header = () => {
   const dropdownRefs = useRef({});
   const hoverTimeoutRef = useRef(null);
   const { theme, setTheme } = useTheme();
+  const setMessage = useExampleStore((state) => state.setMessage);
 
   useEffect(() => {
     const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
@@ -21,35 +25,57 @@ const Header = () => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (isOpen && !event.target.closest("header")) setIsOpen(false);
+      if (isOpen && !event.target.closest("header")) {
+        setIsOpen(false);
+      }
+      if (activeDropdown && !event.target.closest(`[data-dropdown-key="${activeDropdown}"]`)) {
+        setActiveDropdown(null);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+  }, [isOpen, activeDropdown]);
 
   useEffect(() => () => hoverTimeoutRef.current && clearTimeout(hoverTimeoutRef.current), []);
 
-  const handleToggleDropdown = (key) => setActiveDropdown((prev) => (prev === key ? null : key));
+  const handleToggleDropdown = (key) => {
+    setActiveDropdown((prev) => (prev === key ? null : key));
+  };
+
   const handleMouseEnter = (key) => {
     if (!isMobile) {
       if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
       setActiveDropdown(key);
     }
   };
-  const handleMouseLeave = (key) => {
+  const handleMouseLeave = () => {
     if (!isMobile) {
       hoverTimeoutRef.current = setTimeout(() => {
-        if (!dropdownRefs.current[key]?.contains(document.activeElement)) setActiveDropdown(null);
+        let isFocusInsideAnyDropdown = false;
+        Object.values(dropdownRefs.current).forEach((ref) => {
+          if (ref?.contains(document.activeElement)) {
+            isFocusInsideAnyDropdown = true;
+          }
+        });
+        if (!isFocusInsideAnyDropdown) {
+          setActiveDropdown(null);
+        }
       }, 300);
     }
+  };
+
+  const handleLinkClick = () => {
+    setIsOpen(false);
+    setActiveDropdown(null);
+    setMessage(`Navegaste a las ${new Date().toLocaleTimeString()}`);
   };
 
   return (
     <header className="w-full bg-background shadow-md sticky top-0 z-50">
       <div className="max-w-screen-xl mx-auto px-4 py-3 md:py-4 flex items-center justify-between relative">
-        <a href="/" className="flex items-center">
+        <Link to="/" className="flex items-center" onClick={handleLinkClick}>
           <h1 className="text-primary text-2xl md:text-3xl font-bold tracking-tight">{BUSINESS_NAME}</h1>
-        </a>
+        </Link>
         <button
           className={
             "md:hidden flex items-center justify-center p-2 rounded-md text-primary " +
@@ -77,18 +103,20 @@ const Header = () => {
             const isActive = activeDropdown === key;
 
             if (isDropdown) {
+              const basePath = `/${key.toLowerCase().replace(/\s+/g, "-")}`;
               return (
                 <div
                   key={key}
                   ref={(el) => (dropdownRefs.current[key] = el)}
-                  className="relative w-full md:w-auto mt-1"
+                  data-dropdown-key={key}
+                  className="relative w-full md:w-auto mt-1 md:mt-0"
                   onMouseEnter={() => handleMouseEnter(key)}
-                  onMouseLeave={() => handleMouseLeave(key)}
+                  onMouseLeave={handleMouseLeave}
                 >
                   <button
                     className={
                       "flex items-center justify-between md:justify-center w-full md:w-auto " +
-                      "px-3 py-2 rounded-md  text-textPrimary dark:text-textPrimary hover:text-primary text-base font-medium transition-colors duration-200 " +
+                      "px-3 py-2 rounded-md text-textPrimary dark:text-textPrimary hover:text-primary text-base font-medium transition-colors duration-200 " +
                       (isActive ? "text-primary dark:text-primary bg-accent md:bg-transparent" : "")
                     }
                     onClick={() => handleToggleDropdown(key)}
@@ -103,42 +131,45 @@ const Header = () => {
                   </button>
                   <div
                     className={
-                      "mt-0.5 md:mt-2 md:absolute left-0 md:left-1/2 md:-translate-x-1/2 " +
+                      "md:mt-2 md:absolute left-0 md:left-1/2 md:-translate-x-1/2 " +
                       "bg-background rounded-lg shadow-lg py-0 md:py-2 min-w-max md:w-48 " +
-                      "transition-all duration-200 " +
+                      "transition-all duration-200 overflow-hidden " +
                       (isActive
-                        ? "opacity-100 max-h-96 scale-100 pb-2 mb-3"
-                        : "opacity-0 max-h-0 md:max-h-0 scale-95 overflow-hidden pointer-events-none")
+                        ? "opacity-100 max-h-96 scale-100 " + (isMobile ? "pb-2 mb-2" : "")
+                        : "opacity-0 max-h-0 md:max-h-0 scale-95 pointer-events-none")
                     }
-                    onMouseEnter={() => handleMouseEnter(key)}
-                    onMouseLeave={() => handleMouseLeave(key)}
                   >
-                    <div className="hidden md:block absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2">
-                      <div className="w-4 h-4 bg-background transform rotate-45"></div>
+                    <div className="hidden md:block absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-[-1]">
+                      <div className="w-4 h-4 bg-background transform rotate-45 border-t border-l border-gray-200 dark:border-gray-700 shadow-sm"></div>{" "}
                     </div>
-                    <div className="py-2">
-                      {value.categorías.map((sub) => (
-                        <a
-                          key={sub.link}
-                          href={sub.link}
-                          className={
-                            "hover:bg-accent ml-3 block px-4 py-1.5 text-sm text-textPrimary hover:text-primary " +
-                            "transition-colors duration-150 whitespace-nowrap flex items-center hover:text-accent"
-                          }
-                        >
-                          {sub.icon && <DynamicIcon name={sub.icon} className="w-4 h-4 mr-2 text-textTertiary" />}
-                          {sub.nombre}
-                        </a>
-                      ))}
+                    <div className="relative bg-background rounded-lg md:shadow-lg py-1 md:py-0">
+                      {value.categorías.map((sub) => {
+                        const subLink = `${basePath}${sub.link}`;
+                        return (
+                          <Link
+                            key={sub.link}
+                            to={subLink}
+                            onClick={handleLinkClick}
+                            className={
+                              "block px-4 py-1.5 text-sm text-textPrimary hover:text-primary hover:bg-accent " +
+                              "transition-colors duration-150 whitespace-nowrap flex items-center"
+                            }
+                          >
+                            {sub.icon && <DynamicIcon name={sub.icon} className="w-4 h-4 mr-2 text-textTertiary" />}
+                            {sub.nombre}
+                          </Link>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
               );
             }
             return (
-              <a
+              <Link
                 key={value.link}
-                href={value.link}
+                to={value.link}
+                onClick={handleLinkClick}
                 className={
                   "w-full md:w-auto hover:text-primary px-3 py-2 text-base font-medium text-textPrimary text-nowrap " +
                   "flex items-center rounded-md transition-colors duration-200"
@@ -146,11 +177,11 @@ const Header = () => {
               >
                 {value.icon && <DynamicIcon name={value.icon} className="w-5 h-5 mr-2" />}
                 {key.charAt(0).toUpperCase() + key.slice(1)}
-              </a>
+              </Link>
             );
           })}
           <CRButton
-            className="bg-primary text-white"
+            className="bg-primary text-white mt-2 md:mt-0 md:ml-2"
             title={theme === "light" ? "🌙" : "☀️"}
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
           />
