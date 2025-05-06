@@ -1,7 +1,8 @@
 // src/components/Header.jsx
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom"; // Importa Link
-import { BUSINESS_NAME, NAV_ITEMS } from "../constants/navbar.jsx";
+import { Link } from "react-router-dom";
+// Asegúrate de importar CATALOGO_BASE_PATH
+import { BUSINESS_NAME, NAV_ITEMS, CATALOGO_BASE_PATH } from "../constants/navbar.jsx";
 import CRButton from "./UI/CRButton.jsx";
 import { useTheme } from "../context/ThemeProvider.jsx";
 import { DynamicIcon } from "../utils/DynamicIcon.jsx";
@@ -28,7 +29,21 @@ const Header = () => {
       if (isOpen && !event.target.closest("header")) {
         setIsOpen(false);
       }
-      if (activeDropdown && !event.target.closest(`[data-dropdown-key="${activeDropdown}"]`)) {
+      // Cierra el dropdown si se hace clic fuera de él
+      let clickedInsideDropdown = false;
+      if (activeDropdown) {
+        const dropdownElement = dropdownRefs.current[activeDropdown];
+        if (dropdownElement && dropdownElement.contains(event.target)) {
+          clickedInsideDropdown = true;
+        }
+        // También verifica el botón que abre el dropdown
+        const buttonElement = document.querySelector(`[data-dropdown-key="${activeDropdown}"] > button`);
+        if (buttonElement && buttonElement.contains(event.target)) {
+          clickedInsideDropdown = true;
+        }
+      }
+
+      if (activeDropdown && !clickedInsideDropdown && !event.target.closest(`[data-dropdown-key="${activeDropdown}"]`)) {
         setActiveDropdown(null);
       }
     };
@@ -48,25 +63,34 @@ const Header = () => {
       setActiveDropdown(key);
     }
   };
+
   const handleMouseLeave = () => {
     if (!isMobile) {
       hoverTimeoutRef.current = setTimeout(() => {
-        let isFocusInsideAnyDropdown = false;
+        // Verifica si el foco está dentro de alguno de los contenidos del dropdown
+        // Esta lógica es un poco compleja y puede necesitar ajustes dependiendo
+        // de cómo se maneje el foco exactamente en tus dropdowns.
+        // Por ahora, si el mouse sale, cerramos tras un delay.
+        // Si el usuario mueve el mouse rápidamente a un subitem, el mouseenter del subitem debería cancelar este timeout
+        // o el mouseenter del dropdown padre lo reabrirá.
+        let isFocusInsideAnyDropdownContent = false;
         Object.values(dropdownRefs.current).forEach((ref) => {
-          if (ref?.contains(document.activeElement)) {
-            isFocusInsideAnyDropdown = true;
+          // Chequeamos el div que contiene los links, no el div padre completo
+          const dropdownContent = ref?.querySelector('div[role="menu"], div.py-1'); // Ajusta el selector si es necesario
+          if (dropdownContent?.contains(document.activeElement)) {
+            isFocusInsideAnyDropdownContent = true;
           }
         });
-        if (!isFocusInsideAnyDropdown) {
+        if (!isFocusInsideAnyDropdownContent) {
           setActiveDropdown(null);
         }
-      }, 300);
+      }, 200); // Un pequeño delay para permitir moverse a los subitems
     }
   };
 
   const handleLinkClick = () => {
-    setIsOpen(false);
-    setActiveDropdown(null);
+    setIsOpen(false); // Cierra el menú hamburguesa si está abierto
+    setActiveDropdown(null); // Cierra cualquier dropdown abierto
     setMessage(`Navegaste a las ${new Date().toLocaleTimeString()}`);
   };
 
@@ -82,11 +106,14 @@ const Header = () => {
             "hover:text-primary hover:bg-accent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary"
           }
           onClick={() => setIsOpen(!isOpen)}
+          aria-expanded={isOpen}
+          aria-controls="mobile-menu"
           aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
         >
           <DynamicIcon name={isOpen ? "X" : "Menu"} size={24} />
         </button>
         <nav
+          id="mobile-menu"
           className={
             "absolute md:static top-full left-0 w-full md:w-auto " +
             "bg-background md:bg-transparent shadow-md md:shadow-none " +
@@ -99,11 +126,10 @@ const Header = () => {
           }
         >
           {Object.entries(NAV_ITEMS).map(([key, value]) => {
-            const isDropdown = value.categorías && Array.isArray(value.categorías);
+            const isFilterDropdown = value.categorías && Array.isArray(value.categorías) && value.filterType;
             const isActive = activeDropdown === key;
 
-            if (isDropdown) {
-              const basePath = `/${key.toLowerCase().replace(/\s+/g, "-")}`;
+            if (isFilterDropdown) {
               return (
                 <div
                   key={key}
@@ -117,11 +143,12 @@ const Header = () => {
                     className={
                       "flex items-center justify-between md:justify-center w-full md:w-auto " +
                       "px-3 py-2 rounded-md text-textPrimary dark:text-textPrimary hover:text-primary text-base font-medium transition-colors duration-200 " +
-                      (isActive ? "text-primary dark:text-primary bg-accent md:bg-transparent" : "")
+                      (isActive ? "text-primary dark:text-primary bg-accent md:bg-accent" : "") // bg-accent para móvil y hover desktop
                     }
                     onClick={() => handleToggleDropdown(key)}
                     aria-expanded={isActive}
                     aria-haspopup="true"
+                    aria-controls={`dropdown-menu-${key}`}
                   >
                     <span className="flex items-center">
                       {value.icon && <DynamicIcon name={value.icon} className="w-5 h-5 mr-2" />}
@@ -130,26 +157,35 @@ const Header = () => {
                     <DynamicIcon name="ChevronDown" className={`w-4 h-4 ml-1 transition-transform duration-200 ${isActive ? "rotate-180" : ""}`} />
                   </button>
                   <div
+                    id={`dropdown-menu-${key}`}
+                    role="menu"
                     className={
                       "md:mt-2 md:absolute left-0 md:left-1/2 md:-translate-x-1/2 " +
-                      "bg-background rounded-lg shadow-lg py-0 md:py-2 min-w-max md:w-48 " +
+                      "bg-background rounded-lg shadow-lg py-0 md:py-2 min-w-max md:min-w-[12rem] " + // Asegura un ancho mínimo en desktop
                       "transition-all duration-200 overflow-hidden " +
                       (isActive
-                        ? "opacity-100 max-h-96 scale-100 " + (isMobile ? "pb-2 mb-2" : "")
+                        ? "opacity-100 max-h-96 scale-100 " + (isMobile ? "pb-2 mb-2 mt-1" : "") // Añade mt-1 en móvil para separar del botón
                         : "opacity-0 max-h-0 md:max-h-0 scale-95 pointer-events-none")
                     }
                   >
-                    <div className="hidden md:block absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-[-1]">
-                      <div className="w-4 h-4 bg-background transform rotate-45 border-t border-l border-gray-200 dark:border-gray-700 shadow-sm"></div>{" "}
-                    </div>
+                    {/* Flecha del dropdown en desktop */}
+                    {!isMobile && isActive && (
+                      <div className="hidden md:block absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-[-1]">
+                        <div className="w-4 h-4 bg-background transform rotate-45 border-t border-l border-border dark:border-border shadow-sm"></div>
+                      </div>
+                    )}
                     <div className="relative bg-background rounded-lg md:shadow-lg py-1 md:py-0">
+                      {" "}
+                      {/* Contenedor interno para asegurar que los bordes redondeados se apliquen correctamente */}
                       {value.categorías.map((sub) => {
-                        const subLink = `${basePath}${sub.link}`;
+                        const filterQuery = `${value.filterType}=${sub.slug}`;
+                        const fullLink = `${CATALOGO_BASE_PATH}?${filterQuery}`;
                         return (
                           <Link
-                            key={sub.link}
-                            to={subLink}
-                            onClick={handleLinkClick}
+                            key={sub.slug}
+                            to={fullLink}
+                            onClick={handleLinkClick} // Esto cerrará el dropdown al hacer clic en un link
+                            role="menuitem"
                             className={
                               "block px-4 py-1.5 text-sm text-textPrimary hover:text-primary hover:bg-accent " +
                               "transition-colors duration-150 whitespace-nowrap flex items-center"
@@ -165,26 +201,33 @@ const Header = () => {
                 </div>
               );
             }
-            return (
-              <Link
-                key={value.link}
-                to={value.link}
-                onClick={handleLinkClick}
-                className={
-                  "w-full md:w-auto hover:text-primary px-3 py-2 text-base font-medium text-textPrimary text-nowrap " +
-                  "flex items-center rounded-md transition-colors duration-200"
-                }
-              >
-                {value.icon && <DynamicIcon name={value.icon} className="w-5 h-5 mr-2" />}
-                {key.charAt(0).toUpperCase() + key.slice(1)}
-              </Link>
-            );
+            // Para links directos como "Agendar Cita", "Ubicacion", etc.
+            if (value.link) {
+              return (
+                <Link
+                  key={value.link}
+                  to={value.link}
+                  onClick={handleLinkClick}
+                  className={
+                    "w-full md:w-auto hover:text-primary px-3 py-2 text-base font-medium text-textPrimary text-nowrap " +
+                    "flex items-center rounded-md transition-colors duration-200 hover:bg-accent" // hover:bg-accent para consistencia
+                  }
+                >
+                  {value.icon && <DynamicIcon name={value.icon} className="w-5 h-5 mr-2" />}
+                  {key.charAt(0).toUpperCase() + key.slice(1)}
+                </Link>
+              );
+            }
+            return null;
           })}
           <CRButton
             className="bg-primary text-white mt-2 md:mt-0 md:ml-2"
-            title={theme === "light" ? "🌙" : "☀️"}
+            title={theme === "light" ? "🌙 Cambiar a oscuro" : "☀️ Cambiar a claro"}
+            aria-label={theme === "light" ? "Activar modo oscuro" : "Activar modo claro"}
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-          />
+          >
+            <DynamicIcon name={theme === "light" ? "Moon" : "Sun"} size={18} />
+          </CRButton>
         </nav>
       </div>
     </header>

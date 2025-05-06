@@ -1,6 +1,6 @@
 import React from "react";
 
-const Intermedio = ({ to = "/nails", buttonColor = "bg-primary text-white dark:bg-white dark:text-primary" }) => {
+const Intermedio = ({ to = "/explorar-unas", buttonColor = "bg-primary text-white dark:bg-white dark:text-primary" }) => {
   const mobileFadeHeight = "h-[300px]";
   const desktopFadeHeight = "sm:h-[350px]";
 
