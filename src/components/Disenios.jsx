@@ -101,7 +101,7 @@ const Disenios = memo(({ images = [] }) => {
   const finalImageClassName = "w-full h-auto block rounded shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out";
 
   return (
-    <div className="container mx-auto px-2 sm:px-4 relative overflow-hidden max-h-[900px]">
+    <div className="container mx-auto px-8 sm:px-4 relative overflow-hidden max-h-[900px]">
       <h2 className="text-2xl md:text-3xl text-textPrimary font-bold text-center my-6 md:my-8">Nuestros Diseños</h2>
 
       <LightGallery

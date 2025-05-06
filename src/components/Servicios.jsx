@@ -24,7 +24,7 @@ const services = [
 
 const Servicios = () => {
   return (
-    <section className="py-8 px-4 max-w-6xl mx-auto mb-24">
+    <section className="py-8 px-8 max-w-6xl mx-auto mb-24">
       <h2 className="text-2xl font-bold text-center text-white drop-shadow mt-10 mb-8">Nuestros Servicios</h2>
       {/* DIVIDER  */}
       <div className="block w-full h-[1px] bg-white/20 mx-auto mb-14" />

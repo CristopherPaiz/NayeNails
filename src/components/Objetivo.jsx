@@ -8,7 +8,6 @@ const Objetivo = () => {
     <div
       className="w-full bg-fixed bg-center bg-cover relative"
       style={{
-        backgroundImage: "url('http://www.origi-nails.com/images/hair_01.jpg')",
         height: "300px",
         maxHeight: "300px",
       }}

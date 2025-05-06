@@ -6,6 +6,7 @@ import Disenios from "./Disenios";
 import Objetivo from "./Objetivo";
 import useStoreNails from "../store/store";
 import Intermedio from "./Intermedio";
+import Ubicacion from "./Ubicacion";
 
 const ContentSection = () => {
   const { imagenesGaleria } = useStoreNails();
@@ -56,6 +57,12 @@ const ContentSection = () => {
       {/* DIV DE OBJETIVO */}
       <div className="w-full bg-transparent dark:bg-transparent flex flex-col justify-center items-center relative">
         <Objetivo />
+      </div>
+
+      {/* DIV DE UBICACION */}
+      <div className="w-full bg-background dark:bg-background flex flex-col justify-center items-center relative py-10">
+        <ScrollArrow showArrow={false} bg="bg-background" bgDark="dark:bg-background" icon="House" color="text-primary dark:text-textPrimary" />
+        <Ubicacion />
       </div>
     </div>
   );
