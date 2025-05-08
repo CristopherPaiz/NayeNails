@@ -83,7 +83,7 @@ const Servicios = () => {
                 {/* min-h para igualar alturas */}
                 <button
                   onClick={() => openModal(service)}
-                  className="mt-auto w-full bg-accent dark:bg-primary hover:bg-accent-dark dark:hover:bg-primary-dark text-primary dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors duration-200 text-sm flex items-center justify-center"
+                  className="cursor-pointer mt-auto w-full bg-accent dark:bg-primary hover:bg-accent-dark dark:hover:bg-primary-dark text-primary dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors duration-200 text-sm flex items-center justify-center"
                 >
                   Ver las opciones
                   <DynamicIcon name="Eye" className="w-4 h-4 ml-2" />
