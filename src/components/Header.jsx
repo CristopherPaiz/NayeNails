@@ -96,9 +96,9 @@ const Header = () => {
 
   return (
     <header className="w-full bg-background shadow-md sticky top-0 z-50">
-      <div className="max-w-screen-xl mx-auto px-4 py-3 md:py-4 flex items-center justify-between relative">
+      <div className="max-w-screen-xl mx-auto px-4 py-2 sm:py-2 sm:pl-8 flex items-center justify-between relative">
         <Link to="/" className="flex items-center" onClick={handleLinkClick}>
-          <h1 className="text-primary text-2xl md:text-3xl font-bold tracking-tight">{BUSINESS_NAME}</h1>
+          <h1 className="text-primary text-xl sm:text-2xl font-bold tracking-tight">{BUSINESS_NAME}</h1>
         </Link>
         <button
           className={
@@ -117,8 +117,8 @@ const Header = () => {
           className={
             "absolute md:static top-full left-0 w-full md:w-auto " +
             "bg-background md:bg-transparent shadow-md md:shadow-none " +
-            "flex flex-col md:flex-row items-stretch md:items-center gap-y-0 md:gap-x-4 " +
-            "px-4 pt-2 pb-2 md:p-0 z-40 " +
+            "flex flex-col md:flex-row items-stretch md:items-center gap-y-0 md:gap-x-2 " +
+            "px-4 py-2 sm:p-0 z-40 " +
             "origin-top duration-200 ease-in-out " +
             (isOpen
               ? "opacity-100 scale-y-100 translate-y-0"
@@ -142,7 +142,7 @@ const Header = () => {
                   <button
                     className={
                       "flex items-center justify-between md:justify-center w-full md:w-auto " +
-                      "px-3 py-2 rounded-md text-textPrimary dark:text-textPrimary hover:text-primary text-base font-medium transition-colors duration-200 " +
+                      "px-3 py-2 rounded-md text-textPrimary dark:text-textPrimary hover:text-primary text-base sm:text-sm font-medium transition-colors duration-200 " +
                       (isActive ? "text-primary dark:text-primary bg-accent md:bg-accent" : "") // bg-accent para móvil y hover desktop
                     }
                     onClick={() => handleToggleDropdown(key)}
@@ -187,7 +187,7 @@ const Header = () => {
                             onClick={handleLinkClick} // Esto cerrará el dropdown al hacer clic en un link
                             role="menuitem"
                             className={
-                              "block px-4 py-1.5 text-sm text-textPrimary hover:text-primary hover:bg-accent " +
+                              "block px-4 py-1.5 text-base sm:text-sm text-textPrimary hover:text-primary hover:bg-accent " +
                               "transition-colors duration-150 whitespace-nowrap flex items-center"
                             }
                           >
@@ -209,7 +209,7 @@ const Header = () => {
                   to={value.link}
                   onClick={handleLinkClick}
                   className={
-                    "w-full md:w-auto hover:text-primary px-3 py-2 text-base font-medium text-textPrimary text-nowrap " +
+                    "w-full md:w-auto hover:text-primary px-3 py-2 text-base sm:text-sm font-medium text-textPrimary text-nowrap " +
                     "flex items-center rounded-md transition-colors duration-200 hover:bg-accent" // hover:bg-accent para consistencia
                   }
                 >
@@ -220,14 +220,19 @@ const Header = () => {
             }
             return null;
           })}
-          <CRButton
-            className="bg-primary text-white mt-2 md:mt-0 md:ml-2"
-            title={theme === "light" ? "🌙 Cambiar a oscuro" : "☀️ Cambiar a claro"}
-            aria-label={theme === "light" ? "Activar modo oscuro" : "Activar modo claro"}
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-          >
-            <DynamicIcon name={theme === "light" ? "Moon" : "Sun"} size={18} />
-          </CRButton>
+
+          <div className="flex items-center sm:ml-10 sm:-mr-3 w-full justify-end py-3 sm:py-0">
+            <p className="mr-2 flex sm:hidden text-textPrimary dark:text-white">Cambiar tema</p>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                className="sr-only peer"
+                type="checkbox"
+                onChange={() => setTheme(theme === "light" ? "dark" : "light")}
+                checked={theme === "dark"}
+              />
+              <div className="w-12 h-6 rounded-full bg-gradient-to-r from-yellow-600 to-seconda peer-checked:from-purple-800 peer-checked:to-background transition-all duration-500 after:content-['☀️'] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:flex after:items-center after:justify-center after:transition-all after:duration-500 peer-checked:after:translate-x-6 peer-checked:after:content-['🌙'] after:shadow-md after:text-xs"></div>
+            </label>
+          </div>
         </nav>
       </div>
     </header>
