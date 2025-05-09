@@ -66,7 +66,7 @@ const ContactoPage = () => {
                 rel="noopener noreferrer"
                 className="text-primary dark:text-primary-light hover:underline break-all"
               >
-                {numeroWhatsAppRaw}
+                Toca aquí para chatear
               </a>
               <p className="text-xs text-textSecondary dark:text-gray-400 mt-1">Respuesta rápida</p>
             </div>
@@ -76,14 +76,14 @@ const ContactoPage = () => {
           <div className="flex items-start space-x-3 p-4 bg-pink-50 dark:bg-gray-700 rounded-lg">
             <FacebookIcon iconClassName="w-7 h-7 text-primary dark:text-primary mt-1 flex-shrink-0" />
             <div>
-              <h3 className="font-semibold text-textPrimary dark:text-white text-lg">Facebook</h3>
+              <h3 className="font-semibold text-textPrimary dark:text-white text-lg">Facebook / Naye Nails</h3>
               <a
                 href={urlFacebook}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary dark:text-primary-light hover:underline break-all"
               >
-                Naye Nails
+                Toca aquí para ver nuestro perfil
               </a>
               <p className="text-xs text-textSecondary dark:text-gray-400 mt-1">Síguenos para novedades y promociones</p>
             </div>
