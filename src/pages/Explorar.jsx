@@ -1,91 +1,37 @@
 // src/pages/Explorar.jsx
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { DynamicIcon } from "../utils/DynamicIcon";
 import { NAV_ITEMS } from "../constants/navbar";
-
-// --- DATOS DE EJEMPLO ---
-const todasLasUnas = [
-  {
-    id: 1,
-    nombre: "Manicura Tradicional Roja y Francesa",
-    servicios: ["manicura-tradicional", "disenos-personalizados"],
-    colores: ["rojo", "blanco-puro"],
-    efectos: [],
-    imagen: "https://hips.hearstapps.com/hmg-prod/images/saveclip-app-447253732-18266870164224106-8409522755200379066-n-6751e53a212af.jpg",
-    descripcion: "Una hermosa combinación clásica con un toque francés elegante.",
-    precio: "Q25",
-    duracion: "45 min",
-  },
-  {
-    id: 2,
-    nombre: "Acrílicas Ojo de Gato Azul y 3D Plata",
-    servicios: ["unas-acrilicas"],
-    colores: ["azul-profundo", "plata"],
-    efectos: ["ojo-de-gato", "3d"],
-    imagen: "https://media.glamour.mx/photos/666cbc04486c89a986c40c35/1:1/w_2000,h_2000,c_limit/un%CC%83as-efecto-ojo-de-gato.jpg",
-    descripcion: "Impactantes uñas acrílicas con efecto ojo de gato y detalles 3D.",
-    precio: "Q55",
-    duracion: "1h 30min",
-  },
-  {
-    id: 3,
-    nombre: "Polygel Nude con Efecto Sugar",
-    servicios: ["polygel"],
-    colores: ["tonos-nude"],
-    efectos: ["efecto-sugar"],
-    imagen: "https://i.pinimg.com/736x/07/6c/03/076c0381824d36e87f338b2b32ab1723.jpg",
-    descripcion: "Elegancia sutil con la textura única del efecto sugar.",
-    precio: "Q40",
-    duracion: "1h",
-  },
-  {
-    id: 4,
-    nombre: "Semipermanente Metálico y Glitter",
-    servicios: ["esmalte-semipermanente"],
-    colores: ["metalicos", "glitters"],
-    efectos: [],
-    imagen: "https://i.pinimg.com/474x/e3/bd/60/e3bd6091063a98a9ff181cbbc3a1bb9a.jpg",
-    descripcion: "Brillo y glamour con acabados metálicos y destellos de glitter.",
-    precio: "Q30",
-    duracion: "50 min",
-  },
-  {
-    id: 5,
-    nombre: "Manicura Rusa Pastel con Diseño Floral",
-    servicios: ["manicura-rusa", "disenos-personalizados"],
-    colores: ["pasteles"],
-    efectos: [],
-    imagen: "https://semilac.es/media/catalog/product/cache/67d9e1c93bb19887b3b9eeb5a5253fad/s/t/stylizacja_071.jpg",
-    descripcion: "Delicadeza y arte en tus uñas con tonos pastel y diseño floral.",
-    precio: "Q35",
-    duracion: "1h 15min",
-  },
-  {
-    id: 6,
-    nombre: "Uñas en Gel Neón y Clásicas",
-    servicios: ["unas-en-gel"],
-    colores: ["neon", "clasicos"],
-    efectos: [],
-    imagen: "https://i.pinimg.com/564x/14/b2/c6/14b2c6d9fa6e74e5f5b24aa8bc29265e.jpg",
-    descripcion: "Contraste vibrante de colores neón con la elegancia de los clásicos.",
-    precio: "Q45",
-    duracion: "1h 10min",
-  },
-  {
-    id: 7,
-    nombre: "Polygel Ojo de Gato y Encapsulado Floral",
-    servicios: ["polygel"],
-    colores: ["negro", "tonos-nude"],
-    efectos: ["ojo-de-gato", "encapsulados"],
-    imagen: "https://i.pinimg.com/736x/b5/27/25/b527259a05c47960a0826fc7a0e9f581.jpg",
-    descripcion: "Profundidad magnética del ojo de gato con delicados encapsulados florales.",
-    precio: "Q60",
-    duracion: "1h 45min",
-  },
-];
+import useStoreNails from "../store/store";
 
 const ITEMS_PER_PAGE_INITIAL_CATEGORY = 4;
+const MAX_VISIBLE_TAGS_ON_CARD = 3;
+
+// --- COLORES PARA LAS ETIQUETAS ---
+const TAG_COLORS = {
+  servicios: {
+    bg: "bg-blue-100 dark:bg-blue-500/30",
+    text: "text-blue-700 dark:text-blue-300",
+    hoverBg: "hover:bg-blue-200 dark:hover:bg-blue-500/50",
+  },
+  colores: {
+    bg: "bg-pink-100 dark:bg-pink-500/30",
+    text: "text-pink-700 dark:text-pink-300",
+    hoverBg: "hover:bg-pink-200 dark:hover:bg-pink-500/50",
+  },
+  efectos: {
+    bg: "bg-green-100 dark:bg-green-500/30",
+    text: "text-green-700 dark:text-green-300",
+    hoverBg: "hover:bg-green-200 dark:hover:bg-green-500/50",
+  },
+  default: {
+    // Para el botón "+X más" y "Mostrar menos"
+    bg: "bg-gray-200 dark:bg-gray-600",
+    text: "text-gray-700 dark:text-gray-200",
+    hoverBg: "hover:bg-gray-300 dark:hover:bg-gray-500",
+  },
+};
 
 const getAvailableFilterCategories = () => {
   const categories = [];
@@ -108,9 +54,19 @@ getAvailableFilterCategories().forEach((cat) => {
   initialVisibleCounts[cat.key] = ITEMS_PER_PAGE_INITIAL_CATEGORY;
 });
 
+const capitalizeWords = (str) => {
+  if (!str) return "";
+  return str
+    .replace(/-/g, " ")
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+};
+
 const Explorar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { todasLasUnas } = useStoreNails();
 
   const availableFilterOptions = useMemo(() => getAvailableFilterCategories(), []);
 
@@ -148,10 +104,9 @@ const Explorar = () => {
 
   const [isFilterPanelOpenMobile, setIsFilterPanelOpenMobile] = useState(false);
   const [globalSearchTerm, setGlobalSearchTerm] = useState("");
-
   const [visibleCountsPerCategory, setVisibleCountsPerCategory] = useState(initialVisibleCounts);
+  const [expandedTags, setExpandedTags] = useState({}); // { [cardId]: boolean }
 
-  // --- Funciones para modificar la URL ---
   const handleFilterChange = useCallback(
     (filterTypeKey, filterValueSlug) => {
       const currentParams = new URLSearchParams(location.search);
@@ -171,14 +126,15 @@ const Explorar = () => {
     navigate(location.pathname, { replace: true });
     setGlobalSearchTerm("");
     setVisibleCountsPerCategory(initialVisibleCounts);
+    setExpandedTags({}); // Limpiar etiquetas expandidas
   }, [navigate, location.pathname]);
 
-  // --- Funciones auxiliares para la UI ---
   const getNombreFiltro = useCallback(
     (tipoKey, slug) => {
       const categoria = availableFilterOptions.find((cat) => cat.key === tipoKey);
       const opcion = categoria?.options.find((opt) => opt.slug === slug);
-      return opcion?.nombre || slug.replace(/-/g, " ");
+      const baseName = opcion?.nombre || slug; // No reemplazar guiones aquí, capitalizeWords lo hará
+      return capitalizeWords(baseName);
     },
     [availableFilterOptions]
   );
@@ -229,7 +185,25 @@ const Explorar = () => {
     [availableFilterOptions]
   );
 
-  // --- RENDERIZADO DEL PANEL DE FILTROS ---
+  const toggleCardTags = useCallback((cardId) => {
+    setExpandedTags((prev) => ({ ...prev, [cardId]: !prev[cardId] }));
+  }, []);
+
+  const handleCardTagClick = useCallback(
+    (filterTypeKey, filterValueSlug) => {
+      const newParams = new URLSearchParams();
+      newParams.append(filterTypeKey, filterValueSlug);
+      navigate(`${location.pathname}?${newParams.toString()}`, { replace: true });
+      setIsFilterPanelOpenMobile(false); // Opcional: cerrar panel de filtros en mobile
+      window.scrollTo(0, 0); // Opcional: scroll al inicio
+    },
+    [navigate, location.pathname]
+  );
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const renderFilterPanel = useCallback(() => {
     return (
       <aside className="w-full md:w-64 lg:w-72 md:mr-6 lg:mr-8 mb-6 md:mb-0 flex-shrink-0">
@@ -249,7 +223,7 @@ const Explorar = () => {
           <div className="mb-4 relative">
             <input
               type="text"
-              placeholder="Buscar filtros (ej: rojo, acrílicas...)"
+              placeholder="Buscar filtros (ej: Rojo, Acrílicas...)"
               value={globalSearchTerm}
               onChange={handleGlobalSearchChange}
               className="w-full pl-8 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary focus:border-primary bg-background dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
@@ -266,7 +240,7 @@ const Explorar = () => {
                     <div key={categoryResult.key} className="mb-4 border-t border-gray-200 dark:border-gray-700 pt-3 first:pt-0 first:border-t-0">
                       <h3 className="font-semibold text-textSecondary mb-1.5 flex items-center text-xs uppercase tracking-wider">
                         {categoryResult.icon && <DynamicIcon name={categoryResult.icon} className="w-3.5 h-3.5 mr-1.5 text-gray-500" />}
-                        {categoryResult.label}
+                        {capitalizeWords(categoryResult.label)}
                         {filtrosActivosEnEstaCategoria.length > 0 && (
                           <span className="ml-auto text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-mono">
                             {filtrosActivosEnEstaCategoria.length}
@@ -286,7 +260,7 @@ const Explorar = () => {
                                   onChange={() => handleFilterChange(categoryResult.key, opcion.slug)}
                                 />
                                 <span className={`text-xs ${isChecked ? "font-medium text-primary" : "text-textPrimary group-hover:text-primary"}`}>
-                                  {opcion.nombre}
+                                  {getNombreFiltro(categoryResult.key, opcion.slug)}
                                 </span>
                               </label>
                             </li>
@@ -310,7 +284,7 @@ const Explorar = () => {
                     <div className="flex justify-between items-center mb-2">
                       <h3 className="font-semibold text-textSecondary flex items-center text-sm">
                         {categoria.icon && <DynamicIcon name={categoria.icon} className="w-4 h-4 mr-1.5 text-gray-500 dark:text-gray-400" />}
-                        {categoria.label}
+                        {capitalizeWords(categoria.label)}
                       </h3>
                       {numFiltrosActivosEnCategoria > 0 && (
                         <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-mono">
@@ -331,7 +305,7 @@ const Explorar = () => {
                                 onChange={() => handleFilterChange(categoria.key, opcion.slug)}
                               />
                               <span className={`text-xs ${isChecked ? "font-medium text-primary" : "text-textPrimary group-hover:text-primary"}`}>
-                                {opcion.nombre}
+                                {getNombreFiltro(categoria.key, opcion.slug)}
                               </span>
                             </label>
                           </li>
@@ -371,11 +345,11 @@ const Explorar = () => {
     handleGlobalSearchChange,
     handleFilterChange,
     toggleShowMoreInCategory,
+    getNombreFiltro,
   ]);
 
-  // --- RENDERIZADO PRINCIPAL DEL COMPONENTE ---
   return (
-    <div className="container mx-auto px-2 sm:px-4 py-6 md:py-8 pt-8 md:pt-24 min-h-screen">
+    <div className="container mx-auto px-2 sm:px-4 py-6 md:py-8 pt-8 md:pt-8 min-h-screen bg-gray-100 dark:bg-gray-900">
       <div className="md:hidden mb-4 px-2">
         <button
           onClick={() => setIsFilterPanelOpenMobile((prev) => !prev)}
@@ -395,7 +369,7 @@ const Explorar = () => {
           <h1 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4 text-textPrimary text-center md:text-left px-2 md:px-0">
             Explora Nuestros Diseños
           </h1>
-          <div className="mb-4 sm:mb-6 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm mx-2 md:mx-0">
+          <div className="mb-4 sm:mb-6 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm mx-2 md:mx-0">
             {totalFiltrosActivosGeneral > 0 ? (
               <div className="flex flex-wrap gap-x-2 gap-y-1.5 items-center">
                 <span className="text-xs font-medium mr-1 text-textSecondary">Activos:</span>
@@ -422,57 +396,111 @@ const Explorar = () => {
             )}
           </div>
 
-          {/* Lista de Uñas */}
           {displayedNails.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-6 px-2 md:px-0">
-              {displayedNails.map((una) => (
-                <div
-                  key={una.id}
-                  className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden shadow-md bg-background hover:shadow-xl transition-shadow duration-300 flex flex-col"
-                >
-                  <img
-                    src={una.imagen || "https://via.placeholder.com/350x250?text=Nail+Art"}
-                    alt={una.nombre}
-                    className="w-full h-48 sm:h-56 object-cover"
-                  />
-                  <div className="p-3 sm:p-4 flex flex-col flex-grow">
-                    <h3 className="font-semibold text-base sm:text-lg mb-1 text-textPrimary">{una.nombre}</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">
-                      <DynamicIcon name="Clock" className="w-3 h-3 inline mr-1" />
-                      {una.duracion} | <DynamicIcon name="Tag" className="w-3 h-3 inline mx-1" />
-                      {una.precio}
-                    </p>
-                    <p className="text-xs sm:text-sm text-textSecondary mb-2.5 h-10 overflow-hidden text-ellipsis line-clamp-2">{una.descripcion}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-9 sm:gap-6 px-2 md:px-0">
+              {displayedNails.map((una) => {
+                const areTagsExpanded = !!expandedTags[una.id];
 
-                    <div className="flex flex-wrap gap-1 mt-auto pt-2 border-t border-gray-100 dark:border-gray-700/50">
-                      {una.servicios?.map((s) => (
-                        <span
-                          key={s}
-                          className="text-[0.65rem] sm:text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full"
-                        >
-                          {getNombreFiltro("servicios", s)}
-                        </span>
-                      ))}
-                      {una.colores?.map((c) => (
-                        <span
-                          key={c}
-                          className="text-[0.65rem] sm:text-xs bg-pink-100 dark:bg-pink-900/50 text-pink-700 dark:text-pink-300 px-1.5 py-0.5 rounded-full"
-                        >
-                          {getNombreFiltro("colores", c)}
-                        </span>
-                      ))}
-                      {una.efectos?.map((e) => (
-                        <span
-                          key={e}
-                          className="text-[0.65rem] sm:text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-full"
-                        >
-                          {getNombreFiltro("efectos", e)}
-                        </span>
-                      ))}
+                const allCardTagsWithType = [];
+                if (una.servicios && una.servicios.length > 0) {
+                  una.servicios.forEach((s) => allCardTagsWithType.push({ type: "servicios", slug: s, text: getNombreFiltro("servicios", s) }));
+                }
+                if (una.colores && una.colores.length > 0) {
+                  una.colores.forEach((c) => allCardTagsWithType.push({ type: "colores", slug: c, text: getNombreFiltro("colores", c) }));
+                }
+                if (una.efectos && una.efectos.length > 0) {
+                  una.efectos.forEach((e) => allCardTagsWithType.push({ type: "efectos", slug: e, text: getNombreFiltro("efectos", e) }));
+                }
+
+                const tagsToDisplay = areTagsExpanded ? allCardTagsWithType : allCardTagsWithType.slice(0, MAX_VISIBLE_TAGS_ON_CARD);
+                const hiddenCardTagsCount = allCardTagsWithType.length - tagsToDisplay.length;
+
+                return (
+                  <div
+                    key={una.id}
+                    className="bg-white dark:bg-gray-800 rounded-xl shadow-xl overflow-hidden flex flex-col group transition-all duration-300 ease-in-out hover:shadow-2xl"
+                  >
+                    <div className="relative overflow-hidden">
+                      <img
+                        src={una.imagen || "https://via.placeholder.com/350x250?text=Nail+Art"}
+                        alt={una.nombre}
+                        className="w-full h-64 sm:h-56 object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
+                      />
+                    </div>
+
+                    <div className="px-4 pb-6 pt-4 flex flex-col flex-grow">
+                      <div className="w-full flex flex-row">
+                        <div className="flex-grow flex">
+                          <h3 className="font-semibold text-lg text-pretty text-gray-900 dark:text-white mb-1.5 group-hover:text-primary transition-colors duration-300">
+                            {capitalizeWords(una.nombre)}
+                          </h3>
+                        </div>
+
+                        <div className="w-40 -mr-2 flex flex-col items-end text-gray-500 dark:text-gray-400 mb-2 pr-2">
+                          {una.oferta && una.oferta.trim() !== "" ? (
+                            <>
+                              <span className="text-sm line-through text-gray-400 dark:text-gray-500">{una.precio}</span>
+                              <span className="text-xl font-bold text-primary flex items-center">
+                                {una.oferta}
+                                <DynamicIcon name="Tag" className="size-4 ml-1 text-red-500 dark:text-red-400" />
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-xl font-medium text-primary dark:text-primary-light flex items-center">
+                              {una.precio}
+                              <DynamicIcon name="Tag" className="size-4 sm:size-3 inline ml-2 opacity-70" />
+                            </span>
+                          )}
+                          <span className="text-sm text-gray-500 dark:text-gray-400 flex items-center mt-0.5">
+                            {una.duracion}
+                            <DynamicIcon name="Clock" className="size-3.5 inline ml-1.5 opacity-70" />
+                          </span>
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2 leading-relaxed">{una.descripcion}</p>
+
+                      {allCardTagsWithType.length > 0 && (
+                        <div className="mt-auto pt-3 border-t border-gray-200 dark:border-gray-700/60">
+                          <div className="flex flex-wrap gap-1.5 items-center">
+                            {tagsToDisplay.map((tag, index) => {
+                              const tagStyle = TAG_COLORS[tag.type] || TAG_COLORS.default;
+                              return (
+                                <button
+                                  key={`${una.id}-tag-${tag.slug}-${index}`}
+                                  onClick={() => handleCardTagClick(tag.type, tag.slug)}
+                                  title={`Filtrar por ${tag.text}`}
+                                  className={`cursor-pointer text-[0.7rem] sm:text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${tagStyle.bg} ${tagStyle.text} ${tagStyle.hoverBg}`}
+                                >
+                                  {tag.text}
+                                </button>
+                              );
+                            })}
+                            {!areTagsExpanded && hiddenCardTagsCount > 0 && (
+                              <button
+                                onClick={() => toggleCardTags(una.id)}
+                                title="Mostrar más etiquetas"
+                                className={`cursor-pointer text-[0.7rem] sm:text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${TAG_COLORS.default.bg} ${TAG_COLORS.default.text} ${TAG_COLORS.default.hoverBg}`}
+                              >
+                                +{hiddenCardTagsCount} más
+                              </button>
+                            )}
+                            {areTagsExpanded && allCardTagsWithType.length > MAX_VISIBLE_TAGS_ON_CARD && (
+                              <button
+                                onClick={() => toggleCardTags(una.id)}
+                                title="Mostrar menos etiquetas"
+                                className={`text-[0.7rem] sm:text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${TAG_COLORS.default.bg} ${TAG_COLORS.default.text} ${TAG_COLORS.default.hoverBg}`}
+                              >
+                                Mostrar menos
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-12 px-2 md:px-0">
