@@ -7,9 +7,12 @@ const useStoreNails = create((set) => ({
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   message: "Hola Mundo desde Zustand!",
   imagenesInicio: [
-    { url: "http://www.origi-nails.com/images/hair_01.jpg", legend: "Amanecer" },
-    { url: "http://www.origi-nails.com/images/pedi_01.jpg", legend: "Atardecer" },
-    { url: "http://www.origi-nails.com/images/slider_02.jpg", legend: "Noche" },
+    {
+      url: "https://estaticosgn-cdn.deia.eus/clip/c20bfc11-6149-4868-8833-194cbeab1ed9_16-9-discover-aspect-ratio_default_0_x1480y2480.jpg",
+      legend: "Amanecer",
+    },
+    { url: "https://media.vogue.es/photos/5e46dd6814cc4800084d7613/16:9/w_1280,c_limit/VOGUE-Manicura-Bolsos5332-copia.jpg", legend: "Atardecer" },
+    { url: "https://torridnails.it/cdn/shop/articles/Buy_your_kit_d05f3ce0-e86a-4845-b23b-4038f9160196.jpg", legend: "Noche" },
   ],
 
   imagenesGaleria: [
