@@ -7,6 +7,7 @@ import Objetivo from "./Objetivo";
 import useStoreNails from "../store/store";
 import Intermedio from "./Intermedio";
 import Ubicacion from "./Ubicacion";
+import AgendaContacto from "./AgendaContacto";
 
 const ContentSection = () => {
   const { imagenesGaleria } = useStoreNails();
@@ -63,6 +64,11 @@ const ContentSection = () => {
       <div className="w-full bg-background dark:bg-background flex flex-col justify-center items-center relative py-10">
         <ScrollArrow showArrow={false} bg="bg-background" bgDark="dark:bg-background" icon="House" color="text-primary dark:text-textPrimary" />
         <Ubicacion />
+      </div>
+      {/* DIV DE UBICACION */}
+      <div className="w-full bg-background dark:bg-background flex flex-col justify-center items-center relative py-10">
+        <ScrollArrow showArrow={false} bg="bg-background" bgDark="dark:bg-background" icon="Calendar" color="text-primary dark:text-textPrimary" />
+        <AgendaContacto />
       </div>
     </div>
   );
