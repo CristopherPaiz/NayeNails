@@ -1,20 +1,19 @@
 // src/pages/ContactoPage.jsx
 import React from "react";
 import { Link } from "react-router-dom";
-import { CalendarPlus, Phone, Mail, MapPin } from "lucide-react"; // Importamos más iconos
+import { CalendarPlus, Phone, MapPin } from "lucide-react"; // Se quitó Mail
 
-// --- Iconos SVG (puedes moverlos a un archivo separado si los usas en múltiples lugares) ---
-const FacebookIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    className="w-6 h-6 text-white dark:text-primary group-hover:scale-110 transition-transform"
-  >
+// --- Iconos SVG ---
+// Se modificó FacebookIcon para aceptar iconClassName para mayor flexibilidad de estilo
+const FacebookIcon = ({ iconClassName = "w-6 h-6 text-white dark:text-primary group-hover:scale-110 transition-transform" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={iconClassName}>
     <path d="M12 2.03998C6.48 2.03998 2 6.51998 2 12.03C2 17.08 5.64 21.22 10.44 21.88V14.89H7.9V12.03H10.44V9.84998C10.44 7.33998 11.93 5.95998 14.22 5.95998C15.31 5.95998 16.45 6.14998 16.45 6.14998V8.61998H15.19C13.95 8.61998 13.56 9.38998 13.56 10.18V12.03H16.34L15.89 14.89H13.56V21.87C18.36 21.22 22 17.08 22 12.03C22 6.51998 17.52 2.03998 12 2.03998Z" />
   </svg>
 );
 
+// WhatsAppIcon se mantiene definido, aunque no se use directamente en este return,
+// podría ser útil si se quisiera añadir un botón de WhatsApp separado en el futuro.
+// Si no se va a usar, se podría eliminar para limpiar.
 const WhatsAppIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -33,23 +32,17 @@ const ContactoPage = () => {
   const numeroWhatsAppRaw = "+50249425739";
   const numeroWhatsAppParaLink = numeroWhatsAppRaw.replace(/\D/g, "");
   const urlFacebook = "https://facebook.com/profile.php?id=61575180189391";
-  const emailContacto = "contacto@nayenails.com"; // Añade tu email
-  const direccionNegocio = "123 Calle de Ensueño, Ciudad Fantasía"; // Añade tu dirección si aplica
+  // const emailContacto = "contacto@nayenails.com"; // Ya no se usa
+  const direccionNegocio = "123 Calle de Ensueño, Ciudad Fantasía";
 
-  // Función para obtener el saludo según la hora
   const obtenerSaludoDelDia = () => {
     const horaActual = new Date().getHours();
-    if (horaActual < 12) {
-      return "buenos días";
-    } else if (horaActual < 18) {
-      return "buenas tardes";
-    } else {
-      return "buenas noches";
-    }
+    if (horaActual < 12) return "buenos días";
+    if (horaActual < 18) return "buenas tardes";
+    return "buenas noches";
   };
 
   const saludoDelDia = obtenerSaludoDelDia();
-  // Mensaje para WhatsApp un poco más general para una página de contacto
   const mensajeWhatsAppBase = `Hola ${saludoDelDia}, ${nombreDelNegocio}, quisiera más información.`;
   const whatsappUrl = `https://wa.me/${numeroWhatsAppParaLink}?text=${encodeURIComponent(mensajeWhatsAppBase)}`;
 
@@ -79,14 +72,20 @@ const ContactoPage = () => {
             </div>
           </div>
 
+          {/* Sección de Email reemplazada por Facebook */}
           <div className="flex items-start space-x-3 p-4 bg-pink-50 dark:bg-gray-700 rounded-lg">
-            <Mail className="w-7 h-7 text-primary dark:text-primary mt-1 flex-shrink-0" />
+            <FacebookIcon iconClassName="w-7 h-7 text-primary dark:text-primary mt-1 flex-shrink-0" />
             <div>
-              <h3 className="font-semibold text-textPrimary dark:text-white text-lg">Correo Electrónico</h3>
-              <a href={`mailto:${emailContacto}`} className="text-primary dark:text-primary-light hover:underline break-all">
-                {emailContacto}
+              <h3 className="font-semibold text-textPrimary dark:text-white text-lg">Facebook</h3>
+              <a
+                href={urlFacebook}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary dark:text-primary-light hover:underline break-all"
+              >
+                Naye Nails
               </a>
-              <p className="text-xs text-textSecondary dark:text-gray-400 mt-1">Para consultas detalladas</p>
+              <p className="text-xs text-textSecondary dark:text-gray-400 mt-1">Síguenos para novedades y promociones</p>
             </div>
           </div>
 
@@ -101,16 +100,16 @@ const ContactoPage = () => {
           )}
         </div>
 
-        {/* Botón de Agendar Cita (sigue siendo importante) */}
         <Link
-          to="/agendar-cita" // Tu ruta para agendar
+          to="/agendar-cita"
           className="inline-flex items-center justify-center bg-accent dark:bg-primary hover:bg-accent-dark dark:hover:bg-primary-dark text-primary dark:text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 mb-10"
         >
           <CalendarPlus className="mr-2 h-5 w-5" />
           Agenda tu Cita Online
         </Link>
 
-        {/* Redes Sociales */}
+        {/* Sección de Redes Sociales eliminada */}
+        {/*
         <div className="pt-8 border-t border-gray-300 dark:border-white/20">
           <p className="text-md text-textSecondary dark:text-gray-400 mb-5">Síguenos en nuestras redes sociales:</p>
           <div className="flex justify-center items-center space-x-6">
@@ -121,10 +120,11 @@ const ContactoPage = () => {
               aria-label="Visítanos en Facebook"
               className="group bg-primary dark:bg-accent hover:bg-primary-dark dark:hover:bg-accent-dark p-3 rounded-full transition-all duration-300 ease-in-out shadow-lg hover:shadow-xl transform hover:scale-105"
             >
-              <FacebookIcon />
+              <FacebookIcon iconClassName="w-6 h-6 text-white dark:text-primary group-hover:scale-110 transition-transform" />
             </a>
           </div>
         </div>
+        */}
       </div>
     </div>
   );
