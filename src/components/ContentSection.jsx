@@ -38,7 +38,7 @@ const ContentSection = () => {
   return (
     <div className="relative z-20">
       {/* DIV VACIO DEJAR VER EL CARUSEL */}
-      <div className="h-screen pt-16 sm:pt-24 mt-2 sm:mt-9 flex justify-center items-center"></div>
+      <div className="h-dvh pt-16 sm:pt-24 mt-2 sm:mt-9 flex justify-center items-center"></div>
 
       {/* DIV DE SERVICIOS */}
       <div ref={serviciosRef} className="w-full bg-primary dark:bg-background flex flex-col justify-center items-center relative">

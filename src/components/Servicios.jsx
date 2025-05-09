@@ -1,5 +1,5 @@
 // src/components/Servicios.jsx
-import React, { useState, useEffect, useCallback } from "react"; // Añadido useCallback
+import React, { useState, useEffect, useCallback } from "react";
 import { DynamicIcon } from "../utils/DynamicIcon";
 import { NAV_ITEMS } from "../constants/navbar";
 import CategoryPreviewModal from "./subcomponents/CategoryPreviewModal";
@@ -31,9 +31,16 @@ const servicesData = [
   },
 ];
 
+const MODAL_HISTORY_STATE_ID = "categoryPreviewModalOpen"; // Identificador para nuestro estado de historial
+
 const Servicios = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalData, setModalData] = useState({ title: "", icon: "", subcategoryNames: [], ctaButtonText: "" });
+
+  const performCloseModal = useCallback(() => {
+    setIsModalOpen(false);
+    document.body.style.overflow = "auto";
+  }, []);
 
   const openModal = useCallback((service) => {
     const navCategory = NAV_ITEMS[service.navItemsKey];
@@ -47,20 +54,40 @@ const Servicios = () => {
     });
     setIsModalOpen(true);
     document.body.style.overflow = "hidden";
-  }, []); // No tiene dependencias que cambien
+    window.history.pushState({ modalId: MODAL_HISTORY_STATE_ID }, "");
+  }, []);
 
   const closeModal = useCallback(() => {
-    setIsModalOpen(false);
-    document.body.style.overflow = "auto";
-  }, []);
+    if (window.history.state && window.history.state.modalId === MODAL_HISTORY_STATE_ID) {
+      window.history.back(); // Esto disparará 'popstate'
+    } else {
+      performCloseModal();
+    }
+  }, [performCloseModal]); // performCloseModal es estable
 
   useEffect(() => {
     const handleEsc = (event) => {
-      if (event.key === "Escape") closeModal();
+      if (event.key === "Escape") {
+        closeModal(); // Usar la función closeModal que maneja el historial
+      }
     };
-    if (isModalOpen) window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [isModalOpen, closeModal]);
+
+    const handlePopState = (event) => {
+      if (isModalOpen && (!event.state || event.state.modalId !== MODAL_HISTORY_STATE_ID)) {
+        performCloseModal();
+      }
+    };
+
+    if (isModalOpen) {
+      window.addEventListener("keydown", handleEsc);
+      window.addEventListener("popstate", handlePopState);
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handleEsc);
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [isModalOpen, closeModal, performCloseModal]);
 
   return (
     <>
@@ -74,13 +101,11 @@ const Servicios = () => {
               className="bg-background dark:bg-gray-800 rounded-xl shadow-lg flex flex-col items-center text-center transition-all duration-300 ease-in-out hover:shadow-2xl hover:-translate-y-1"
             >
               <div className="relative w-full px-6 pt-12 pb-8 flex flex-col items-center flex-grow">
-                {/* Aumentado pt y pb */}
                 <div className="absolute -top-7 left-1/2 transform -translate-x-1/2 bg-primary dark:bg-accent rounded-full p-3 shadow-md border-2 border-background dark:border-gray-800">
                   <DynamicIcon name={service.icon} className="size-8 text-white dark:text-primary" />
                 </div>
                 <h3 className="text-xl font-semibold mb-3 text-primary dark:text-primary-light">{service.title}</h3>
-                <p className="text-sm text-textSecondary dark:text-gray-300 mb-6 flex-grow min-h-[60px]">{service.description}</p>{" "}
-                {/* min-h para igualar alturas */}
+                <p className="text-sm text-textSecondary dark:text-gray-300 mb-6 flex-grow min-h-[60px]">{service.description}</p>
                 <button
                   onClick={() => openModal(service)}
                   className="cursor-pointer mt-auto w-full bg-accent dark:bg-primary hover:bg-accent-dark dark:hover:bg-primary-dark text-primary dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors duration-200 text-sm flex items-center justify-center"
@@ -96,7 +121,7 @@ const Servicios = () => {
 
       <CategoryPreviewModal
         isOpen={isModalOpen}
-        onClose={closeModal}
+        onClose={closeModal} // Usar la función closeModal que maneja el historial
         title={modalData.title}
         icon={modalData.icon}
         subcategoryNames={modalData.subcategoryNames}
