@@ -1,7 +1,9 @@
 // src/pages/UbicacionPage.jsx
 import { Map, Navigation, ExternalLink, Phone, Clock } from "lucide-react";
+import useScrollToTop from "../hooks/useScrollToTop";
 
 const UbicacionPage = () => {
+  useScrollToTop();
   const Direccion = "12 Avenida 2-25, Zona 6, Quetzaltenango, Guatemala";
   const Celular = "XXXX-XXXX";
   const Horario = "Lunes a Viernes: 9:00 AM - 5:00 PM";

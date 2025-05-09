@@ -2,6 +2,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { CalendarPlus, Phone, MapPin } from "lucide-react"; // Se quitó Mail
+import useScrollToTop from "../hooks/useScrollToTop";
 
 // --- Iconos SVG ---
 // Se modificó FacebookIcon para aceptar iconClassName para mayor flexibilidad de estilo
@@ -27,6 +28,7 @@ const WhatsAppIcon = () => (
 // --- Fin Iconos SVG ---
 
 const ContactoPage = () => {
+  useScrollToTop();
   // Personaliza estos valores
   const nombreDelNegocio = "Naye Nails";
   const numeroWhatsAppRaw = "+50249425739";

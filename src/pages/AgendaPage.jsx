@@ -4,8 +4,10 @@ import { User, Phone, CalendarDays, Clock, Send } from "lucide-react";
 import ConfirmationModal from "../components/ConfirmationModal";
 import { format, getDay, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import useScrollToTop from "../hooks/useScrollToTop";
 
 const AgendaPage = () => {
+  useScrollToTop();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
