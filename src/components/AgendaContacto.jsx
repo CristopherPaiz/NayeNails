@@ -51,8 +51,8 @@ const AgendaContacto = () => {
   );
 
   return (
-    <section className="px-4 sm:px-8 mb-14">
-      <div className="bg-background dark:bg-gray-800 rounded-xl shadow-xl p-8 md:p-12 text-center">
+    <section className="px-4 sm:px-8 mb-14 -mt-6">
+      <div className="bg-background dark:bg-gray-800 rounded-xl border border-primary shadow-xl p-8 md:p-12 text-center">
         <h2 className="text-3xl font-bold text-primary dark:text-primary-light mb-3">¿Lista para tu Próxima Cita?</h2>
         <p className="text-lg text-textSecondary dark:text-gray-300 mb-8 max-w-md mx-auto">
           Reserva tu espacio fácilmente con nuestro sistema de agenda online y prepárate para lucir unas uñas espectaculares.

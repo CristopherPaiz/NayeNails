@@ -11,7 +11,7 @@ export default function Ubicacion() {
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${coordenadas}`;
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-4 px-8">
+    <div className="w-full max-w-6xl mx-auto p-4 px-8 mb-14">
       <h2 className="text-3xl font-bold mb-6 text-center text-primary dark:text-textPrimary">Encuéntranos</h2>
 
       <div className="bg-primary/5 dark:bg-tertiary/10 rounded-2xl shadow-lg overflow-hidden border-2 border-primary dark:border-tertiary">
