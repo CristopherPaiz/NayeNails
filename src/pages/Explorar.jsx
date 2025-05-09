@@ -5,107 +5,47 @@ import { DynamicIcon } from "../utils/DynamicIcon";
 import { NAV_ITEMS } from "../constants/navbar";
 import useStoreNails from "../store/store";
 
+import { capitalizeWords } from "../utils/textUtils";
+import {
+  getAvailableFilterCategories,
+  getInitialVisibleCounts,
+  parseFiltersFromUrl,
+  calculateDisplayedNails,
+  getNombreFiltroFromSlug,
+  calculateTotalFiltrosActivos,
+  performGlobalFilterSearch,
+} from "../utils/filterUtils";
+
 const ITEMS_PER_PAGE_INITIAL_CATEGORY = 4;
 const MAX_VISIBLE_TAGS_ON_CARD = 3;
-
-// --- COLORES PARA LAS ETIQUETAS ---
-const TAG_COLORS = {
-  servicios: {
-    bg: "bg-blue-100 dark:bg-blue-500/30",
-    text: "text-blue-700 dark:text-blue-300",
-    hoverBg: "hover:bg-blue-200 dark:hover:bg-blue-500/50",
-  },
-  colores: {
-    bg: "bg-pink-100 dark:bg-pink-500/30",
-    text: "text-pink-700 dark:text-pink-300",
-    hoverBg: "hover:bg-pink-200 dark:hover:bg-pink-500/50",
-  },
-  efectos: {
-    bg: "bg-green-100 dark:bg-green-500/30",
-    text: "text-green-700 dark:text-green-300",
-    hoverBg: "hover:bg-green-200 dark:hover:bg-green-500/50",
-  },
-  default: {
-    // Para el botón "+X más" y "Mostrar menos"
-    bg: "bg-gray-200 dark:bg-gray-600",
-    text: "text-gray-700 dark:text-gray-200",
-    hoverBg: "hover:bg-gray-300 dark:hover:bg-gray-500",
-  },
-};
-
-const getAvailableFilterCategories = () => {
-  const categories = [];
-  const navItemEntries = Object.entries(NAV_ITEMS);
-  for (const [key, value] of navItemEntries) {
-    if (value.filterType && value.categorías && Array.isArray(value.categorías)) {
-      categories.push({
-        key: value.filterType,
-        label: key,
-        icon: value.icon,
-        options: value.categorías.map((cat) => ({ nombre: cat.nombre, slug: cat.slug, icon: cat.icon })),
-      });
-    }
-  }
-  return categories;
-};
-
-const initialVisibleCounts = {};
-getAvailableFilterCategories().forEach((cat) => {
-  initialVisibleCounts[cat.key] = ITEMS_PER_PAGE_INITIAL_CATEGORY;
-});
-
-const capitalizeWords = (str) => {
-  if (!str) return "";
-  return str
-    .replace(/-/g, " ")
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
-};
 
 const Explorar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { todasLasUnas } = useStoreNails();
+  const { todasLasUnas, TAG_COLORS } = useStoreNails();
 
-  const availableFilterOptions = useMemo(() => getAvailableFilterCategories(), []);
+  const availableFilterOptions = useMemo(() => getAvailableFilterCategories(NAV_ITEMS), []);
 
-  const parsedFiltersFromUrl = useMemo(() => {
-    const queryParams = new URLSearchParams(location.search);
-    const filters = {};
-    if (availableFilterOptions.length > 0) {
-      availableFilterOptions.forEach((cat) => {
-        filters[cat.key] = queryParams.getAll(cat.key) || [];
-      });
-    }
-    return filters;
-  }, [location.search, availableFilterOptions]);
+  const initialVisibleCountsCalculated = useMemo(
+    () => getInitialVisibleCounts(availableFilterOptions, ITEMS_PER_PAGE_INITIAL_CATEGORY),
+    [availableFilterOptions]
+  );
 
-  const displayedNails = useMemo(() => {
-    if (Object.keys(parsedFiltersFromUrl).length === 0 || availableFilterOptions.length === 0) {
-      return todasLasUnas;
-    }
-    let filtered = [...todasLasUnas];
-    let hasAnyFilterApplied = false;
-    availableFilterOptions.forEach((category) => {
-      const filterTypeKey = category.key;
-      const selectedValues = parsedFiltersFromUrl[filterTypeKey];
-      if (selectedValues && selectedValues.length > 0) {
-        hasAnyFilterApplied = true;
-        filtered = filtered.filter((nail) => {
-          const nailValuesForType = nail[filterTypeKey];
-          if (!Array.isArray(nailValuesForType) || nailValuesForType.length === 0) return false;
-          return selectedValues.every((selectedValue) => nailValuesForType.includes(selectedValue));
-        });
-      }
-    });
-    return hasAnyFilterApplied ? filtered : todasLasUnas;
-  }, [parsedFiltersFromUrl, availableFilterOptions]);
+  const parsedFiltersFromUrl = useMemo(() => parseFiltersFromUrl(location.search, availableFilterOptions), [location.search, availableFilterOptions]);
+
+  const displayedNails = useMemo(
+    () => calculateDisplayedNails(todasLasUnas, parsedFiltersFromUrl, availableFilterOptions),
+    [todasLasUnas, parsedFiltersFromUrl, availableFilterOptions]
+  );
 
   const [isFilterPanelOpenMobile, setIsFilterPanelOpenMobile] = useState(false);
   const [globalSearchTerm, setGlobalSearchTerm] = useState("");
-  const [visibleCountsPerCategory, setVisibleCountsPerCategory] = useState(initialVisibleCounts);
-  const [expandedTags, setExpandedTags] = useState({}); // { [cardId]: boolean }
+  const [visibleCountsPerCategory, setVisibleCountsPerCategory] = useState(initialVisibleCountsCalculated);
+  const [expandedTags, setExpandedTags] = useState({});
+
+  useEffect(() => {
+    setVisibleCountsPerCategory(initialVisibleCountsCalculated);
+  }, [initialVisibleCountsCalculated]);
 
   const handleFilterChange = useCallback(
     (filterTypeKey, filterValueSlug) => {
@@ -125,50 +65,27 @@ const Explorar = () => {
   const clearAllFilters = useCallback(() => {
     navigate(location.pathname, { replace: true });
     setGlobalSearchTerm("");
-    setVisibleCountsPerCategory(initialVisibleCounts);
-    setExpandedTags({}); // Limpiar etiquetas expandidas
-  }, [navigate, location.pathname]);
+    setVisibleCountsPerCategory(initialVisibleCountsCalculated);
+    setExpandedTags({});
+  }, [navigate, location.pathname, initialVisibleCountsCalculated]);
 
   const getNombreFiltro = useCallback(
     (tipoKey, slug) => {
-      const categoria = availableFilterOptions.find((cat) => cat.key === tipoKey);
-      const opcion = categoria?.options.find((opt) => opt.slug === slug);
-      const baseName = opcion?.nombre || slug; // No reemplazar guiones aquí, capitalizeWords lo hará
-      return capitalizeWords(baseName);
+      return getNombreFiltroFromSlug(availableFilterOptions, tipoKey, slug);
     },
     [availableFilterOptions]
   );
 
-  const totalFiltrosActivosGeneral = useMemo(() => {
-    if (Object.keys(parsedFiltersFromUrl).length === 0) return 0;
-    return Object.values(parsedFiltersFromUrl).reduce((sum, arr) => sum + (arr?.length || 0), 0);
-  }, [parsedFiltersFromUrl]);
+  const totalFiltrosActivosGeneral = useMemo(() => calculateTotalFiltrosActivos(parsedFiltersFromUrl), [parsedFiltersFromUrl]);
 
   const handleGlobalSearchChange = (e) => {
     setGlobalSearchTerm(e.target.value);
   };
 
-  const searchResults = useMemo(() => {
-    if (!globalSearchTerm.trim()) return [];
-    const normalizedSearch = globalSearchTerm
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-    const results = [];
-    availableFilterOptions.forEach((category) => {
-      const matchedOptions = category.options.filter((option) =>
-        option.nombre
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .includes(normalizedSearch)
-      );
-      if (matchedOptions.length > 0) {
-        results.push({ ...category, options: matchedOptions });
-      }
-    });
-    return results;
-  }, [globalSearchTerm, availableFilterOptions]);
+  const searchResults = useMemo(
+    () => performGlobalFilterSearch(globalSearchTerm, availableFilterOptions),
+    [globalSearchTerm, availableFilterOptions]
+  );
 
   const toggleShowMoreInCategory = useCallback(
     (categoryKey) => {
@@ -194,8 +111,8 @@ const Explorar = () => {
       const newParams = new URLSearchParams();
       newParams.append(filterTypeKey, filterValueSlug);
       navigate(`${location.pathname}?${newParams.toString()}`, { replace: true });
-      setIsFilterPanelOpenMobile(false); // Opcional: cerrar panel de filtros en mobile
-      window.scrollTo(0, 0); // Opcional: scroll al inicio
+      setIsFilterPanelOpenMobile(false);
+      window.scrollTo(0, 0);
     },
     [navigate, location.pathname]
   );
@@ -240,7 +157,7 @@ const Explorar = () => {
                     <div key={categoryResult.key} className="mb-4 border-t border-gray-200 dark:border-gray-700 pt-3 first:pt-0 first:border-t-0">
                       <h3 className="font-semibold text-textSecondary mb-1.5 flex items-center text-xs uppercase tracking-wider">
                         {categoryResult.icon && <DynamicIcon name={categoryResult.icon} className="w-3.5 h-3.5 mr-1.5 text-gray-500" />}
-                        {capitalizeWords(categoryResult.label)}
+                        {capitalizeWords(categoryResult.label)} {/* Capitalizamos el label de la categoría */}
                         {filtrosActivosEnEstaCategoria.length > 0 && (
                           <span className="ml-auto text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-mono">
                             {filtrosActivosEnEstaCategoria.length}
@@ -260,7 +177,7 @@ const Explorar = () => {
                                   onChange={() => handleFilterChange(categoryResult.key, opcion.slug)}
                                 />
                                 <span className={`text-xs ${isChecked ? "font-medium text-primary" : "text-textPrimary group-hover:text-primary"}`}>
-                                  {getNombreFiltro(categoryResult.key, opcion.slug)}
+                                  {getNombreFiltro(categoryResult.key, opcion.slug)} {/* Usamos la función que ya capitaliza */}
                                 </span>
                               </label>
                             </li>
@@ -273,7 +190,7 @@ const Explorar = () => {
               ) : (
                 <p className="text-xs text-gray-400 dark:text-gray-500 italic px-1 py-2">No se encontraron filtros para "{globalSearchTerm}".</p>
               )
-            ) : (
+            ) : availableFilterOptions.length > 0 ? (
               availableFilterOptions.map((categoria) => {
                 const currentVisibleCount = visibleCountsPerCategory[categoria.key] || ITEMS_PER_PAGE_INITIAL_CATEGORY;
                 const opcionesAMostrar = categoria.options.slice(0, currentVisibleCount);
@@ -284,7 +201,7 @@ const Explorar = () => {
                     <div className="flex justify-between items-center mb-2">
                       <h3 className="font-semibold text-textSecondary flex items-center text-sm">
                         {categoria.icon && <DynamicIcon name={categoria.icon} className="w-4 h-4 mr-1.5 text-gray-500 dark:text-gray-400" />}
-                        {capitalizeWords(categoria.label)}
+                        {capitalizeWords(categoria.label)} {/* Capitalizamos el label de la categoría */}
                       </h3>
                       {numFiltrosActivosEnCategoria > 0 && (
                         <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-mono">
@@ -305,7 +222,7 @@ const Explorar = () => {
                                 onChange={() => handleFilterChange(categoria.key, opcion.slug)}
                               />
                               <span className={`text-xs ${isChecked ? "font-medium text-primary" : "text-textPrimary group-hover:text-primary"}`}>
-                                {getNombreFiltro(categoria.key, opcion.slug)}
+                                {getNombreFiltro(categoria.key, opcion.slug)} {/* Usamos la función que ya capitaliza */}
                               </span>
                             </label>
                           </li>
@@ -325,10 +242,12 @@ const Explorar = () => {
                         Mostrar menos
                       </button>
                     )}
-                    {categoria.options.length === 0 && <p className="text-xs text-gray-400 px-1">No hay opciones.</p>}
+                    {categoria.options.length === 0 && <p className="text-xs text-gray-400 px-1 italic">No hay opciones en esta categoría.</p>}
                   </div>
                 );
               })
+            ) : (
+              <p className="text-xs text-gray-400 dark:text-gray-500 italic px-1 py-2">No hay categorías de filtro disponibles en este momento.</p>
             )}
           </div>
         </div>
@@ -385,31 +304,44 @@ const Explorar = () => {
                         className="ml-1 -mr-0.5 p-0.5 rounded-full hover:bg-primary/30 dark:hover:bg-primary/40"
                         aria-label={`Remover filtro ${getNombreFiltro(tipo, slug)}`}
                       >
-                        <DynamicIcon name="X" size={10} />
+                        <DynamicIcon name="X" className="sm:size-3 size-4 cursor-pointer" />
                       </button>
                     </span>
                   ))
                 )}
               </div>
-            ) : (
+            ) : availableFilterOptions.length > 0 ? (
               <p className="text-xs text-gray-500 dark:text-gray-400">Selecciona filtros para refinar tu búsqueda o explora todos los diseños.</p>
+            ) : (
+              <p className="text-xs text-gray-500 dark:text-gray-400">Explora todos nuestros diseños disponibles.</p>
             )}
           </div>
 
-          {displayedNails.length > 0 ? (
+          {!todasLasUnas || todasLasUnas.length === 0 ? (
+            <div className="text-center py-12 px-2 md:px-0">
+              <DynamicIcon name="PackageOpen" size={48} className="mx-auto text-gray-400 dark:text-gray-500 mb-4" />
+              <h2 className="text-xl sm:text-2xl font-semibold text-textPrimary mb-2">Aún no hay diseños disponibles</h2>
+              <p className="text-base text-gray-500 dark:text-gray-400">
+                Estamos trabajando para añadir nuevo contenido. ¡Por favor, vuelve más tarde!
+              </p>
+            </div>
+          ) : displayedNails.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-9 sm:gap-6 px-2 md:px-0">
               {displayedNails.map((una) => {
                 const areTagsExpanded = !!expandedTags[una.id];
 
                 const allCardTagsWithType = [];
-                if (una.servicios && una.servicios.length > 0) {
-                  una.servicios.forEach((s) => allCardTagsWithType.push({ type: "servicios", slug: s, text: getNombreFiltro("servicios", s) }));
-                }
-                if (una.colores && una.colores.length > 0) {
-                  una.colores.forEach((c) => allCardTagsWithType.push({ type: "colores", slug: c, text: getNombreFiltro("colores", c) }));
-                }
-                if (una.efectos && una.efectos.length > 0) {
-                  una.efectos.forEach((e) => allCardTagsWithType.push({ type: "efectos", slug: e, text: getNombreFiltro("efectos", e) }));
+                // Solo generar tags si hay filtros disponibles para obtener sus nombres
+                if (availableFilterOptions.length > 0) {
+                  if (una.servicios && una.servicios.length > 0) {
+                    una.servicios.forEach((s) => allCardTagsWithType.push({ type: "servicios", slug: s, text: getNombreFiltro("servicios", s) }));
+                  }
+                  if (una.colores && una.colores.length > 0) {
+                    una.colores.forEach((c) => allCardTagsWithType.push({ type: "colores", slug: c, text: getNombreFiltro("colores", c) }));
+                  }
+                  if (una.efectos && una.efectos.length > 0) {
+                    una.efectos.forEach((e) => allCardTagsWithType.push({ type: "efectos", slug: e, text: getNombreFiltro("efectos", e) }));
+                  }
                 }
 
                 const tagsToDisplay = areTagsExpanded ? allCardTagsWithType : allCardTagsWithType.slice(0, MAX_VISIBLE_TAGS_ON_CARD);
@@ -511,7 +443,7 @@ const Explorar = () => {
                   ? `Prueba con otro término de búsqueda o revisa los filtros activos.`
                   : totalFiltrosActivosGeneral > 0
                   ? "Intenta ajustar tus filtros o "
-                  : "Prueba con otros filtros o explora todos los diseños."}
+                  : "Parece que no hay diseños que coincidan. ¡Explora otras opciones!"}
                 {totalFiltrosActivosGeneral > 0 && (
                   <button onClick={clearAllFilters} className="text-primary underline">
                     limpia todos los filtros
