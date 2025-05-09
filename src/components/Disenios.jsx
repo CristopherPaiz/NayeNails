@@ -1,11 +1,10 @@
 // src/components/Disenios.jsx
 import React, { useEffect, useState, useRef, memo, useCallback } from "react";
-import { useNavigate } from "react-router-dom"; // Importar useNavigate
+import { useNavigate } from "react-router-dom";
 import LightGallery from "lightgallery/react";
 import Masonry from "masonry-layout";
 import imagesLoaded from "imagesloaded";
 
-// GalleryItem se usa, así que asegúrate que la importación sea correcta
 import GalleryItem from "./subcomponents/GalleryItem";
 
 import "lightgallery/css/lightgallery.css";
@@ -28,144 +27,173 @@ const shuffleArray = (array) => {
 };
 
 const Disenios = memo(({ images = [] }) => {
-  const navigate = useNavigate(); // Hook de React Router
+  const navigate = useNavigate();
   const [shuffledItems, setShuffledItems] = useState([]);
   const masonryContainerRef = useRef(null);
   const masonryInstanceRef = useRef(null);
-  // No necesitamos lightGalleryApiRef si no vamos a llamar a .closeGallery() programáticamente
-  // const lightGalleryApiRef = useRef(null);
-  const [isLightGalleryOpen, setIsLightGalleryOpen] = useState(false);
+
+  const isLgActuallyOpen = useRef(false);
+  const isClosingProcessRef = useRef(false);
+
+  // Usamos un estado para la key de LightGallery para que su cambio provoque un re-render
+  // y el useEffect de Masonry pueda depender de él.
+  const [lightGalleryKey, setLightGalleryKey] = useState(Date.now());
 
   useEffect(() => {
     setShuffledItems(shuffleArray(images));
   }, [images]);
 
-  // Efecto para Masonry (igual que tu original)
+  // Efecto para Masonry:
+  // Se re-ejecutará cuando shuffledItems cambie O cuando lightGalleryKey cambie.
   useEffect(() => {
+    console.log("Masonry useEffect triggered. LG Key:", lightGalleryKey, "ShuffledItems length:", shuffledItems.length);
     if (!masonryContainerRef.current || shuffledItems.length === 0) {
       if (masonryInstanceRef.current) {
         try {
           masonryInstanceRef.current.destroy();
         } catch (e) {
-          /* ignorable */
+          console.warn("Masonry destroy (no container/items):", e);
         }
         masonryInstanceRef.current = null;
       }
       return;
     }
+
     const containerElement = masonryContainerRef.current;
-    let msnry;
-    const timerId = setTimeout(() => {
-      if (!containerElement) return;
-      if (masonryInstanceRef.current) {
-        try {
-          masonryInstanceRef.current.destroy();
-        } catch (e) {
-          /* ignorable */
-        }
-      }
+    // Destruir instancia anterior de Masonry si existe
+    if (masonryInstanceRef.current) {
       try {
-        msnry = new Masonry(containerElement, {
+        console.log("Destroying previous Masonry instance");
+        masonryInstanceRef.current.destroy();
+      } catch (e) {
+        console.warn("Error destroying previous Masonry instance (ignorable):", e);
+      }
+      masonryInstanceRef.current = null; // Asegurarse de que se limpie la ref
+    }
+
+    // Un pequeño delay puede ayudar a asegurar que el DOM esté listo después del cambio de key
+    const timerId = setTimeout(() => {
+      if (!containerElement) {
+        // Doble chequeo por si el contenedor desaparece
+        console.log("Masonry init aborted: containerElement is null after timeout");
+        return;
+      }
+      console.log("Initializing new Masonry instance");
+      try {
+        const msnry = new Masonry(containerElement, {
           itemSelector: ".gallery-item",
           columnWidth: ".grid-sizer",
           percentPosition: true,
-          transitionDuration: 0, // Como en tu original
+          transitionDuration: 50, // Para un re-layout rápido
         });
         masonryInstanceRef.current = msnry;
-        imagesLoaded(containerElement).on("always", () => {
-          if (masonryInstanceRef.current) masonryInstanceRef.current.layout();
-        });
+
+        imagesLoaded(containerElement)
+          .on("always", () => {
+            if (masonryInstanceRef.current) {
+              console.log("imagesLoaded: always - Masonry layout");
+              masonryInstanceRef.current.layout();
+            }
+          })
+          .on("progress", (instance, image) => {
+            if (masonryInstanceRef.current && image.isLoaded) {
+              console.log("imagesLoaded: progress - Masonry layout");
+              masonryInstanceRef.current.layout();
+            }
+          });
+        // Un layout inicial después de la inicialización de Masonry
         msnry.layout();
       } catch (error) {
         console.error("Failed to initialize Masonry:", error);
       }
-    }, 100); // Como en tu original
+    }, 50); // Aumentar este delay si Masonry sigue sin aplicarse después del cambio de key
+
     return () => {
       clearTimeout(timerId);
       if (masonryInstanceRef.current) {
         try {
+          console.log("Cleaning up Masonry instance from useEffect return");
           masonryInstanceRef.current.destroy();
         } catch (e) {
-          /* ignorable */
+          console.warn("Error destroying Masonry in cleanup (ignorable):", e);
         }
         masonryInstanceRef.current = null;
       }
     };
-  }, [shuffledItems]);
+  }, [shuffledItems, lightGalleryKey]); // <<== DEPENDENCIA IMPORTANTE: lightGalleryKey
 
-  // Efecto para el resize de Masonry (igual que tu original)
+  // Efecto para el resize de Masonry
   useEffect(() => {
     const handleResize = () => {
-      if (masonryInstanceRef.current) masonryInstanceRef.current.layout();
+      if (masonryInstanceRef.current) {
+        console.log("Resize: Masonry layout");
+        masonryInstanceRef.current.layout();
+      }
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Callbacks de LightGallery
-  // onLgInit no es estrictamente necesario si no usamos la API de LG, pero no hace daño tenerla.
-  // const onLgInit = useCallback((detail) => {
-  //   if (detail && detail.instance) lightGalleryApiRef.current = detail.instance;
-  // }, []);
-
   const onLgAfterOpen = useCallback(() => {
-    setIsLightGalleryOpen(true);
-    document.body.style.overflow = "hidden";
+    isLgActuallyOpen.current = true;
+    isClosingProcessRef.current = false;
   }, []);
 
   const onLgBeforeClose = useCallback(() => {
-    navigate("/");
-    setIsLightGalleryOpen(false);
-    document.body.style.overflow = "auto";
+    if (isClosingProcessRef.current) {
+      return;
+    }
+    isClosingProcessRef.current = true;
+    isLgActuallyOpen.current = false;
+
+    // Actualizar el estado de la key para forzar el re-montaje de LightGallery
+    // y consecuentemente, la re-ejecución del useEffect de Masonry.
+    setLightGalleryKey(Date.now());
+
+    setTimeout(() => {
+      navigate("/");
+    }, 50);
   }, [navigate]);
 
-  // Limpieza si el componente se desmonta con la galería abierta
+  // Efecto de limpieza para el desmontaje del componente
   useEffect(() => {
     return () => {
-      if (isLightGalleryOpen) {
+      if (isLgActuallyOpen.current || document.body.style.overflow === "hidden") {
         document.body.style.overflow = "auto";
       }
     };
-  }, [isLightGalleryOpen]);
+  }, []);
 
   const responsiveColWidthClass = "w-1/2 lg:w-1/4";
   const gridSizerClass = responsiveColWidthClass;
-  const lightGalleryItemClass = "lg-react-item"; // Clase que LightGallery usa para encontrar items
-  // Clases para tus items, como las tenías
+  const lightGalleryItemClass = "lg-react-item";
   const galleryItemClassName = `gallery-item ${lightGalleryItemClass} ${responsiveColWidthClass} p-1 sm:p-1.5 block align-top`;
   const finalImageClassName = "w-full h-auto block rounded shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out";
 
   return (
     <div className="container mx-auto px-8 sm:px-4 relative overflow-hidden max-h-[900px]">
       <h2 className="text-2xl md:text-3xl text-textPrimary font-bold text-center my-6 md:my-8">Nuestros Diseños</h2>
-
       <LightGallery
-        // onInit={onLgInit} // Opcional
+        key={lightGalleryKey}
         onAfterOpen={onLgAfterOpen}
         onBeforeClose={onLgBeforeClose}
-        // Configuración de LightGallery como en tu versión original para apertura inmediata
-        speed={0}
-        backdropDuration={0}
-        startAnimationDuration={0}
-        zoomFromOrigin={false} // Como lo tenías
-        closeOnTap={true} // Como lo tenías
+        speed={100}
+        backdropDuration={100}
+        startAnimationDuration={50}
+        zoomFromOrigin={true}
+        closeOnTap={true}
+        hideScrollbar={true}
         plugins={[lgThumbnail, lgZoom]}
         closable={true}
         download={false}
         selector={`.${lightGalleryItemClass}`}
-        elementClassNames="lightgallery-custom-wrapper" // Como lo tenías
-        // isMobile={true} // LightGallery suele detectar esto. Puedes mantenerlo si prefieres.
+        elementClassNames="lightgallery-custom-wrapper"
       >
-        {/* Estructura de Masonry como en tu original */}
         <div ref={masonryContainerRef} className="masonry-wrapper-internal relative -m-1 sm:-m-1.5 overflow-hidden">
+          {/* Grid sizer debe estar presente para Masonry ANTES de que se inicialice */}
           <div className={`${gridSizerClass} grid-sizer p-1 sm:p-1.5`} aria-hidden="true"></div>
           {shuffledItems.map((item) => (
-            <GalleryItem
-              key={item.id}
-              item={item}
-              itemClassName={galleryItemClassName} // Usando tu clase original
-              imageClassName={finalImageClassName} // Usando tu clase original
-            />
+            <GalleryItem key={item.id} item={item} itemClassName={galleryItemClassName} imageClassName={finalImageClassName} />
           ))}
         </div>
       </LightGallery>
