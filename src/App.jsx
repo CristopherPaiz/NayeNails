@@ -10,22 +10,20 @@ const App = () => {
   // const { message, setMessage, fetchMessage } = useExampleStore();
 
   return (
-    <BrowserRouter>
-      <div className="bg-backgroundSecondary min-h-screen flex flex-col">
-        <Header />
+    <div className="bg-backgroundSecondary min-h-screen flex flex-col">
+      <Header />
 
-        <main className="flex-grow">
-          {/* <p>Zustand dice: {message}</p>
+      <main className="flex-grow">
+        {/* <p>Zustand dice: {message}</p>
           <button onClick={() => setMessage("Nuevo mensaje desde App!")} className="bg-blue-500 text-white p-2 rounded">
             Cambiar mensaje en Zustand
           </button>
           <button onClick={fetchMessage} className="bg-green-500 text-white p-2 rounded">
             Obtener mensaje (simulación API)
           </button> */}
-          <AppRouter />
-        </main>
-      </div>
-    </BrowserRouter>
+        <AppRouter />
+      </main>
+    </div>
   );
 };
 
