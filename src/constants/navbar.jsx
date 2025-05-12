@@ -63,3 +63,15 @@ export const NAV_ITEMS = {
     icon: "Mail",
   },
 };
+
+export const ADMIN_ITEMS = {
+  administracion: {
+    categorías: [
+      { nombre: "Categorías", slug: "/admin/categorias", icon: "ListTree" },
+      { nombre: "Diseños", slug: "/admin/disenios", icon: "Paintbrush" },
+      { nombre: "Configuraciones", slug: "/admin/config", icon: "Settings" },
+      { nombre: "Perfil", slug: "/admin/perfil", icon: "User" },
+    ],
+    icon: "Settings",
+  },
+};

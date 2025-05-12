@@ -156,7 +156,7 @@ const CRAlert = (() => {
                 <div className="flex mr-1">{getIcon(type)}</div>
                 <div className="font-bold text-[0.90rem] text-nowrap">{title.length > 30 ? `${message.slice(0, 30)}...` : title}</div>
               </div>
-              <button onClick={handleClose} className="text-white hover:text-gray-200 text-sm">
+              <button onClick={handleClose} className="text-white hover:text-gray-200 text-sm cursor-pointer">
                 ✕
               </button>
             </div>

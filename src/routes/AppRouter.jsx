@@ -11,6 +11,10 @@ import ProtectedRoute from "../layouts/ProtectedRoute"; // Importar ProtectedRou
 
 import { CATALOGO_BASE_PATH } from "../constants/navbar";
 import Explorar from "../pages/Explorar";
+import Configuraciones from "../pages/Admin/Configuraciones";
+import Perfil from "../pages/Admin/Perfil";
+import Disenios from "../pages/Admin/Disenios";
+import Categorias from "../pages/Admin/Categorias";
 
 const AppRouter = () => {
   return (
@@ -28,6 +32,10 @@ const AppRouter = () => {
         {/* Envuelve las rutas que quieres proteger */}
         {/* Ejemplo: <Route path="/admin" element={<AdminPage />} /> */}
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/admin/config" element={<Configuraciones />} />
+        <Route path="/admin/perfil" element={<Perfil />} />
+        <Route path="/admin/disenios" element={<Disenios />} />
+        <Route path="/admin/categorias" element={<Categorias />} />
         {/* Puedes agregar más rutas protegidas aquí */}
       </Route>
 
