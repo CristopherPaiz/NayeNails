@@ -11,12 +11,7 @@ const useAuthStore = create((set, get) => ({
   login: async (credentials) => {
     // set({ isLoading: true }); // Puedes activar un estado de carga específico para el login si quieres
     try {
-      console.log(`[authStore] Attempting login with credentials:`, credentials);
-      console.log(`[authStore] Target URL: ${apiClient.defaults.baseURL}/auth/login`);
-
       const response = await apiClient.post("/auth/login", credentials); // Endpoint relativo a baseURL
-
-      console.log("[authStore] Login response from server:", response);
 
       if (response.data && response.data.user) {
         set({
@@ -31,7 +26,6 @@ const useAuthStore = create((set, get) => ({
         });
         return response.data;
       } else {
-        console.error("[authStore] Login response missing data.user:", response.data);
         CRAlert.alert({
           title: "Error de Respuesta",
           message: "Respuesta inesperada del servidor durante el login.",
@@ -42,7 +36,6 @@ const useAuthStore = create((set, get) => ({
         throw new Error("Respuesta inesperada del servidor durante el login.");
       }
     } catch (error) {
-      console.error("[authStore] Login API call failed:", error); // Esto mostrará el error de Axios completo
       // El interceptor de Axios ya debería haber logueado detalles del error de red.
       // CRAlert ya se maneja en el interceptor de Axios si es un error de backend con mensaje,
       // o aquí si es otro tipo de error.
@@ -64,10 +57,7 @@ const useAuthStore = create((set, get) => ({
   // ... (logout y checkAuthStatus permanecen igual, pero también se beneficiarían de logs similares si fallan)
   logout: async () => {
     try {
-      console.log(`[authStore] Attempting logout.`);
-      console.log(`[authStore] Target URL: ${apiClient.defaults.baseURL}/auth/logout`);
       const response = await apiClient.post("/auth/logout");
-      console.log("[authStore] Logout response from server:", response);
       set({ isAuthenticated: false, user: null, isLoading: false });
       CRAlert.alert({
         title: "Sesión Cerrada",
@@ -75,7 +65,6 @@ const useAuthStore = create((set, get) => ({
         type: "info",
       });
     } catch (error) {
-      console.error("[authStore] Logout API call failed:", error);
       const errorMessage =
         error.response?.data?.message ||
         (error.code === "ERR_NETWORK" ? "Error de red al cerrar sesión." : error.message) ||
@@ -93,10 +82,7 @@ const useAuthStore = create((set, get) => ({
   checkAuthStatus: async () => {
     if (!get().isLoading) set({ isLoading: true });
     try {
-      console.log(`[authStore] Checking auth status.`);
-      console.log(`[authStore] Target URL: ${apiClient.defaults.baseURL}/auth/me`);
       const response = await apiClient.get("/auth/me");
-      console.log("[authStore] Check auth status response from server:", response);
       if (response.data && response.data.user) {
         set({ isAuthenticated: true, user: response.data.user, isLoading: false });
       } else {

@@ -46,7 +46,6 @@ const Disenios = memo(({ images = [] }) => {
   // Efecto para Masonry:
   // Se re-ejecutará cuando shuffledItems cambie O cuando lightGalleryKey cambie.
   useEffect(() => {
-    console.log("Masonry useEffect triggered. LG Key:", lightGalleryKey, "ShuffledItems length:", shuffledItems.length);
     if (!masonryContainerRef.current || shuffledItems.length === 0) {
       if (masonryInstanceRef.current) {
         try {
@@ -63,7 +62,6 @@ const Disenios = memo(({ images = [] }) => {
     // Destruir instancia anterior de Masonry si existe
     if (masonryInstanceRef.current) {
       try {
-        console.log("Destroying previous Masonry instance");
         masonryInstanceRef.current.destroy();
       } catch (e) {
         console.warn("Error destroying previous Masonry instance (ignorable):", e);
@@ -75,7 +73,6 @@ const Disenios = memo(({ images = [] }) => {
     const timerId = setTimeout(() => {
       if (!containerElement) {
         // Doble chequeo por si el contenedor desaparece
-        console.log("Masonry init aborted: containerElement is null after timeout");
         return;
       }
       console.log("Initializing new Masonry instance");
@@ -91,13 +88,11 @@ const Disenios = memo(({ images = [] }) => {
         imagesLoaded(containerElement)
           .on("always", () => {
             if (masonryInstanceRef.current) {
-              console.log("imagesLoaded: always - Masonry layout");
               masonryInstanceRef.current.layout();
             }
           })
           .on("progress", (instance, image) => {
             if (masonryInstanceRef.current && image.isLoaded) {
-              console.log("imagesLoaded: progress - Masonry layout");
               masonryInstanceRef.current.layout();
             }
           });
@@ -112,7 +107,6 @@ const Disenios = memo(({ images = [] }) => {
       clearTimeout(timerId);
       if (masonryInstanceRef.current) {
         try {
-          console.log("Cleaning up Masonry instance from useEffect return");
           masonryInstanceRef.current.destroy();
         } catch (e) {
           console.warn("Error destroying Masonry in cleanup (ignorable):", e);
@@ -126,7 +120,6 @@ const Disenios = memo(({ images = [] }) => {
   useEffect(() => {
     const handleResize = () => {
       if (masonryInstanceRef.current) {
-        console.log("Resize: Masonry layout");
         masonryInstanceRef.current.layout();
       }
     };

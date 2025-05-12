@@ -35,7 +35,7 @@ const LoginPage = () => {
       await login({ username, password });
       // La redirección se maneja en el useEffect
     } catch (error) {
-      console.log(error);
+      return error;
       // El error ya es manejado por CRAlert en authStore
       // El campo de contraseña podría limpiarse aquí si se desea tras un fallo
       // setPassword('');
