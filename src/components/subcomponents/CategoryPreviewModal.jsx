@@ -1,8 +1,7 @@
-// src/components/Modals/CategoryPreviewModal.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { DynamicIcon } from "../../utils/DynamicIcon"; // Ajusta la ruta
-import { CATALOGO_BASE_PATH } from "../../constants/navbar"; // Ajusta la ruta
+import { DynamicIcon } from "../../utils/DynamicIcon";
+import { CATALOGO_BASE_PATH } from "../../constants/navbar";
 
 const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames = [], ctaButtonText }) => {
   if (!isOpen) return null;
@@ -11,7 +10,7 @@ const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames =
     if (subcategoryNames.length === 0) return [];
     let items = [...subcategoryNames];
     if (items.length > 0 && items.length < 10) {
-      items = [...items, ...items, ...items, ...items]; // Duplicar más para asegurar el llenado
+      items = [...items, ...items, ...items, ...items];
     } else if (items.length > 0 && items.length < 20) {
       items = [...items, ...items];
     }
@@ -22,7 +21,6 @@ const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames =
   const marqueeRow1 = marqueeItems.slice(0, halfIndex);
   const marqueeRow2 = marqueeItems.slice(halfIndex);
 
-  // Generar CSS para la marquesina
   const marqueeCSS = `
     .marquee-container {
       position: relative;
@@ -94,22 +92,20 @@ const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames =
     }
   `;
 
-  // Determinar el color de fondo del modal para el gradiente de fade
-  // Esto es un poco hacky. Sería mejor si el color de fondo fuera una prop o del tema.
   const [modalBgColor, setModalBgColor] = useState("white");
-  const [chipBgColor, setChipBgColor] = useState("#e5e7eb"); // bg-gray-200
-  const [chipTextColor, setChipTextColor] = useState("#374151"); // text-gray-700
+  const [chipBgColor, setChipBgColor] = useState("#e5e7eb");
+  const [chipTextColor, setChipTextColor] = useState("#374151");
 
   useEffect(() => {
-    // Detectar si el tema oscuro está activo (esto es una suposición, ajusta a tu implementación de tema)
+    
     if (document.documentElement.classList.contains("dark")) {
-      setModalBgColor("#1f2937"); // bg-gray-800
-      setChipBgColor("#4b5563"); // bg-gray-600
-      setChipTextColor("#d1d5db"); // text-gray-300
+      setModalBgColor("#1f2937"); 
+      setChipBgColor("#4b5563"); 
+      setChipTextColor("#d1d5db"); 
     } else {
       setModalBgColor("white");
-      setChipBgColor("#e0e7ff"); // bg-accent (ejemplo, ajusta a tu color de accent light)
-      setChipTextColor("#4338ca"); // text-primary (ejemplo, ajusta a tu color primario light)
+      setChipBgColor("#e0e7ff"); 
+      setChipTextColor("#4338ca"); 
     }
   }, []);
 
@@ -147,8 +143,6 @@ const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames =
 
           {marqueeItems.length > 0 && (
             <div className="marquee-container group">
-              {" "}
-              {/* 'group' para el hover de pausa */}
               <div className="marquee-fade marquee-fade-left"></div>
               <div className="marquee-fade marquee-fade-right"></div>
               <div className="marquee-row marquee-row-1">
@@ -159,7 +153,6 @@ const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames =
                     </span>
                   ))}
                 </div>
-                {/* Duplicado para efecto continuo */}
                 <div className="marquee-content">
                   {marqueeRow1.map((name, idx) => (
                     <span key={`r1-dup-${idx}`} className="marquee-chip">
@@ -172,8 +165,6 @@ const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames =
                 <div className="marquee-content">
                   {marqueeRow2.map((name, idx) => (
                     <span key={`r2-${idx}`} className="marquee-chip">
-                      {" "}
-                      {/* Puedes variar el estilo de los chips de la segunda fila */}
                       {name}
                     </span>
                   ))}

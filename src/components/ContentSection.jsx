@@ -1,4 +1,4 @@
-// /src/components/ContentSection.jsx
+
 import { useRef, useState, useEffect } from "react";
 import ScrollArrow from "./subcomponents/ScrollArrow";
 import Servicios from "./Servicios";

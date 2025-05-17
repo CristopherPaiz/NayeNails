@@ -1,4 +1,3 @@
-// src/components/ConfirmationModal.jsx
 import { X, CheckCircle2, AlertTriangle } from "lucide-react";
 
 const ConfirmationModal = ({ isOpen, onClose, title, children, type = "success" }) => {

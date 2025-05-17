@@ -1,4 +1,3 @@
-// src/pages/UbicacionPage.jsx
 import { Map, Navigation, ExternalLink, Phone, Clock } from "lucide-react";
 import useScrollToTop from "../hooks/useScrollToTop";
 
@@ -16,21 +15,13 @@ const UbicacionPage = () => {
 
   return (
     <div className="container mx-auto px-6 py-8 pt-16 md:pt-14">
-      {/* Ajusta pt si tienes un navbar fijo */}
       <h1 className="text-4xl font-bold mb-8 text-center text-primary dark:text-textPrimary">Nuestra Ubicación</h1>
-      {/* Mantenemos la tarjeta principal para la información */}
       <div className="bg-primary/5 dark:bg-tertiary/10 rounded-2xl shadow-xl overflow-hidden border-2 border-primary dark:border-tertiary max-w-5xl mx-auto">
         <div className="flex flex-col md:flex-row">
-          {/* Columna de la Imagen */}
           <div className="w-full md:w-2/5">
-            <img
-              src="/pics/local.png" // Asegúrate que esta ruta sea accesible desde `public`
-              alt="Nuestras instalaciones en Quetzaltenango"
-              className="w-full h-64 md:h-full object-cover" // Ajusta la altura para móviles si es necesario
-            />
+            <img src="/pics/local.png" alt="Nuestras instalaciones en Quetzaltenango" className="w-full h-64 md:h-full object-cover" />
           </div>
 
-          {/* Columna de Información y Mapa */}
           <div className="w-full md:w-3/5 p-6 md:p-8 bg-gradient-to-br from-primary/5 to-tertiary/5 dark:from-tertiary/10 dark:to-primary/10">
             <div className="mb-6">
               <h2 className="text-2xl font-semibold mb-4 text-primary dark:text-textPrimary">Detalles de Contacto</h2>
@@ -50,7 +41,6 @@ const UbicacionPage = () => {
               </div>
             </div>
 
-            {/* Botón "Cómo llegar" para móviles (visible si no hay mapa) */}
             <div className="md:hidden mt-8 mb-4">
               <a
                 href={googleMapsUrl}
@@ -63,7 +53,6 @@ const UbicacionPage = () => {
               </a>
             </div>
 
-            {/* Sección del Mapa para pantallas medianas y grandes */}
             <div className="hidden md:block mt-8">
               <h3 className="text-xl font-semibold flex items-center mb-3 text-primary dark:text-textPrimary">
                 <Map className="mr-2 text-primary dark:text-tertiary" size={22} />
@@ -75,9 +64,9 @@ const UbicacionPage = () => {
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}
-                  allowFullScreen={true} // Cambiado a boolean
+                  allowFullScreen={true}
                   loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade" // Buena práctica para iframes de Google Maps
+                  referrerPolicy="no-referrer-when-downgrade"
                   className="w-full"
                 />
               </div>

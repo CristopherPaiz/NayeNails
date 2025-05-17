@@ -28,7 +28,7 @@ import PropTypes from "prop-types";
  * @param {Function} [onClickItem=()=>{}] - Callback al hacer clic en una imagen
  *
  * @example
- * // Ejemplo básico
+ * 
  * const images = [
  *   { url: 'imagen1.jpg', legend: 'Primera imagen' },
  *   { url: 'imagen2.jpg', legend: 'Segunda imagen' }
@@ -39,7 +39,7 @@ import PropTypes from "prop-types";
  * }
  *
  * @example
- * // Ejemplo intermedio con miniaturas y controles
+ * 
  * const images = [
  *   { url: 'imagen1.jpg', legend: 'Playa' },
  *   { url: 'imagen2.jpg', legend: 'Montaña' },
@@ -60,7 +60,7 @@ import PropTypes from "prop-types";
  * }
  *
  * @example
- * // Ejemplo avanzado con todas las características
+ * 
  * const images = [
  *   { imageUrl: 'imagen1.jpg', legend: 'Amanecer' },
  *   { imageUrl: 'imagen2.jpg', legend: 'Atardecer' },
@@ -174,7 +174,7 @@ const CRCarousel = ({
   }, [isHovered, isMobileInteraction, data.length, validInterval, stopOnHover, showProgressBar, infiniteLoop, currentIndex]);
 
   useEffect(() => {
-    // Agregar listener para clicks fuera del carrusel en mobile
+    
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setIsMobileInteraction(false);
@@ -207,12 +207,12 @@ const CRCarousel = ({
     e.stopPropagation();
     setCurrentIndex(index);
     setProgress(100);
-    // Cargar todas las imágenes instantáneamente
+    
     setLoadedImages([...Array(data.length).keys()]);
   };
 
   const handleContainerClick = () => {
-    // En mobile, activar la interacción al hacer click
+    
     if ("ontouchstart" in window) {
       setIsMobileInteraction(true);
     }
@@ -226,7 +226,7 @@ const CRCarousel = ({
     onClickItem({ item, index, currentIndex });
   };
 
-  // Touch handlers
+  
   const onTouchStart = (e) => {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
@@ -251,7 +251,7 @@ const CRCarousel = ({
     }
   };
 
-  // Mouse drag handlers
+  
   const onMouseDown = (e) => {
     setIsDragging(true);
     setStartX(e.pageX);

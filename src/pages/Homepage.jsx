@@ -1,4 +1,4 @@
-// src/pages/HomePage.jsx
+
 import HeroSection from "../components/HeroSection";
 import ContentSection from "../components/ContentSection";
 

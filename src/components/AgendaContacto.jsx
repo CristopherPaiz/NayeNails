@@ -1,16 +1,13 @@
-// src/components/AgendaContacto.jsx
 import React from "react";
 import { Link } from "react-router-dom";
-import { CalendarPlus } from "lucide-react"; // Para el botón principal
+import { CalendarPlus } from "lucide-react";
 
 const AgendaContacto = () => {
-  // Personaliza estos valores
-  const nombreDelNegocio = "Naye Nails"; // Cambia esto por el nombre de tu negocio
-  const numeroWhatsAppRaw = "+50249425739"; // Tu número de WhatsApp completo
-  const numeroWhatsAppParaLink = numeroWhatsAppRaw.replace(/\D/g, ""); // Elimina caracteres no numéricos para el link wa.me
+  const nombreDelNegocio = "Naye Nails";
+  const numeroWhatsAppRaw = "+50249425739";
+  const numeroWhatsAppParaLink = numeroWhatsAppRaw.replace(/\D/g, "");
   const urlFacebook = "https://facebook.com/profile.php?id=61575180189391";
 
-  // Función para obtener el saludo según la hora
   const obtenerSaludoDelDia = () => {
     const horaActual = new Date().getHours();
     if (horaActual < 12) {
@@ -26,7 +23,6 @@ const AgendaContacto = () => {
   const mensajeWhatsAppBase = `Hola ${saludoDelDia}, ${nombreDelNegocio}, quisiera reservar una cita.`;
   const whatsappUrl = `https://wa.me/${numeroWhatsAppParaLink}?text=${encodeURIComponent(mensajeWhatsAppBase)}`;
 
-  // SVG para Facebook (sin cambios)
   const FacebookIcon = () => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -38,7 +34,6 @@ const AgendaContacto = () => {
     </svg>
   );
 
-  // SVG para WhatsApp (sin cambios)
   const WhatsAppIcon = () => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -59,7 +54,7 @@ const AgendaContacto = () => {
         </p>
 
         <Link
-          to="/agendar-cita" // Tu ruta para agendar
+          to="/agendar-cita"
           className="inline-flex items-center justify-center bg-accent dark:bg-primary hover:bg-accent-dark dark:hover:bg-primary-dark text-primary dark:text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
         >
           <CalendarPlus className="mr-2 h-5 w-5" />

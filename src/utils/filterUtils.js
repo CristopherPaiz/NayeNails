@@ -1,5 +1,5 @@
-// src/utils/filterUtils.js
-import { capitalizeWords } from "./textUtils"; // Importamos desde el mismo directorio utils
+
+import { capitalizeWords } from "./textUtils"; 
 
 export const getAvailableFilterCategories = (NAV_ITEMS) => {
   const categories = [];
@@ -10,10 +10,10 @@ export const getAvailableFilterCategories = (NAV_ITEMS) => {
     if (value.filterType && value.categorías && Array.isArray(value.categorías)) {
       categories.push({
         key: value.filterType,
-        label: key, // Este es el nombre de la categoría, ej: "COLORES"
+        label: key, 
         icon: value.icon,
         options: value.categorías.map((cat) => ({
-          nombre: cat.nombre, // Este es el nombre de la opción, ej: "Rojo Carmesí"
+          nombre: cat.nombre, 
           slug: cat.slug,
           icon: cat.icon,
         })),
@@ -94,12 +94,12 @@ export const performGlobalFilterSearch = (searchTerm, availableFilterCategories)
   const normalizedSearch = searchTerm
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, ""); // Normalizar y quitar acentos
+    .replace(/[\u0300-\u036f]/g, ""); 
   const results = [];
 
   availableFilterCategories.forEach((category) => {
     const matchedOptions = category.options.filter((option) =>
-      option.nombre // Buscar en el nombre original sin capitalizar
+      option.nombre 
         .toLowerCase()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")

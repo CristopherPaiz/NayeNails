@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "../api/axios";
-import CRAlert from "../components/UI/CRAlert"; // Asegúrate que la ruta sea correcta
+import CRAlert from "../components/UI/CRAlert"; 
 
 /**
  * Hook genérico para realizar peticiones API usando React Query.
@@ -26,7 +26,7 @@ const useApiRequest = ({
   errorMessage,
 }) => {
   const queryClient = useQueryClient();
-  // Si no se provee customQueryKey, usar url y config.params como base para GETs
+  
   const queryKey = customQueryKey || (method.toUpperCase() === "GET" ? [url, config.params || {}] : [url]);
 
   const defaultSuccessHandler = (data, defaultMsg) => {
@@ -52,7 +52,7 @@ const useApiRequest = ({
     return useQuery({
       queryKey,
       queryFn,
-      enabled: options.enabled, // Pasa el 'enabled' de React Query
+      enabled: options.enabled, 
       onSuccess: (data) => {
         defaultSuccessHandler(data, "Datos obtenidos con éxito");
         if (options.onSuccess) options.onSuccess(data);
@@ -61,12 +61,12 @@ const useApiRequest = ({
         defaultErrorHandler(error, "Error al obtener los datos");
         if (options.onError) options.onError(error);
       },
-      ...options, // Permite pasar otras opciones de useQuery (staleTime, cacheTime, etc.)
+      ...options, 
     });
   } else {
-    // Para POST, PUT, DELETE, PATCH
+    
     const mutationFn = async (data) => {
-      // 'data' es el body de la petición
+      
       const response = await apiClient[method.toLowerCase()](url, data, config);
       return response.data;
     };
@@ -75,15 +75,15 @@ const useApiRequest = ({
       mutationFn,
       onSuccess: (data, variables, context) => {
         defaultSuccessHandler(data, "Operación exitosa");
-        // Opcional: invalidar queries relevantes después de una mutación exitosa
-        // Ejemplo: queryClient.invalidateQueries({ queryKey: ['listaDeAlgoRelacionado'] });
+        
+        
         if (options.onSuccess) options.onSuccess(data, variables, context);
       },
       onError: (error, variables, context) => {
         defaultErrorHandler(error, "La operación falló");
         if (options.onError) options.onError(error, variables, context);
       },
-      ...options, // Permite pasar otras opciones de useMutation
+      ...options, 
     });
   }
 };

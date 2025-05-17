@@ -1,4 +1,3 @@
-// src/pages/Explorar.jsx
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { DynamicIcon } from "../utils/DynamicIcon";
@@ -331,7 +330,7 @@ const Explorar = () => {
                 const areTagsExpanded = !!expandedTags[una.id];
 
                 const allCardTagsWithType = [];
-                // Solo generar tags si hay filtros disponibles para obtener sus nombres
+
                 if (availableFilterOptions.length > 0) {
                   if (una.servicios && una.servicios.length > 0) {
                     una.servicios.forEach((s) => allCardTagsWithType.push({ type: "servicios", slug: s, text: getNombreFiltro("servicios", s) }));

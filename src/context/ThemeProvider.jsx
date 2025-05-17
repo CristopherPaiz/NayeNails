@@ -32,7 +32,7 @@ const ThemeProviderContext = createContext(initialState);
  *
  * @example
  * const { theme, setTheme } = useTheme();
- * console.log(theme); // "light" | "dark" | "system"
+ * console.log(theme); 
  * <button className="right-0" onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
  *   {theme === "light" ? "🌙" : "☀️"}
  * </button>
@@ -85,7 +85,7 @@ export function ThemeProvider({ children, defaultTheme = "system", storageKey = 
  *
  * @example
  * const { theme, setTheme } = useTheme();
- * console.log(theme); // "light" | "dark" | "system"
+ * console.log(theme); 
  * <button className="right-0" onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
  *   {theme === "light" ? "🌙" : "☀️"}
  * </button>
@@ -100,7 +100,7 @@ export const useTheme = () => {
   return context;
 };
 
-// PropTypes para ThemeProvider
+
 ThemeProvider.propTypes = {
   children: PropTypes.node.isRequired,
   defaultTheme: PropTypes.string,

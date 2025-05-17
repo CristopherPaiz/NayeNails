@@ -105,7 +105,7 @@ const CRDate = ({
     }
   }, [defaultValue, value, setValue]);
 
-  // MANEJO DEL RESET
+  
   const prevReset = useRef(reset);
 
   useEffect(() => {

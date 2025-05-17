@@ -1,4 +1,4 @@
-// src/components/Disenios.jsx
+
 import React, { useEffect, useState, useRef, memo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import LightGallery from "lightgallery/react";
@@ -35,16 +35,16 @@ const Disenios = memo(({ images = [] }) => {
   const isLgActuallyOpen = useRef(false);
   const isClosingProcessRef = useRef(false);
 
-  // Usamos un estado para la key de LightGallery para que su cambio provoque un re-render
-  // y el useEffect de Masonry pueda depender de él.
+  
+  
   const [lightGalleryKey, setLightGalleryKey] = useState(Date.now());
 
   useEffect(() => {
     setShuffledItems(shuffleArray(images));
   }, [images]);
 
-  // Efecto para Masonry:
-  // Se re-ejecutará cuando shuffledItems cambie O cuando lightGalleryKey cambie.
+  
+  
   useEffect(() => {
     if (!masonryContainerRef.current || shuffledItems.length === 0) {
       if (masonryInstanceRef.current) {
@@ -59,20 +59,20 @@ const Disenios = memo(({ images = [] }) => {
     }
 
     const containerElement = masonryContainerRef.current;
-    // Destruir instancia anterior de Masonry si existe
+    
     if (masonryInstanceRef.current) {
       try {
         masonryInstanceRef.current.destroy();
       } catch (e) {
         console.warn("Error destroying previous Masonry instance (ignorable):", e);
       }
-      masonryInstanceRef.current = null; // Asegurarse de que se limpie la ref
+      masonryInstanceRef.current = null; 
     }
 
-    // Un pequeño delay puede ayudar a asegurar que el DOM esté listo después del cambio de key
+    
     const timerId = setTimeout(() => {
       if (!containerElement) {
-        // Doble chequeo por si el contenedor desaparece
+        
         return;
       }
       console.log("Initializing new Masonry instance");
@@ -81,7 +81,7 @@ const Disenios = memo(({ images = [] }) => {
           itemSelector: ".gallery-item",
           columnWidth: ".grid-sizer",
           percentPosition: true,
-          transitionDuration: 50, // Para un re-layout rápido
+          transitionDuration: 50, 
         });
         masonryInstanceRef.current = msnry;
 
@@ -96,12 +96,12 @@ const Disenios = memo(({ images = [] }) => {
               masonryInstanceRef.current.layout();
             }
           });
-        // Un layout inicial después de la inicialización de Masonry
+        
         msnry.layout();
       } catch (error) {
         console.error("Failed to initialize Masonry:", error);
       }
-    }, 50); // Aumentar este delay si Masonry sigue sin aplicarse después del cambio de key
+    }, 50); 
 
     return () => {
       clearTimeout(timerId);
@@ -114,9 +114,9 @@ const Disenios = memo(({ images = [] }) => {
         masonryInstanceRef.current = null;
       }
     };
-  }, [shuffledItems, lightGalleryKey]); // <<== DEPENDENCIA IMPORTANTE: lightGalleryKey
+  }, [shuffledItems, lightGalleryKey]); 
 
-  // Efecto para el resize de Masonry
+  
   useEffect(() => {
     const handleResize = () => {
       if (masonryInstanceRef.current) {
@@ -139,8 +139,8 @@ const Disenios = memo(({ images = [] }) => {
     isClosingProcessRef.current = true;
     isLgActuallyOpen.current = false;
 
-    // Actualizar el estado de la key para forzar el re-montaje de LightGallery
-    // y consecuentemente, la re-ejecución del useEffect de Masonry.
+    
+    
     setLightGalleryKey(Date.now());
 
     setTimeout(() => {
@@ -148,7 +148,7 @@ const Disenios = memo(({ images = [] }) => {
     }, 50);
   }, [navigate]);
 
-  // Efecto de limpieza para el desmontaje del componente
+  
   useEffect(() => {
     return () => {
       if (isLgActuallyOpen.current || document.body.style.overflow === "hidden") {

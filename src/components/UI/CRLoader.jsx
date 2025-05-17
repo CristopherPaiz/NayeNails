@@ -15,7 +15,7 @@ import PropTypes from "prop-types";
  * @returns {React.Component} El componente CRLoader.
  *
  * @example
- * // Ejemplo de uso:
+ * 
  * <CRLoader text="Cargando..." style="circle" fullScreen={false} background="bg-red-500" size="md" onlyIcon={false} orientation="vertical" zIndex={100} />
  *
  *_

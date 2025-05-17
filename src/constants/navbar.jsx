@@ -1,4 +1,4 @@
-// src/constants/navbar.jsx
+
 export const BUSINESS_NAME = "Naye Nails";
 
 const toSlug = (name) =>
@@ -8,7 +8,7 @@ const toSlug = (name) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
-// NUEVA RUTA BASE PARA EL CATÁLOGO DE UÑAS
+
 export const CATALOGO_BASE_PATH = "/explorar-unas";
 
 export const NAV_ITEMS = {

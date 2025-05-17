@@ -1,4 +1,4 @@
-// src/components/HeroSection.jsx
+
 import useStoreNails from "../store/store";
 import CRCarousel from "./UI/CRCarousel";
 

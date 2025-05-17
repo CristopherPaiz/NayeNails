@@ -1,5 +1,4 @@
-// src/pages/AgendaPage.jsx
-import { useState, useEffect, useRef } from "react"; // <--- Importa useRef
+import { useState, useEffect, useRef } from "react";
 import { User, Phone, CalendarDays, Clock, Send } from "lucide-react";
 import ConfirmationModal from "../components/ConfirmationModal";
 import { format, getDay, parseISO } from "date-fns";
@@ -104,17 +103,12 @@ const AgendaPage = () => {
     }
   };
 
-  // <--- 2. Función para abrir el date picker
   const handleDateContainerClick = () => {
     if (dateInputRef.current) {
       try {
         dateInputRef.current.showPicker();
       } catch (error) {
-        // Fallback para navegadores muy antiguos que no soporten showPicker()
-        // o si hay algún problema inesperado.
         console.error("Error al intentar mostrar el selector de fecha:", error);
-        // Como fallback, podríamos intentar enfocar el input,
-        // aunque esto no garantiza que el picker se abra.
         dateInputRef.current.focus();
       }
     }
@@ -132,7 +126,6 @@ const AgendaPage = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="w-full max-w-lg bg-white dark:bg-background p-6 sm:p-8 rounded-xl shadow-2xl space-y-6">
-        {/* ... otros inputs ... */}
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Nombre Completo
@@ -179,31 +172,20 @@ const AgendaPage = () => {
           <label htmlFor="date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Fecha
           </label>
-          {/* --- 3. Añade onClick y cursor-pointer al div contenedor --- */}
-          <div
-            className="relative mt-1 cursor-pointer" // <--- Añadido cursor-pointer
-            onClick={handleDateContainerClick} // <--- Añadido onClick
-          >
+          <div className="relative mt-1 cursor-pointer" onClick={handleDateContainerClick}>
             <div className={iconTwClasses}>
               <CalendarDays size={20} />
             </div>
             <input
-              ref={dateInputRef} // <--- 4. Asigna la ref al input
+              ref={dateInputRef}
               type="date"
               name="date"
               id="date"
               required
-              // Nota: `pointer-events-none` aquí haría que el input no reciba foco al ser clickeado
-              // directamente, lo cual podría ser deseable si SOLO queremos que el div lo abra.
-              // Pero para la interacción normal (escribir fecha si se permite, etc.), no lo ponemos.
               className={`${inputTwClasses} appearance-none`}
               min={today}
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              // Opcional: si quieres que el click en el input también abra el picker
-              // (aunque el div ya lo hace, esto puede ser redundante o causar un doble intento
-              // que los navegadores suelen manejar bien).
-              // onClick={(e) => e.target.showPicker?.()}
             />
           </div>
           {isWeekend && selectedDate && (
@@ -211,7 +193,6 @@ const AgendaPage = () => {
           )}
         </div>
 
-        {/* ... resto del formulario ... */}
         {selectedDate && !isWeekend && availableTimes.length > 0 && (
           <div>
             <label htmlFor="time" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -234,7 +215,7 @@ const AgendaPage = () => {
                 </option>
                 {availableTimes.map((time) => (
                   <option key={time} value={time}>
-                    {formatTimeToAMPM(time)} {/* Mostrar hora en AM/PM */}
+                    {formatTimeToAMPM(time)}
                   </option>
                 ))}
               </select>

@@ -1,4 +1,4 @@
-// src/components/Servicios.jsx
+
 import React, { useState, useEffect, useCallback } from "react";
 import { DynamicIcon } from "../utils/DynamicIcon";
 import { NAV_ITEMS } from "../constants/navbar";
@@ -31,7 +31,7 @@ const servicesData = [
   },
 ];
 
-const MODAL_HISTORY_STATE_ID = "categoryPreviewModalOpen"; // Identificador para nuestro estado de historial
+const MODAL_HISTORY_STATE_ID = "categoryPreviewModalOpen"; 
 
 const Servicios = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,16 +59,16 @@ const Servicios = () => {
 
   const closeModal = useCallback(() => {
     if (window.history.state && window.history.state.modalId === MODAL_HISTORY_STATE_ID) {
-      window.history.back(); // Esto disparará 'popstate'
+      window.history.back(); 
     } else {
       performCloseModal();
     }
-  }, [performCloseModal]); // performCloseModal es estable
+  }, [performCloseModal]); 
 
   useEffect(() => {
     const handleEsc = (event) => {
       if (event.key === "Escape") {
-        closeModal(); // Usar la función closeModal que maneja el historial
+        closeModal(); 
       }
     };
 
@@ -121,7 +121,7 @@ const Servicios = () => {
 
       <CategoryPreviewModal
         isOpen={isModalOpen}
-        onClose={closeModal} // Usar la función closeModal que maneja el historial
+        onClose={closeModal} 
         title={modalData.title}
         icon={modalData.icon}
         subcategoryNames={modalData.subcategoryNames}

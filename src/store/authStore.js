@@ -1,7 +1,7 @@
-// src/store/authStore.js
+
 import { create } from "zustand";
-import apiClient from "../api/axios"; // Verifica esta ruta
-import CRAlert from "../components/UI/CRAlert"; // Verifica esta ruta
+import apiClient from "../api/axios"; 
+import CRAlert from "../components/UI/CRAlert"; 
 
 const useAuthStore = create((set, get) => ({
   isAuthenticated: false,
@@ -9,9 +9,9 @@ const useAuthStore = create((set, get) => ({
   isLoading: true,
 
   login: async (credentials) => {
-    // set({ isLoading: true }); // Puedes activar un estado de carga específico para el login si quieres
+    
     try {
-      const response = await apiClient.post("/auth/login", credentials); // Endpoint relativo a baseURL
+      const response = await apiClient.post("/auth/login", credentials); 
 
       if (response.data && response.data.user) {
         set({
@@ -32,16 +32,16 @@ const useAuthStore = create((set, get) => ({
           type: "error",
         });
         set({ isAuthenticated: false, user: null, isLoading: false });
-        // Lanzar un error aquí para que el componente lo maneje si es necesario
+        
         throw new Error("Respuesta inesperada del servidor durante el login.");
       }
     } catch (error) {
-      // El interceptor de Axios ya debería haber logueado detalles del error de red.
-      // CRAlert ya se maneja en el interceptor de Axios si es un error de backend con mensaje,
-      // o aquí si es otro tipo de error.
+      
+      
+      
       const errorMessage =
-        error.response?.data?.message || // Mensaje del backend
-        (error.code === "ERR_NETWORK" ? "Error de red. No se pudo conectar al servidor." : error.message) || // Mensaje de Axios
+        error.response?.data?.message || 
+        (error.code === "ERR_NETWORK" ? "Error de red. No se pudo conectar al servidor." : error.message) || 
         "Error desconocido al iniciar sesión.";
 
       CRAlert.alert({
@@ -50,11 +50,11 @@ const useAuthStore = create((set, get) => ({
         type: "error",
       });
       set({ isAuthenticated: false, user: null, isLoading: false });
-      throw error; // Re-lanza para que el componente LoginPage lo pueda atrapar
+      throw error; 
     }
   },
 
-  // ... (logout y checkAuthStatus permanecen igual, pero también se beneficiarían de logs similares si fallan)
+  
   logout: async () => {
     try {
       const response = await apiClient.post("/auth/logout");

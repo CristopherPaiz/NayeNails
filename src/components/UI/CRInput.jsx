@@ -76,7 +76,7 @@ const CRInput = ({
   const handleChange = (e) => {
     let newValue = e.target.value;
 
-    // Enforce maxLength manually for type number
+    
     if (type === "number" && maxLength && newValue.length > maxLength) {
       newValue = newValue.slice(0, maxLength);
     }
@@ -90,7 +90,7 @@ const CRInput = ({
     "bg-white dark:bg-neutral-800/50 text-black dark:text-white block w-full px-3 py-2 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500";
   const errorStyle = "border-red-500 focus:ring-red-500 focus:border-red-500 text-red-500 dark:text-red-400";
   const disabledStyle = "opacity-50 dark:opacity-30 cursor-not-allowed";
-  const inputPaddingRight = maxLength > 100 ? "pr-14" : "pr-11"; // Reserve space for the counter
+  const inputPaddingRight = maxLength > 100 ? "pr-14" : "pr-11"; 
 
   return (
     <div className={`py-2 ${error ? "text-red-500 dark:text-red-400" : ""}`}>
@@ -107,7 +107,7 @@ const CRInput = ({
       <div className="relative">
         <input
           id="CRInput"
-          type={type === "number" || type === "numeric" ? "number" : type} // Override to "text" for numbers
+          type={type === "number" || type === "numeric" ? "number" : type} 
           inputMode={type === "number" || type === "numeric" ? "number" : type}
           placeholder={placeholder}
           maxLength={maxLength}

@@ -1,4 +1,4 @@
-// src/utils/textUtils.js
+
 export const capitalizeWords = (str) => {
   if (!str) return "";
   return str

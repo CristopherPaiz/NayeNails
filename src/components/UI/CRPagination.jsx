@@ -22,7 +22,7 @@ import PropTypes from "prop-types";
  * @returns {JSX.Element} Retorna el componente de paginación o null si total <= 1
  *
  * @example
- * // Ejemplo básico
+ * 
  * function MyComponent() {
  *   const [currentPage, setCurrentPage] = useState(1);
  *   return (
@@ -35,7 +35,7 @@ import PropTypes from "prop-types";
  * }
  *
  * @example
- * // Ejemplo intermedio con configuración personalizada
+ * 
  * function MyComponent() {
  *   const [currentPage, setCurrentPage] = useState(1);
  *   return (
@@ -54,7 +54,7 @@ import PropTypes from "prop-types";
  * }
  *
  * @example
- * // Ejemplo avanzado con todas las características
+ * 
  * function MyComponent() {
  *   const [currentPage, setCurrentPage] = useState(1);
  *   return (
@@ -70,7 +70,7 @@ import PropTypes from "prop-types";
  *       maxElements={9}
  *       labelArrowLeft="Anterior"
  *       labelArrowRight="Siguiente"
- *       disable={isLoading} // Deshabilita durante la carga
+ *       disable={isLoading} 
  *     />
  *   );
  * }

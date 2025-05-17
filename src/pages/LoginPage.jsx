@@ -1,9 +1,8 @@
-// src/pages/LoginPage.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import useAuthStore from "../store/authStore";
 import CRButton from "../components/UI/CRButton";
-import { Eye, EyeOff, Loader2 } from "lucide-react"; // Iconos para ver/ocultar contraseña y loader
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
@@ -12,9 +11,9 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isAuthenticated, isLoading: authIsLoadingGlobal, user } = useAuthStore();
-  const [isSubmitting, setIsSubmitting] = useState(false); // Loader específico para el submit del login
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const from = location.state?.from?.pathname || (user?.rol === "admin" ? "/admin/dashboard" : "/dashboard");
+  const from = location.state?.from?.pathname || (user?.rol === "admin" ? "/admin/config" : "/admin/dashboard");
 
   useEffect(() => {
     if (isAuthenticated && !authIsLoadingGlobal) {
@@ -25,52 +24,44 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {
-      // CRAlert ya está integrado en authStore para errores de API,
-      // pero podrías añadir una alerta local para validación de campos vacíos si prefieres.
-      // CRAlert.alert({ title: "Campos Requeridos", message: "Por favor, ingresa tu usuario y contraseña.", type: "warning" });
+      
+      
       return;
     }
     setIsSubmitting(true);
     try {
       await login({ username, password });
-      // La redirección se maneja en el useEffect
+      
     } catch (error) {
-      return error;
-      // El error ya es manejado por CRAlert en authStore
-      // El campo de contraseña podría limpiarse aquí si se desea tras un fallo
-      // setPassword('');
+      console.error("Error al iniciar sesión:", error);
+      
+      
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Si el estado de autenticación global se está cargando (ej. checkAuthStatus)
-  // Y el usuario aún no está autenticado, muestra un loader de página completa.
   if (authIsLoadingGlobal && !isAuthenticated) {
     return (
-      <div className="flex flex-col justify-center items-center min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-4">
-        <Loader2 className="h-12 w-12 animate-spin text-sky-400 mb-4" />
+      <div className="flex flex-col justify-center items-center min-h-screen bg-backgroundSecondary text-textPrimary p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
         <p className="text-xl">Verificando sesión...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-md bg-slate-800/80 backdrop-blur-md shadow-2xl rounded-xl p-8 space-y-8">
+    <div className="min-dvh mt-14 bg-backgroundSecondary flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-md bg-background dark:bg-gray-800 shadow-xl rounded-xl p-8 space-y-8 border border-transparent dark:border-gray-700">
         <div>
-          {/* Puedes agregar un logo aquí si quieres */}
-          {/* <img className="mx-auto h-12 w-auto" src="/path-to-your-logo.svg" alt="Your Company" /> */}
-          <h2 className="mt-6 text-center text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Bienvenido de Nuevo</h2>
-          <p className="mt-2 text-center text-sm text-slate-400">Ingresa tus credenciales para acceder.</p>
+          <img className="mx-auto h-32 w-36 -mb-6 invert dark:invert-0" src="/nayeNails.svg" alt="Naye Nails Logo" />
+          <h2 className="mt-6 text-center text-3xl sm:text-4xl font-extrabold text-primary dark:text-primary tracking-tight">Bienvenido/a</h2>
+          <p className="mt-2 text-center text-sm text-textSecondary dark:text-gray-300">Ingresa tus credenciales para acceder.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label
-              htmlFor="username"
-              className="block text-sm font-medium text-sky-300 sr-only" // sr-only si usas placeholder como label visual
-            >
+            <label htmlFor="username" className="block text-sm font-medium text-textPrimary dark:text-gray-200 mb-1">
               Nombre de Usuario
             </label>
             <input
@@ -81,14 +72,14 @@ const LoginPage = () => {
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Nombre de Usuario"
-              className="appearance-none block w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg shadow-sm placeholder-slate-400 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-colors"
+              placeholder="Tu nombre de usuario"
+              className="appearance-none block w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-textTertiary dark:placeholder-gray-400 text-textPrimary dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-colors"
               disabled={isSubmitting || authIsLoadingGlobal}
             />
           </div>
 
           <div className="relative">
-            <label htmlFor="password" className="block text-sm font-medium text-sky-300 sr-only">
+            <label htmlFor="password" className="block text-sm font-medium text-textPrimary dark:text-gray-200 mb-1">
               Contraseña
             </label>
             <input
@@ -99,14 +90,14 @@ const LoginPage = () => {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Contraseña"
-              className="appearance-none block w-full px-4 py-3 pr-10 bg-slate-700/50 border border-slate-600 rounded-lg shadow-sm placeholder-slate-400 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-colors"
+              placeholder="Tu contraseña"
+              className="appearance-none block w-full px-4 py-3 pr-10 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-textTertiary dark:placeholder-gray-400 text-textPrimary dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-colors"
               disabled={isSubmitting || authIsLoadingGlobal}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 text-slate-400 hover:text-sky-300 focus:outline-none"
+              className="absolute inset-y-0 right-0 top-7 pr-3 flex items-center text-sm leading-5 text-textTertiary dark:text-gray-400 hover:text-primary dark:hover:text-primary-light focus:outline-none"
               aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               disabled={isSubmitting || authIsLoadingGlobal}
             >
@@ -114,33 +105,23 @@ const LoginPage = () => {
             </button>
           </div>
 
-          {/* Opcional: Link para "Olvidé mi contraseña" */}
-          {/* <div className="flex items-center justify-end">
-            <div className="text-sm">
-              <a href="#" className="font-medium text-sky-400 hover:text-sky-300">
-                ¿Olvidaste tu contraseña?
-              </a>
-            </div>
-          </div> */}
-
           <div>
             <CRButton
               type="submit"
-              title={isSubmitting ? "Ingresando..." : "Ingresar Ahora"}
+              title="Ingresar Ahora"
               loading={isSubmitting}
-              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-base font-semibold text-white bg-sky-500 hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-sky-500 transition-transform transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+              loadingText="Ingresando..."
+              className="w-full py-3 px-4 rounded-lg shadow-md font-semibold text-base
+                         bg-primary text-white
+                         hover:opacity-90
+                         dark:bg-primary dark:text-textPrimary dark:hover:opacity-90
+                         focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary
+                         dark:focus:ring-offset-gray-800
+                         disabled:opacity-70"
               disabled={isSubmitting || authIsLoadingGlobal}
-            ></CRButton>
+            />
           </div>
         </form>
-
-        {/* Opcional: Link para registrarse */}
-        {/* <p className="mt-8 text-center text-sm text-slate-400">
-          ¿No tienes una cuenta?{' '}
-          <Link to="/register" className="font-medium text-sky-400 hover:text-sky-300">
-            Regístrate aquí
-          </Link>
-        </p> */}
       </div>
     </div>
   );
