@@ -6,64 +6,12 @@ import CRLoader from "../../components/UI/CRLoader";
 import CategoriaPadreCard from "../Admin/categoriasManage/CategoriaPadreCard.jsx";
 import CategoriaFormModal from "../Admin/categoriasManage/CategoriaFormModal.jsx";
 import ConfirmationModal from "../../components/ConfirmationModal";
-
-const initialCategoriasData = [
-  {
-    id: "cat1",
-    nombre: "Servicios",
-    icono: "Sparkles",
-    activo: true,
-    subcategorias: [
-      { id: "sub1", idPadre: "cat1", nombre: "Manicura Clásica", icono: "Hand", activo: true },
-      { id: "sub2", idPadre: "cat1", nombre: "Uñas Acrílicas", icono: "Layers", activo: true },
-      { id: "sub3", idPadre: "cat1", nombre: "Pedicura Spa", icono: "Footprints", activo: true },
-      { id: "sub4", idPadre: "cat1", nombre: "Manicura Rusa", icono: "Scissors", activo: true },
-    ],
-  },
-  {
-    id: "cat2",
-    nombre: "Efectos",
-    icono: "Droplet",
-    activo: true,
-    subcategorias: [
-      { id: "sub5", idPadre: "cat2", nombre: "Ojo de Gato", icono: "Eye", activo: true },
-      { id: "sub6", idPadre: "cat2", nombre: "Efecto Espejo", icono: "Airplay", activo: true },
-      { id: "sub7", idPadre: "cat2", nombre: "Glitter", icono: "Sparkle", activo: true },
-      { id: "sub8", idPadre: "cat2", nombre: "Mate", icono: "Droplets", activo: true },
-    ],
-  },
-  {
-    id: "cat3",
-    nombre: "Colores",
-    icono: "Paintbrush",
-    activo: true,
-    subcategorias: [
-      { id: "sub9", idPadre: "cat3", nombre: "Pastel", icono: "Palette", activo: true },
-      { id: "sub10", idPadre: "cat3", nombre: "Neón", icono: "Sun", activo: true },
-      { id: "sub11", idPadre: "cat3", nombre: "Nude", icono: "Droplet", activo: true },
-      { id: "sub12", idPadre: "cat3", nombre: "Metálico", icono: "Gem", activo: true },
-    ],
-  },
-  {
-    id: "cat4",
-    nombre: "Tipos",
-    icono: "Shapes",
-    activo: true,
-    subcategorias: [
-      { id: "sub13", idPadre: "cat4", nombre: "Almendrada", icono: "Circle", activo: true },
-      { id: "sub14", idPadre: "cat4", nombre: "Cuadrada", icono: "Square", activo: true },
-      { id: "sub15", idPadre: "cat4", nombre: "Stiletto", icono: "Triangle", activo: true },
-      { id: "sub16", idPadre: "cat4", nombre: "Ovalada", icono: "Squircle", activo: true },
-    ],
-  },
-];
+import useApiRequest from "../../hooks/useApiRequest.js";
+import { useQueryClient } from "@tanstack/react-query";
 
 const CategoriasPage = () => {
+  const queryClient = useQueryClient();
   const [categorias, setCategorias] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingAction, setIsLoadingAction] = useState(false);
-  // eslint-disable-next-line no-unused-vars
-  const [error, setError] = useState(null);
   const [selectedParentId, setSelectedParentId] = useState(null);
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -73,6 +21,8 @@ const CategoriasPage = () => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [confirmModalProps, setConfirmModalProps] = useState({ title: "", message: "", onConfirm: () => {} });
 
+  const [isLoadingAction, setIsLoadingAction] = useState(false); // Para acciones específicas como submit o toggle
+
   const iconOptions = useMemo(
     () =>
       Object.keys(LucideIcons)
@@ -81,13 +31,97 @@ const CategoriasPage = () => {
     []
   );
 
+  const queryKeyCategorias = ["/categorias"];
+
+  const {
+    data: categoriasData,
+    isLoading: isLoadingCategorias,
+    error: errorCategorias,
+    refetch: refetchCategorias,
+  } = useApiRequest({
+    queryKey: queryKeyCategorias,
+    url: "/categorias",
+    method: "GET",
+    notificationEnabled: false, // Las notificaciones de error se manejan abajo
+  });
+
   useEffect(() => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setCategorias(initialCategoriasData);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
+    if (categoriasData) {
+      setCategorias(categoriasData);
+    }
+  }, [categoriasData]);
+
+  const mutationOptions = {
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeyCategorias });
+      closeFormModal();
+      setIsLoadingAction(false);
+    },
+    onError: () => {
+      setIsLoadingAction(false);
+      // La notificación de error ya la maneja useApiRequest
+    },
+  };
+
+  const addCategoriaPadreMutation = useApiRequest({
+    url: "/categorias",
+    method: "POST",
+    options: mutationOptions,
+    successMessage: "Categoría padre creada con éxito.",
+  });
+
+  const editCategoriaPadreMutation = useApiRequest({
+    url: `/categorias/${currentCategoria?.id}`, // URL se actualiza cuando currentCategoria cambia
+    method: "PUT",
+    options: mutationOptions,
+    successMessage: "Categoría padre actualizada con éxito.",
+  });
+
+  const addSubcategoriaMutation = useApiRequest({
+    url: `/categorias/${currentCategoria?.idPadre}/subcategorias`, // URL se actualiza
+    method: "POST",
+    options: mutationOptions,
+    successMessage: "Subcategoría creada con éxito.",
+  });
+
+  const editSubcategoriaMutation = useApiRequest({
+    url: `/subcategorias/${currentCategoria?.id}`, // URL se actualiza
+    method: "PUT",
+    options: mutationOptions,
+    successMessage: "Subcategoría actualizada con éxito.",
+  });
+
+  const toggleActivoCategoriaPadreMutation = useApiRequest({
+    method: "PATCH",
+    options: {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries({ queryKey: queryKeyCategorias });
+        setIsConfirmModalOpen(false);
+        setIsLoadingAction(false);
+        // Notificación ya manejada por el hook
+      },
+      onError: () => {
+        setIsConfirmModalOpen(false);
+        setIsLoadingAction(false);
+      },
+    },
+    // successMessage se puede establecer dinámicamente si es necesario
+  });
+
+  const toggleActivoSubcategoriaMutation = useApiRequest({
+    method: "PATCH",
+    options: {
+      onSuccess: (data) => {
+        queryClient.invalidateQueries({ queryKey: queryKeyCategorias });
+        setIsConfirmModalOpen(false);
+        setIsLoadingAction(false);
+      },
+      onError: () => {
+        setIsConfirmModalOpen(false);
+        setIsLoadingAction(false);
+      },
+    },
+  });
 
   const handleToggleParent = (parentId) => {
     setSelectedParentId((prevId) => (prevId === parentId ? null : parentId));
@@ -98,9 +132,9 @@ const CategoriasPage = () => {
     if ((mode === "editParent" || mode === "editChild") && categoriaData) {
       setCurrentCategoria(categoriaData);
     } else if (mode === "addChild" && parentIdForNewChild) {
-      setCurrentCategoria({ idPadre: parentIdForNewChild });
+      setCurrentCategoria({ idPadre: parentIdForNewChild }); // Solo idPadre para nueva subcategoría
     } else {
-      setCurrentCategoria(null);
+      setCurrentCategoria(null); // Para nueva categoría padre
     }
     setIsFormModalOpen(true);
   };
@@ -110,84 +144,75 @@ const CategoriasPage = () => {
     setCurrentCategoria(null);
   };
 
-  const handleFormSubmit = (formData) => {
+  const handleFormSubmit = async (formData) => {
     setIsLoadingAction(true);
-    setTimeout(() => {
+    try {
       if (modalMode === "addParent") {
-        setCategorias((prev) => [...prev, { ...formData, id: `cat${Date.now()}`, subcategorias: [], activo: true }]);
+        await addCategoriaPadreMutation.mutateAsync(formData);
       } else if (modalMode === "editParent") {
-        setCategorias((prev) => prev.map((cat) => (cat.id === formData.id ? { ...cat, ...formData } : cat)));
+        await editCategoriaPadreMutation.mutateAsync(formData);
       } else if (modalMode === "addChild") {
-        setCategorias((prev) =>
-          prev.map((cat) =>
-            cat.id === formData.idPadre
-              ? { ...cat, subcategorias: [...cat.subcategorias, { ...formData, id: `sub${Date.now()}`, activo: true, idPadre: cat.id }] } // Asegurar idPadre
-              : cat
-          )
-        );
+        // formData ya tiene idPadre del modal, pero la URL de la mutación lo usa del currentCategoria
+        await addSubcategoriaMutation.mutateAsync(formData);
       } else if (modalMode === "editChild") {
-        setCategorias((prev) =>
-          prev.map((cat) => {
-            if (cat.id === formData.idPadre) {
-              return { ...cat, subcategorias: cat.subcategorias.map((sub) => (sub.id === formData.id ? { ...sub, ...formData } : sub)) };
-            }
-            return cat;
-          })
-        );
+        await editSubcategoriaMutation.mutateAsync(formData);
       }
-      closeFormModal();
-      setIsLoadingAction(false);
-    }, 500);
+    } catch (err) {
+      // El error ya es manejado y notificado por useApiRequest
+      setIsLoadingAction(false); // Asegurar que se detenga la carga en error
+    }
+    // onSuccess en las mutaciones se encarga de cerrar modal y setIsLoadingAction(false)
   };
 
-  const prepareToggleActivo = (itemType, itemId, itemIsCurrentlyActive, parentId = null) => {
-    const actionText = itemIsCurrentlyActive ? "inactivar" : "activar";
+  const prepareToggleActivo = (itemType, item, parentId = null) => {
+    const actionText = item.activo ? "inactivar" : "activar";
+    const itemName = item.nombre;
     setConfirmModalProps({
       title: `Confirmar ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}`,
-      message: `¿Estás seguro de que deseas ${actionText} este elemento?`,
-      onConfirm: () => {
+      message: `¿Estás seguro de que deseas ${actionText} "${itemName}"?`,
+      onConfirm: async () => {
         setIsLoadingAction(true);
-        setTimeout(() => {
+        try {
           if (itemType === "parent") {
-            setCategorias((prev) => prev.map((cat) => (cat.id === itemId ? { ...cat, activo: !cat.activo } : cat)));
-          } else if (itemType === "child" && parentId) {
-            setCategorias((prev) =>
-              prev.map((cat) => {
-                if (cat.id === parentId) {
-                  return {
-                    ...cat,
-                    subcategorias: cat.subcategorias.map((sub) => (sub.id === itemId ? { ...sub, activo: !sub.activo } : sub)),
-                  };
-                }
-                return cat;
-              })
-            );
+            await toggleActivoCategoriaPadreMutation.mutateAsync(null, {
+              url: `/categorias/${item.id}/toggle-activo`, // URL específica para esta mutación
+            });
+          } else if (itemType === "child") {
+            await toggleActivoSubcategoriaMutation.mutateAsync(null, {
+              url: `/subcategorias/${item.id}/toggle-activo`, // URL específica
+            });
           }
-          setIsConfirmModalOpen(false);
+        } catch (err) {
           setIsLoadingAction(false);
-        }, 500);
+        }
       },
     });
     setIsConfirmModalOpen(true);
   };
 
-  if (isLoading) {
+  if (isLoadingCategorias) {
     return <CRLoader text="Cargando categorías..." fullScreen={false} style="circle" size="lg" />;
   }
 
-  if (error) {
+  if (errorCategorias) {
     return (
       <div className="text-center p-8 text-red-500 dark:text-red-400">
         <DynamicIcon name="AlertTriangle" className="mx-auto h-12 w-12 mb-4" />
-        <p className="text-xl">Error al cargar las categorías: {error}</p>
-        <CRButton onClick={() => window.location.reload()} title="Reintentar" className="mt-4 bg-primary text-white" />
+        <p className="text-xl">Error al cargar las categorías: {errorCategorias.message ?? "Error desconocido"}</p>
+        <CRButton onClick={() => refetchCategorias()} title="Reintentar" className="mt-4 bg-primary text-white" />
       </div>
     );
   }
 
   return (
     <div className="sm:px">
-      {isLoadingAction && <CRLoader fullScreen background="bg-black/30 dark:bg-black/50" style="dots" />}
+      {(isLoadingAction ||
+        addCategoriaPadreMutation.isPending ||
+        editCategoriaPadreMutation.isPending ||
+        addSubcategoriaMutation.isPending ||
+        editSubcategoriaMutation.isPending ||
+        toggleActivoCategoriaPadreMutation.isPending ||
+        toggleActivoSubcategoriaMutation.isPending) && <CRLoader fullScreen background="bg-black/30 dark:bg-black/50" style="dots" />}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="text-2xl md:text-3xl font-bold text-textPrimary dark:text-white">Gestión de Categorías</h1>
         <div>
@@ -215,11 +240,11 @@ const CategoriasPage = () => {
               categoria={cat}
               isExpanded={selectedParentId === cat.id}
               onToggleExpand={() => handleToggleParent(cat.id)}
-              onEdit={() => openFormModal("editParent", cat)} // Se pasa el objeto 'cat' completo
-              onToggleActivo={() => prepareToggleActivo("parent", cat.id, cat.activo)}
+              onEdit={() => openFormModal("editParent", cat)}
+              onToggleActivo={() => prepareToggleActivo("parent", cat)}
               onAddSubcategoria={() => openFormModal("addChild", null, cat.id)}
-              onEditSubcategoria={(subcat) => openFormModal("editChild", subcat)} // Se pasa el objeto 'subcat' completo
-              onToggleActivoSubcategoria={(subcatId, currentSubActivo) => prepareToggleActivo("child", subcatId, currentSubActivo, cat.id)}
+              onEditSubcategoria={(subcat) => openFormModal("editChild", subcat)}
+              onToggleActivoSubcategoria={(subcat) => prepareToggleActivo("child", subcat, cat.id)}
             />
           ))}
         </div>
@@ -231,9 +256,9 @@ const CategoriasPage = () => {
           onClose={closeFormModal}
           onSubmit={handleFormSubmit}
           mode={modalMode}
-          // `currentCategoria` puede ser un objeto padre, un objeto hijo, o {idPadre: '...'} para nuevo hijo, o null para nuevo padre
           categoriaToEdit={currentCategoria}
           iconOptions={iconOptions}
+          isLoading={isLoadingAction}
         />
       )}
 

@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { DynamicIcon } from "../utils/DynamicIcon";
-import { NAV_ITEMS } from "../constants/navbar";
+import { STATIC_NAV_ITEMS } from "../constants/navbar";
 import CategoryPreviewModal from "./subcomponents/CategoryPreviewModal";
 
 const servicesData = [
@@ -31,7 +30,7 @@ const servicesData = [
   },
 ];
 
-const MODAL_HISTORY_STATE_ID = "categoryPreviewModalOpen"; 
+const MODAL_HISTORY_STATE_ID = "categoryPreviewModalOpen";
 
 const Servicios = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,7 +42,7 @@ const Servicios = () => {
   }, []);
 
   const openModal = useCallback((service) => {
-    const navCategory = NAV_ITEMS[service.navItemsKey];
+    const navCategory = STATIC_NAV_ITEMS[service.navItemsKey];
     const subcategories = navCategory && navCategory.categorías ? navCategory.categorías.map((sub) => sub.nombre) : [];
 
     setModalData({
@@ -59,16 +58,16 @@ const Servicios = () => {
 
   const closeModal = useCallback(() => {
     if (window.history.state && window.history.state.modalId === MODAL_HISTORY_STATE_ID) {
-      window.history.back(); 
+      window.history.back();
     } else {
       performCloseModal();
     }
-  }, [performCloseModal]); 
+  }, [performCloseModal]);
 
   useEffect(() => {
     const handleEsc = (event) => {
       if (event.key === "Escape") {
-        closeModal(); 
+        closeModal();
       }
     };
 
@@ -121,7 +120,7 @@ const Servicios = () => {
 
       <CategoryPreviewModal
         isOpen={isModalOpen}
-        onClose={closeModal} 
+        onClose={closeModal}
         title={modalData.title}
         icon={modalData.icon}
         subcategoryNames={modalData.subcategoryNames}

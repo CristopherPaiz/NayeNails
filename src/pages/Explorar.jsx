@@ -1,12 +1,11 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { DynamicIcon } from "../utils/DynamicIcon";
-import { NAV_ITEMS } from "../constants/navbar";
 import useStoreNails from "../store/store";
+import CRLoader from "../components/UI/CRLoader";
 
 import { capitalizeWords } from "../utils/textUtils";
 import {
-  getAvailableFilterCategories,
   getInitialVisibleCounts,
   parseFiltersFromUrl,
   calculateDisplayedNails,
@@ -18,12 +17,34 @@ import {
 const ITEMS_PER_PAGE_INITIAL_CATEGORY = 4;
 const MAX_VISIBLE_TAGS_ON_CARD = 3;
 
+const getDynamicFilterCategories = (dynamicNavItems) => {
+  const categories = [];
+  if (!dynamicNavItems || typeof dynamicNavItems !== "object") return categories;
+
+  const navItemEntries = Object.entries(dynamicNavItems);
+  for (const [key, value] of navItemEntries) {
+    if (value.filterType && value.categorías && Array.isArray(value.categorías)) {
+      categories.push({
+        key: value.filterType,
+        label: key,
+        icon: value.icon,
+        options: value.categorías.map((cat) => ({
+          nombre: cat.nombre,
+          slug: cat.slug,
+          icon: cat.icon,
+        })),
+      });
+    }
+  }
+  return categories;
+};
+
 const Explorar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { todasLasUnas, TAG_COLORS } = useStoreNails();
+  const { todasLasUnas, TAG_COLORS, dynamicNavItems, isLoadingDynamicNav, errorDynamicNav, fetchDynamicNavItems } = useStoreNails();
 
-  const availableFilterOptions = useMemo(() => getAvailableFilterCategories(NAV_ITEMS), []);
+  const availableFilterOptions = useMemo(() => getDynamicFilterCategories(dynamicNavItems), [dynamicNavItems]);
 
   const initialVisibleCountsCalculated = useMemo(
     () => getInitialVisibleCounts(availableFilterOptions, ITEMS_PER_PAGE_INITIAL_CATEGORY),
@@ -41,6 +62,13 @@ const Explorar = () => {
   const [globalSearchTerm, setGlobalSearchTerm] = useState("");
   const [visibleCountsPerCategory, setVisibleCountsPerCategory] = useState(initialVisibleCountsCalculated);
   const [expandedTags, setExpandedTags] = useState({});
+
+  useEffect(() => {
+    if (errorDynamicNav && availableFilterOptions.length === 0) {
+      // Podrías añadir un botón para reintentar o un reintento automático limitado
+      // fetchDynamicNavItems(); // Cuidado con bucles infinitos aquí
+    }
+  }, [errorDynamicNav, availableFilterOptions.length, fetchDynamicNavItems]);
 
   useEffect(() => {
     setVisibleCountsPerCategory(initialVisibleCountsCalculated);
@@ -91,7 +119,7 @@ const Explorar = () => {
       setVisibleCountsPerCategory((prevCounts) => {
         const category = availableFilterOptions.find((cat) => cat.key === categoryKey);
         const categoryOptionsLength = category ? category.options.length : 0;
-        const currentCount = prevCounts[categoryKey] || ITEMS_PER_PAGE_INITIAL_CATEGORY;
+        const currentCount = prevCounts[categoryKey] ?? ITEMS_PER_PAGE_INITIAL_CATEGORY;
         return {
           ...prevCounts,
           [categoryKey]: currentCount >= categoryOptionsLength && categoryOptionsLength > 0 ? ITEMS_PER_PAGE_INITIAL_CATEGORY : categoryOptionsLength,
@@ -121,6 +149,27 @@ const Explorar = () => {
   }, []);
 
   const renderFilterPanel = useCallback(() => {
+    if (isLoadingDynamicNav && availableFilterOptions.length === 0) {
+      return (
+        <aside className="w-full md:w-64 lg:w-72 md:mr-6 lg:mr-8 mb-6 md:mb-0 flex-shrink-0">
+          <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow sticky top-20">
+            <CRLoader text="Cargando filtros..." style="dots" size="md" />
+          </div>
+        </aside>
+      );
+    }
+    if (errorDynamicNav && availableFilterOptions.length === 0) {
+      return (
+        <aside className="w-full md:w-64 lg:w-72 md:mr-6 lg:mr-8 mb-6 md:mb-0 flex-shrink-0">
+          <div className="p-4 bg-red-50 dark:bg-red-900/30 rounded-lg shadow sticky top-20 text-center">
+            <DynamicIcon name="AlertTriangle" className="mx-auto text-red-500 w-8 h-8 mb-2" />
+            <p className="text-sm text-red-700 dark:text-red-300">Error al cargar filtros.</p>
+            <CRButton title="Reintentar" onClick={fetchDynamicNavItems} className="mt-2 !bg-red-500 !text-white text-xs py-1 px-2" />
+          </div>
+        </aside>
+      );
+    }
+
     return (
       <aside className="w-full md:w-64 lg:w-72 md:mr-6 lg:mr-8 mb-6 md:mb-0 flex-shrink-0">
         <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg shadow sticky top-20">
@@ -151,12 +200,12 @@ const Explorar = () => {
             {globalSearchTerm.trim() ? (
               searchResults.length > 0 ? (
                 searchResults.map((categoryResult) => {
-                  const filtrosActivosEnEstaCategoria = parsedFiltersFromUrl[categoryResult.key] || [];
+                  const filtrosActivosEnEstaCategoria = parsedFiltersFromUrl[categoryResult.key] ?? [];
                   return (
                     <div key={categoryResult.key} className="mb-4 border-t border-gray-200 dark:border-gray-700 pt-3 first:pt-0 first:border-t-0">
                       <h3 className="font-semibold text-textSecondary mb-1.5 flex items-center text-xs uppercase tracking-wider">
                         {categoryResult.icon && <DynamicIcon name={categoryResult.icon} className="w-3.5 h-3.5 mr-1.5 text-gray-500" />}
-                        {capitalizeWords(categoryResult.label)} {/* Capitalizamos el label de la categoría */}
+                        {capitalizeWords(categoryResult.label)}
                         {filtrosActivosEnEstaCategoria.length > 0 && (
                           <span className="ml-auto text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-mono">
                             {filtrosActivosEnEstaCategoria.length}
@@ -176,7 +225,7 @@ const Explorar = () => {
                                   onChange={() => handleFilterChange(categoryResult.key, opcion.slug)}
                                 />
                                 <span className={`text-xs ${isChecked ? "font-medium text-primary" : "text-textPrimary group-hover:text-primary"}`}>
-                                  {getNombreFiltro(categoryResult.key, opcion.slug)} {/* Usamos la función que ya capitaliza */}
+                                  {getNombreFiltro(categoryResult.key, opcion.slug)}
                                 </span>
                               </label>
                             </li>
@@ -191,16 +240,16 @@ const Explorar = () => {
               )
             ) : availableFilterOptions.length > 0 ? (
               availableFilterOptions.map((categoria) => {
-                const currentVisibleCount = visibleCountsPerCategory[categoria.key] || ITEMS_PER_PAGE_INITIAL_CATEGORY;
+                const currentVisibleCount = visibleCountsPerCategory[categoria.key] ?? ITEMS_PER_PAGE_INITIAL_CATEGORY;
                 const opcionesAMostrar = categoria.options.slice(0, currentVisibleCount);
-                const numFiltrosActivosEnCategoria = (parsedFiltersFromUrl[categoria.key] || []).length;
+                const numFiltrosActivosEnCategoria = (parsedFiltersFromUrl[categoria.key] ?? []).length;
 
                 return (
                   <div key={categoria.key} className="mb-5 border-t border-gray-200 dark:border-gray-700 pt-4 first:pt-0 first:border-t-0">
                     <div className="flex justify-between items-center mb-2">
                       <h3 className="font-semibold text-textSecondary flex items-center text-sm">
                         {categoria.icon && <DynamicIcon name={categoria.icon} className="w-4 h-4 mr-1.5 text-gray-500 dark:text-gray-400" />}
-                        {capitalizeWords(categoria.label)} {/* Capitalizamos el label de la categoría */}
+                        {capitalizeWords(categoria.label)}
                       </h3>
                       {numFiltrosActivosEnCategoria > 0 && (
                         <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-mono">
@@ -210,7 +259,7 @@ const Explorar = () => {
                     </div>
                     <ul className="space-y-1">
                       {opcionesAMostrar.map((opcion) => {
-                        const isChecked = (parsedFiltersFromUrl[categoria.key] || []).includes(opcion.slug);
+                        const isChecked = (parsedFiltersFromUrl[categoria.key] ?? []).includes(opcion.slug);
                         return (
                           <li key={opcion.slug}>
                             <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 p-1 rounded-md group">
@@ -221,7 +270,7 @@ const Explorar = () => {
                                 onChange={() => handleFilterChange(categoria.key, opcion.slug)}
                               />
                               <span className={`text-xs ${isChecked ? "font-medium text-primary" : "text-textPrimary group-hover:text-primary"}`}>
-                                {getNombreFiltro(categoria.key, opcion.slug)} {/* Usamos la función que ya capitaliza */}
+                                {getNombreFiltro(categoria.key, opcion.slug)}
                               </span>
                             </label>
                           </li>
@@ -259,6 +308,9 @@ const Explorar = () => {
     searchResults,
     visibleCountsPerCategory,
     totalFiltrosActivosGeneral,
+    isLoadingDynamicNav, // Nueva dependencia
+    errorDynamicNav, // Nueva dependencia
+    fetchDynamicNavItems, // Nueva dependencia
     clearAllFilters,
     handleGlobalSearchChange,
     handleFilterChange,
@@ -292,7 +344,7 @@ const Explorar = () => {
               <div className="flex flex-wrap gap-x-2 gap-y-1.5 items-center">
                 <span className="text-xs font-medium mr-1 text-textSecondary">Activos:</span>
                 {Object.entries(parsedFiltersFromUrl).map(([tipo, slugs]) =>
-                  (slugs || []).map((slug) => (
+                  (slugs ?? []).map((slug) => (
                     <span
                       key={`${tipo}-${slug}`}
                       className="flex items-center bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light text-[0.7rem] font-semibold px-2 py-0.5 rounded-full"
@@ -309,10 +361,14 @@ const Explorar = () => {
                   ))
                 )}
               </div>
-            ) : availableFilterOptions.length > 0 ? (
+            ) : isLoadingDynamicNav && availableFilterOptions.length === 0 ? (
+              <p className="text-xs text-gray-500 dark:text-gray-400">Cargando opciones de filtro...</p>
+            ) : !isLoadingDynamicNav && availableFilterOptions.length > 0 ? (
               <p className="text-xs text-gray-500 dark:text-gray-400">Selecciona filtros para refinar tu búsqueda o explora todos los diseños.</p>
             ) : (
-              <p className="text-xs text-gray-500 dark:text-gray-400">Explora todos nuestros diseños disponibles.</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                No hay filtros disponibles o error al cargarlos. Explora todos nuestros diseños.
+              </p>
             )}
           </div>
 
@@ -328,20 +384,26 @@ const Explorar = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-9 sm:gap-6 px-2 md:px-0">
               {displayedNails.map((una) => {
                 const areTagsExpanded = !!expandedTags[una.id];
-
                 const allCardTagsWithType = [];
 
-                if (availableFilterOptions.length > 0) {
-                  if (una.servicios && una.servicios.length > 0) {
-                    una.servicios.forEach((s) => allCardTagsWithType.push({ type: "servicios", slug: s, text: getNombreFiltro("servicios", s) }));
+                // Generar tags para la tarjeta basados en availableFilterOptions (que ahora es dinámico)
+                // y las propiedades del objeto 'una' (ej. una.servicios, una.colores)
+                availableFilterOptions.forEach((filterCat) => {
+                  const unaPropertyKey = filterCat.key; // ej: "servicios", "colores"
+                  if (una[unaPropertyKey] && Array.isArray(una[unaPropertyKey])) {
+                    una[unaPropertyKey].forEach((tagSlug) => {
+                      // Encontrar el nombre original de la subcategoría para mostrar
+                      const subCategoriaOriginal = filterCat.options.find((opt) => opt.slug === tagSlug);
+                      if (subCategoriaOriginal) {
+                        allCardTagsWithType.push({
+                          type: unaPropertyKey, // El filterTypeKey, ej: "servicios"
+                          slug: tagSlug, // El slug de la subcategoría, ej: "manicura-tradicional"
+                          text: capitalizeWords(subCategoriaOriginal.nombre), // Nombre capitalizado de la subcategoría
+                        });
+                      }
+                    });
                   }
-                  if (una.colores && una.colores.length > 0) {
-                    una.colores.forEach((c) => allCardTagsWithType.push({ type: "colores", slug: c, text: getNombreFiltro("colores", c) }));
-                  }
-                  if (una.efectos && una.efectos.length > 0) {
-                    una.efectos.forEach((e) => allCardTagsWithType.push({ type: "efectos", slug: e, text: getNombreFiltro("efectos", e) }));
-                  }
-                }
+                });
 
                 const tagsToDisplay = areTagsExpanded ? allCardTagsWithType : allCardTagsWithType.slice(0, MAX_VISIBLE_TAGS_ON_CARD);
                 const hiddenCardTagsCount = allCardTagsWithType.length - tagsToDisplay.length;
@@ -353,7 +415,7 @@ const Explorar = () => {
                   >
                     <div className="relative overflow-hidden">
                       <img
-                        src={una.imagen || "https://via.placeholder.com/350x250?text=Nail+Art"}
+                        src={una.imagen ?? "https://via.placeholder.com/350x250?text=Nail+Art"}
                         alt={una.nombre}
                         className="w-full h-64 sm:h-56 object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
                       />
@@ -395,7 +457,7 @@ const Explorar = () => {
                         <div className="mt-auto pt-3 border-t border-gray-200 dark:border-gray-700/60">
                           <div className="flex flex-wrap gap-1.5 items-center">
                             {tagsToDisplay.map((tag, index) => {
-                              const tagStyle = TAG_COLORS[tag.type] || TAG_COLORS.default;
+                              const tagStyle = TAG_COLORS[tag.type] ?? TAG_COLORS.default;
                               return (
                                 <button
                                   key={`${una.id}-tag-${tag.slug}-${index}`}

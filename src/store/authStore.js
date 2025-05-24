@@ -1,7 +1,6 @@
-
 import { create } from "zustand";
-import apiClient from "../api/axios"; 
-import CRAlert from "../components/UI/CRAlert"; 
+import apiClient from "../api/axios";
+import CRAlert from "../components/UI/CRAlert";
 
 const useAuthStore = create((set, get) => ({
   isAuthenticated: false,
@@ -9,9 +8,8 @@ const useAuthStore = create((set, get) => ({
   isLoading: true,
 
   login: async (credentials) => {
-    
     try {
-      const response = await apiClient.post("/auth/login", credentials); 
+      const response = await apiClient.post("/auth/login", credentials);
 
       if (response.data && response.data.user) {
         set({
@@ -21,7 +19,7 @@ const useAuthStore = create((set, get) => ({
         });
         CRAlert.alert({
           title: "Éxito",
-          message: response.data.message || "Inicio de sesión exitoso.",
+          message: response.data.message ?? "Inicio de sesión exitoso.",
           type: "success",
         });
         return response.data;
@@ -32,16 +30,12 @@ const useAuthStore = create((set, get) => ({
           type: "error",
         });
         set({ isAuthenticated: false, user: null, isLoading: false });
-        
         throw new Error("Respuesta inesperada del servidor durante el login.");
       }
     } catch (error) {
-      
-      
-      
       const errorMessage =
-        error.response?.data?.message || 
-        (error.code === "ERR_NETWORK" ? "Error de red. No se pudo conectar al servidor." : error.message) || 
+        error.response?.data?.message ??
+        (error.code === "ERR_NETWORK" ? "Error de red. No se pudo conectar al servidor." : error.message) ??
         "Error desconocido al iniciar sesión.";
 
       CRAlert.alert({
@@ -50,24 +44,23 @@ const useAuthStore = create((set, get) => ({
         type: "error",
       });
       set({ isAuthenticated: false, user: null, isLoading: false });
-      throw error; 
+      throw error;
     }
   },
 
-  
   logout: async () => {
     try {
       const response = await apiClient.post("/auth/logout");
       set({ isAuthenticated: false, user: null, isLoading: false });
       CRAlert.alert({
         title: "Sesión Cerrada",
-        message: response.data.message || "Has cerrado sesión exitosamente.",
+        message: response.data.message ?? "Has cerrado sesión exitosamente.",
         type: "info",
       });
     } catch (error) {
       const errorMessage =
-        error.response?.data?.message ||
-        (error.code === "ERR_NETWORK" ? "Error de red al cerrar sesión." : error.message) ||
+        error.response?.data?.message ??
+        (error.code === "ERR_NETWORK" ? "Error de red al cerrar sesión." : error.message) ??
         "Error desconocido al cerrar sesión.";
       CRAlert.alert({
         title: "Error al Cerrar Sesión",

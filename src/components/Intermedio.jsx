@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom"; // Importar Link
 
 const Intermedio = ({ to = "/explorar-unas", buttonColor = "bg-primary text-white dark:bg-white dark:text-primary" }) => {
   const mobileFadeHeight = "h-[300px]";
@@ -15,8 +16,8 @@ const Intermedio = ({ to = "/explorar-unas", buttonColor = "bg-primary text-whit
                     pointer-events-none
                 `}
       ></div>
-      <a
-        href={to}
+      <Link // Cambiado de <a> a <Link>
+        to={to}
         className={`w-1/2 sm:w-1/3
                     z-20
                     pointer-events-auto cursor-pointer
@@ -27,7 +28,7 @@ const Intermedio = ({ to = "/explorar-unas", buttonColor = "bg-primary text-whit
                 `}
       >
         Ver más
-      </a>
+      </Link>
     </div>
   );
 };

@@ -1,6 +1,9 @@
 import { create } from "zustand";
+import apiClient from "../api/axios.js";
+import { toSlug } from "../utils/textUtils.js";
+import CRAlert from "../components/UI/CRAlert.jsx";
 
-const useStoreNails = create((set) => ({
+const useStoreNails = create((set, get) => ({
   message: "Hola Mundo desde Zustand!",
   imagenesInicio: [
     { url: "https://torridnails.it/cdn/shop/articles/Buy_your_kit_d05f3ce0-e86a-4845-b23b-4038f9160196.jpg", legend: "" },
@@ -10,7 +13,6 @@ const useStoreNails = create((set) => ({
       legend: "",
     },
   ],
-
   imagenesGaleria: [
     { id: "img-1", src: "/pics/1.jpg", thumb: "/pics/1.jpg", alt: "Imagen 1", lgSize: "1920-1280" },
     { id: "img-2", src: "/pics/2.jpg", thumb: "/pics/2.jpg", alt: "Imagen 2", lgSize: "1024-768" },
@@ -23,89 +25,11 @@ const useStoreNails = create((set) => ({
     { id: "img-9", src: "/pics/9.jpg", thumb: "/pics/9.jpg", alt: "Imagen 9", lgSize: "2048-1365" },
     { id: "img-10", src: "/pics/10.jpg", thumb: "/pics/10.jpg", alt: "Imagen 10", lgSize: "1600-1067" },
   ],
+  imagenesCarouselObjetivo: [],
 
-  todasLasUnas: [
-    {
-      id: 1,
-      nombre: "Manicura Tradicional Roja y Francesa",
-      servicios: ["manicura-tradicional", "disenos-personalizados"],
-      colores: ["rojo", "blanco-puro"],
-      efectos: [],
-      imagen: "https://hips.hearstapps.com/hmg-prod/images/saveclip-app-447253732-18266870164224106-8409522755200379066-n-6751e53a212af.jpg",
-      descripcion: "Una hermosa combinación clásica con un toque francés elegante.",
-      precio: "Q25",
-      oferta: null,
-      duracion: "45 min",
-    },
-    {
-      id: 2,
-      nombre: "Acrílicas Ojo de Gato Azul y 3D Plata",
-      servicios: ["unas-acrilicas"],
-      colores: ["azul-profundo", "plata"],
-      efectos: ["ojo-de-gato", "3d"],
-      imagen: "https://media.glamour.mx/photos/666cbc04486c89a986c40c35/1:1/w_2000,h_2000,c_limit/un%CC%83as-efecto-ojo-de-gato.jpg",
-      descripcion: "Impactantes uñas acrílicas con efecto ojo de gato y detalles 3D.",
-      precio: "Q55",
-      oferta: "Q50",
-      duracion: "1h 30min",
-    },
-    {
-      id: 3,
-      nombre: "Polygel Nude con Efecto Sugar",
-      servicios: ["polygel"],
-      colores: ["tonos-nude"],
-      efectos: ["efecto-sugar"],
-      imagen: "https://i.pinimg.com/736x/07/6c/03/076c0381824d36e87f338b2b32ab1723.jpg",
-      descripcion: "Elegancia sutil con la textura única del efecto sugar.",
-      precio: "Q40",
-      duracion: "1h",
-    },
-    {
-      id: 4,
-      nombre: "Semipermanente Metálico y Glitter",
-      servicios: ["esmalte-semipermanente"],
-      colores: ["metalicos", "glitters"],
-      efectos: [],
-      imagen: "https://i.pinimg.com/474x/e3/bd/60/e3bd6091063a98a9ff181cbbc3a1bb9a.jpg",
-      descripcion: "Brillo y glamour con acabados metálicos y destellos de glitter.",
-      precio: "Q30",
-      duracion: "50 min",
-    },
-    {
-      id: 5,
-      nombre: "Manicura Rusa Pastel con Diseño Floral",
-      servicios: ["manicura-rusa", "disenos-personalizados"],
-      colores: ["pasteles"],
-      efectos: [],
-      imagen: "https://semilac.es/media/catalog/product/cache/67d9e1c93bb19887b3b9eeb5a5253fad/s/t/stylizacja_071.jpg",
-      descripcion: "Delicadeza y arte en tus uñas con tonos pastel y diseño floral.",
-      precio: "Q35",
-      duracion: "1h 15min",
-    },
-    {
-      id: 6,
-      nombre: "Uñas en Gel Neón y Clásicas",
-      servicios: ["unas-en-gel"],
-      colores: ["neon", "clasicos"],
-      efectos: [],
-      imagen: "https://i.pinimg.com/564x/14/b2/c6/14b2c6d9fa6e74e5f5b24aa8bc29265e.jpg",
-      descripcion: "Contraste vibrante de colores neón con la elegancia de los clásicos.",
-      precio: "Q45",
-      oferta: "Q40",
-      duracion: "1h 10min",
-    },
-    {
-      id: 7,
-      nombre: "Polygel Ojo de Gato y Encapsulado Floral",
-      servicios: ["polygel"],
-      colores: ["negro", "tonos-nude"],
-      efectos: ["ojo-de-gato", "encapsulados"],
-      imagen: "https://i.pinimg.com/736x/b5/27/25/b527259a05c47960a0826fc7a0e9f581.jpg",
-      descripcion: "Profundidad magnética del ojo de gato con delicados encapsulados florales.",
-      precio: "Q60",
-      duracion: "1h 45min",
-    },
-  ],
+  todasLasUnas: [],
+  isLoadingTodasLasUnas: true,
+  errorTodasLasUnas: null,
 
   TAG_COLORS: {
     servicios: {
@@ -128,6 +52,144 @@ const useStoreNails = create((set) => ({
       text: "text-gray-700 dark:text-gray-200",
       hoverBg: "hover:bg-gray-300 dark:hover:bg-gray-500",
     },
+  },
+
+  dynamicNavItems: {},
+  isLoadingDynamicNav: true,
+  errorDynamicNav: null,
+
+  fetchDynamicNavItems: async () => {
+    if (!get().isLoadingDynamicNav) set({ isLoadingDynamicNav: true });
+    set({ errorDynamicNav: null });
+    try {
+      const response = await apiClient.get("/categorias");
+      const activeCategoriasPadre = response.data?.filter((cp) => cp.activo) ?? [];
+
+      const newDynamicNavItems = {};
+      const newTagColors = { ...get().TAG_COLORS };
+      const colorPalette = [
+        "purple",
+        "red",
+        "orange",
+        "cyan",
+        "teal",
+        "green",
+        "blue",
+        "yellow",
+        "sky",
+        "violet",
+        "indigo",
+        "rose",
+        "lime",
+        "amber",
+        "emerald",
+        "fuchsia",
+        "pink",
+      ];
+      let colorIndex = 0;
+      const existingColorKeys = Object.keys(newTagColors).filter((k) => k !== "default");
+
+      activeCategoriasPadre.forEach((catPadre) => {
+        const filterTypeKey = toSlug(catPadre.nombre);
+        newDynamicNavItems[catPadre.nombre] = {
+          icon: catPadre.icono ?? "List",
+          filterType: filterTypeKey,
+          categorías: (catPadre.subcategorias?.filter((sub) => sub.activo) ?? []).map((sub) => ({
+            nombre: sub.nombre,
+            slug: toSlug(sub.nombre),
+            icon: sub.icono ?? "ChevronRight",
+          })),
+        };
+
+        if (!newTagColors[filterTypeKey]) {
+          // Asegurar que no se repitan colores ya usados por las claves base (servicios, colores, efectos)
+          let assignedColor = false;
+          while (!assignedColor && colorIndex < colorPalette.length * 2) {
+            // Iterar más para encontrar uno no usado
+            const colorName = colorPalette[colorIndex % colorPalette.length];
+            if (!existingColorKeys.includes(colorName) && !Object.values(newTagColors).some((tc) => tc.bg.includes(colorName))) {
+              newTagColors[filterTypeKey] = {
+                bg: `bg-${colorName}-100 dark:bg-${colorName}-500/30`,
+                text: `text-${colorName}-700 dark:text-${colorName}-300`,
+                hoverBg: `hover:bg-${colorName}-200 dark:hover:bg-${colorName}-500/50`,
+              };
+              existingColorKeys.push(filterTypeKey); // Marcar como usado para futuras asignaciones dinámicas
+              assignedColor = true;
+            }
+            colorIndex++;
+          }
+          if (!assignedColor) {
+            // Fallback si todos los colores de la paleta están "usados"
+            newTagColors[filterTypeKey] = { ...newTagColors.default };
+          }
+        }
+      });
+      set({ dynamicNavItems: newDynamicNavItems, TAG_COLORS: newTagColors, isLoadingDynamicNav: false });
+    } catch (error) {
+      console.error("Error fetching dynamic nav items:", error);
+      set({
+        errorDynamicNav: error.response?.data?.message ?? error.message ?? "Error al cargar categorías para navegación",
+        isLoadingDynamicNav: false,
+      });
+    }
+  },
+
+  fetchTodasLasUnas: async () => {
+    if (!get().isLoadingTodasLasUnas) set({ isLoadingTodasLasUnas: true });
+    set({ errorTodasLasUnas: null });
+    try {
+      const response = await apiClient.get("/disenios");
+      const apiDisenios = response.data ?? [];
+      set({ todasLasUnas: apiDisenios, isLoadingTodasLasUnas: false });
+    } catch (error) {
+      console.error("Error fetching todas las unas:", error);
+      CRAlert.alert({ title: "Error de Carga", message: "No se pudieron cargar los diseños desde el servidor.", type: "error" });
+      set({
+        errorTodasLasUnas: error.response?.data?.message ?? error.message ?? "Error al cargar diseños",
+        isLoadingTodasLasUnas: false,
+        todasLasUnas: [],
+      });
+    }
+  },
+
+  fetchConfiguracionesSitio: async () => {
+    try {
+      const response = await apiClient.get("/configuraciones-sitio");
+      const configs = response.data ?? [];
+
+      const parseConfigValue = (clave, fallback) => {
+        const config = configs.find((c) => c.clave === clave);
+        if (config?.valor) {
+          try {
+            const parsedValue = JSON.parse(config.valor);
+            if (
+              Array.isArray(parsedValue) &&
+              parsedValue.every((item) => typeof item === "object" && item !== null && typeof item.url === "string")
+            ) {
+              return parsedValue;
+            }
+            console.warn(`Valor de configuración para '${clave}' no es un array de objetos con URL válido. Usando fallback.`);
+            return fallback;
+          } catch (e) {
+            console.error(`Error parsing JSON para la clave '${clave}':`, e, "Valor recibido:", config.valor);
+            return fallback;
+          }
+        }
+        return fallback;
+      };
+
+      set({
+        imagenesInicio: parseConfigValue("carousel_principal_imagenes", get().imagenesInicio),
+        imagenesGaleria: parseConfigValue("galeria_inicial_imagenes", get().imagenesGaleria),
+        imagenesCarouselObjetivo: parseConfigValue(
+          "carousel_objetivo_imagenes",
+          get().imagenesCarouselObjetivo.length > 0 ? get().imagenesCarouselObjetivo : []
+        ),
+      });
+    } catch (error) {
+      console.error("Error fetching site configurations:", error);
+      // No se muestra alerta global aquí, se usarán los valores por defecto del store.
+    }
   },
 
   setMessage: (newMessage) => set({ message: newMessage }),

@@ -40,7 +40,7 @@ const AdminDashboardPage = () => {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-textPrimary dark:text-white">
-          ¡Bienvenido(a), {user ? capitalizeWords(user.nombre || user.username) : "Admin"}!
+          ¡Bienvenido(a), {user ? capitalizeWords(user.nombre ?? user.username) : "Admin"}!
         </h1>
         <p className="text-textSecondary dark:text-slate-400 mt-3">Aquí tienes un resumen de la actividad.</p>
       </div>
