@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react"; // Añadir useEffect
 import CRButton from "../../components/UI/CRButton";
 import CRModal from "../../components/UI/CRModal";
 import CRInput from "../../components/UI/CRInput";
@@ -19,12 +19,13 @@ const DiseniosAdminPage = () => {
   const [formValues, setFormValues] = useState({
     nombre: "",
     descripcion: "",
-    imagen_url: "",
+    imagen_file: null, // Cambiado de imagen_url a imagen_file
     precio: "",
     oferta: "",
     duracion: "",
     subcategorias: [],
   });
+  const [imagePreview, setImagePreview] = useState(null); // Para previsualización
   const [errors, setErrors] = useState({});
   const [categorySelectorError, setCategorySelectorError] = useState(null);
 
@@ -67,12 +68,10 @@ const DiseniosAdminPage = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeyDiseniosAdmin });
       closeFormModal();
-      setIsConfirmModalOpen(false); // También cierra el modal de confirmación si estaba abierto
+      setIsConfirmModalOpen(false);
       CRAlert.alert({ title: "Éxito", message: data?.message || successMsg, type: "success" });
     },
     onError: (error) => {
-      // El error ya se muestra por useApiRequest si notificationEnabled es true por defecto
-      // o podemos manejarlo aquí si queremos ser más específicos.
       setIsConfirmModalOpen(false);
       CRAlert.alert({ title: "Error", message: error.response?.data?.message || "La operación falló.", type: "error" });
     },
@@ -93,7 +92,7 @@ const DiseniosAdminPage = () => {
 
   const toggleActivoDisenioMutation = useApiRequest({
     method: "PATCH",
-    options: commonMutationOptions("Estado del diseño actualizado."), // Mensaje genérico, la API devuelve uno más específico
+    options: commonMutationOptions("Estado del diseño actualizado."),
     notificationEnabled: false,
   });
 
@@ -107,11 +106,12 @@ const DiseniosAdminPage = () => {
     setModalMode(mode);
     setCurrentDisenio(disenio);
     setCategorySelectorError(null);
+    setImagePreview(disenio?.imagen_url || null); // Mostrar imagen actual en edición
     if (mode === "edit" && disenio) {
       setFormValues({
         nombre: disenio.nombre ?? "",
         descripcion: disenio.descripcion ?? "",
-        imagen_url: disenio.imagen_url ?? "",
+        imagen_file: null, // Resetear el file input
         precio: disenio.precio?.toString() ?? "",
         oferta: disenio.oferta?.toString() ?? "",
         duracion: disenio.duracion ?? "",
@@ -121,7 +121,7 @@ const DiseniosAdminPage = () => {
       setFormValues({
         nombre: "",
         descripcion: "",
-        imagen_url: "",
+        imagen_file: null,
         precio: "",
         oferta: "",
         duracion: "",
@@ -138,18 +138,32 @@ const DiseniosAdminPage = () => {
     setFormValues({
       nombre: "",
       descripcion: "",
-      imagen_url: "",
+      imagen_file: null,
       precio: "",
       oferta: "",
       duracion: "",
       subcategorias: [],
     });
+    setImagePreview(null);
     setCategorySelectorError(null);
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormValues((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormValues((prev) => ({ ...prev, imagen_file: file }));
+      setImagePreview(URL.createObjectURL(file));
+      setErrors((prev) => ({ ...prev, imagen_file: undefined })); // Limpiar error de imagen si se selecciona una
+    } else {
+      setFormValues((prev) => ({ ...prev, imagen_file: null }));
+      // Si se deselecciona, y estamos editando, volver a la imagen actual del diseño
+      setImagePreview(currentDisenio?.imagen_url || null);
+    }
   };
 
   const handleCategorySelectorChange = (selectedSubcategoryIds) => {
@@ -163,18 +177,25 @@ const DiseniosAdminPage = () => {
   const validateForm = () => {
     const newErrors = {};
     if (!formValues.nombre.trim()) newErrors.nombre = "El nombre es obligatorio.";
-    if (!formValues.imagen_url.trim()) newErrors.imagen_url = "La URL de la imagen es obligatoria.";
-    else {
-      try {
-        new URL(formValues.imagen_url);
-      } catch (e) {
-        console.error(e);
-        newErrors.imagen_url = "La URL de la imagen no es válida.";
-      }
+
+    // La imagen es obligatoria solo al crear. Al editar, si no se sube nueva, se mantiene la anterior.
+    if (modalMode === "add" && !formValues.imagen_file) {
+      newErrors.imagen_file = "La imagen es obligatoria.";
+    }
+    if (formValues.imagen_file && formValues.imagen_file.size > 10 * 1024 * 1024) {
+      // 10MB
+      newErrors.imagen_file = "La imagen no debe exceder los 10MB.";
+    }
+    if (formValues.imagen_file && !formValues.imagen_file.type.startsWith("image/")) {
+      newErrors.imagen_file = "El archivo debe ser una imagen.";
     }
 
     if (categorySelectorError) {
       newErrors.subcategoriasGlobal = categorySelectorError;
+    }
+    if (formValues.subcategorias.length === 0) {
+      newErrors.subcategoriasGlobal =
+        (newErrors.subcategoriasGlobal ? newErrors.subcategoriasGlobal + " " : "") + "Debe seleccionar al menos una subcategoría.";
     }
 
     setErrors(newErrors);
@@ -185,14 +206,24 @@ const DiseniosAdminPage = () => {
     e.preventDefault();
     if (!validateForm()) return;
 
-    const payload = { ...formValues, subcategorias: formValues.subcategorias };
+    const formData = new FormData();
+    formData.append("nombre", formValues.nombre);
+    formData.append("descripcion", formValues.descripcion || "");
+    if (formValues.imagen_file) {
+      formData.append("imagen_disenio", formValues.imagen_file);
+    }
+    formData.append("precio", formValues.precio || "");
+    formData.append("oferta", formValues.oferta || "");
+    formData.append("duracion", formValues.duracion || "");
+
+    formValues.subcategorias.forEach((subId) => formData.append("subcategorias", subId.toString()));
 
     if (modalMode === "add") {
-      await addDisenioMutation.mutateAsync({ data: payload });
+      await addDisenioMutation.mutateAsync(formData);
     } else {
       await editDisenioMutation.mutateAsync({
         url: `/disenios/${currentDisenio?.id}`,
-        data: payload,
+        data: formData,
       });
     }
   };
@@ -209,7 +240,7 @@ const DiseniosAdminPage = () => {
       onConfirm: async () => {
         await toggleActivoDisenioMutation.mutateAsync({
           url: `/disenios/${disenio.id}/toggle-activo`,
-          data: null,
+          data: null, // PATCH no necesita body aquí
         });
       },
       confirmButtonText: actionText,
@@ -235,8 +266,23 @@ const DiseniosAdminPage = () => {
 
   const isMutationLoading =
     addDisenioMutation.isPending || editDisenioMutation.isPending || toggleActivoDisenioMutation.isPending || deleteDisenioMutation.isPending;
-  const categorySelectorKey =
-    modalMode === "add" ? `new-${Date.now()}` : currentDisenio?.id ? `edit-${currentDisenio.id}` : `edit-fallback-${Date.now()}`;
+
+  const categorySelectorKey = useMemo(() => {
+    return modalMode === "add"
+      ? `new-${Date.now()}`
+      : currentDisenio?.id
+      ? `edit-${currentDisenio.id}-${formValues.subcategorias.join("-")}`
+      : `edit-fallback-${Date.now()}`;
+  }, [modalMode, currentDisenio, formValues.subcategorias]);
+
+  useEffect(() => {
+    // Limpiar el object URL de la previsualización cuando el componente se desmonte o cambie la imagen
+    return () => {
+      if (imagePreview && imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   if (isLoadingDisenios || isLoadingCategorias) {
     return <CRLoader text="Cargando datos..." fullScreen={false} style="circle" size="lg" />;
@@ -355,15 +401,32 @@ const DiseniosAdminPage = () => {
               setValue={(val) => handleInputChange({ target: { name: "descripcion", value: val } })}
               placeholder="Pequeña descripción del diseño"
             />
-            <CRInput
-              title="URL de la Imagen"
-              name="imagen_url"
-              value={formValues.imagen_url}
-              setValue={(val) => handleInputChange({ target: { name: "imagen_url", value: val } })}
-              error={errors.imagen_url}
-              placeholder="https://ejemplo.com/imagen.jpg"
-              require
-            />
+
+            <div>
+              <label htmlFor="imagen_file" className="block text-sm font-medium text-textPrimary dark:text-gray-200 mb-1">
+                Imagen del Diseño {modalMode === "add" && <span className="text-red-500">*</span>}
+              </label>
+              <input
+                type="file"
+                id="imagen_file"
+                name="imagen_file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="block w-full text-sm text-slate-500 dark:text-slate-400
+                           file:mr-4 file:py-2 file:px-4
+                           file:rounded-full file:border-0
+                           file:text-sm file:font-semibold
+                           file:bg-primary/10 file:text-primary
+                           hover:file:bg-primary/20 dark:file:bg-primary/80 dark:file:text-white dark:hover:file:bg-primary"
+              />
+              {imagePreview && (
+                <div className="mt-2">
+                  <img src={imagePreview} alt="Previsualización" className="max-h-40 rounded-md border border-gray-300 dark:border-slate-600" />
+                </div>
+              )}
+              {errors.imagen_file && <p className="text-xs text-red-500 dark:text-red-400 mt-1">{errors.imagen_file}</p>}
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <CRInput
                 title="Precio"
@@ -372,6 +435,7 @@ const DiseniosAdminPage = () => {
                 value={formValues.precio}
                 setValue={(val) => handleInputChange({ target: { name: "precio", value: val } })}
                 placeholder="Ej: 150"
+                step="0.01"
               />
               <CRInput
                 title="Precio de Oferta (opcional)"
@@ -380,6 +444,7 @@ const DiseniosAdminPage = () => {
                 value={formValues.oferta}
                 setValue={(val) => handleInputChange({ target: { name: "oferta", value: val } })}
                 placeholder="Ej: 120"
+                step="0.01"
               />
             </div>
             <CRInput
@@ -401,10 +466,6 @@ const DiseniosAdminPage = () => {
               />
               {errors.subcategoriasGlobal && <p className="text-xs text-red-500 dark:text-red-400 mt-1">{errors.subcategoriasGlobal}</p>}
             </div>
-
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Subcategorías seleccionadas (IDs): {formValues.subcategorias.length > 0 ? formValues.subcategorias.join(", ") : "Ninguna"}
-            </p>
 
             <div className="flex justify-end space-x-3 pt-3">
               <CRButton
@@ -453,7 +514,7 @@ const DiseniosAdminPage = () => {
               await confirmModalProps.onConfirm();
             }}
             className={`${confirmModalProps.confirmButtonClass || "bg-primary hover:bg-primary-dark"} text-white`}
-            loading={isMutationLoading} // Considerar un loading específico para la acción de confirmación
+            loading={isMutationLoading}
             disabled={isMutationLoading}
           />
         </div>
