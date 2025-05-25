@@ -1,37 +1,6 @@
 import { useEffect, useCallback } from "react";
 import PropTypes from "prop-types";
 
-/**
- * CRModal - Un componente modal personalizable con varias opciones de configuración.
- *
- * @param {Object} props - El objeto de propiedades.
- * @param {string} [props.title] - El título que se muestra en la parte superior del modal.
- * @param {number|string} [props.width="auto"] - El ancho del modal. Puede ser un numero, porcentaje o "auto".
- * @param {number|string} [props.height="auto"] - La altura del modal. Puede ser un numero, porcentaje o "auto".
- * @param {boolean} [props.closable=true] - Determina si el modal puede ser cerrado por el usuario.
- * @param {boolean} props.isOpen - Indica si el modal está abierto o cerrado.
- * @param {function} props.setIsOpen - Función para actualizar el estado que controla la visibilidad del modal.
- * @param {function} [props.onOpen] - Callback que se ejecuta cuando el modal se abre.
- * @param {function} [props.onClose] - Callback que se ejecuta cuando el modal se cierra.
- * @param {boolean} [props.disableBackdropClick=false] - Desactiva el cierre del modal al hacer clic en el fondo.
- * @param {boolean} [props.disableEscapeKeyDown=false] - Desactiva el cierre del modal con la tecla "Escape".
- * @param {number} [props.zIndex=10] - El z-index del modal para controlar su nivel de apilamiento.
- * @param {boolean} [props.fullScreen=false] - Hace que el modal ocupe toda la pantalla si es true.
- * @param {string} [props.className] - Clases de Tailwind adicionales que sobreescribirán los estilos actuales.
- * @param {React.ReactNode} [props.children] - El contenido que se va a renderizar dentro del modal.
- *
- * @returns {React.ReactElement|null} El elemento del modal o null si no está abierto.
- *
- * @example
- * <CRModal title="Título del modal" isOpen={isOpen} setIsOpen={setIsOpen}>
- *  <p>Contenido del modal</p>
- * </CRModal>
- *
- * <CRModal isOpen={isOpen} setIsOpen={setIsOpen} disableBackdropClick>
- * <p>Contenido del modal</p>
- * </CRModal>
- */
-
 const CRModal = ({
   title,
   width = "auto",
@@ -43,7 +12,7 @@ const CRModal = ({
   onClose,
   disableBackdropClick = false,
   disableEscapeKeyDown = false,
-  zIndex = 10,
+  zIndex = 5000,
   fullScreen = false,
   className,
   children,
@@ -52,7 +21,6 @@ const CRModal = ({
     if (isOpen) {
       onOpen?.();
       document.body.style.overflow = "hidden";
-      // Add empty state to history when modal opens
       window.history.pushState(null, "", window.location.href);
     } else {
       document.body.style.overflow = "";

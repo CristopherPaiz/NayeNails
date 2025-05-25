@@ -1,37 +1,29 @@
-import React, { useState, useEffect } from "react";
-import { Outlet, useLocation } from "react-router-dom";
-import Sidebar from "../components/admin/Sidebar";
-import { DynamicIcon } from "../utils/DynamicIcon";
+import React, { useEffect } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import useAuthStore from "../store/authStore";
 
 const AdminLayout = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { isAuthenticated, isLoading: authIsLoading } = useAuthStore();
   const location = useLocation();
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (isSidebarOpen && window.innerWidth < 768) {
-      setIsSidebarOpen(false);
+    if (!authIsLoading && !isAuthenticated) {
+      navigate("/login", { state: { from: location }, replace: true });
     }
-  }, [location.pathname]);
+  }, [authIsLoading, isAuthenticated, navigate, location]);
+
+  if (authIsLoading) {
+    return <div className="flex justify-center items-center h-dvh">Cargando...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
-    <div className="flex flex-1 pt-8 sm:pt-4 px-4">
-      <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-      {isSidebarOpen && <div className="fixed inset-0 z-20 bg-black/60 md:hidden" onClick={toggleSidebar}></div>}
-      <main className="flex-grow p-4 sm:p-6 lg:p-8 overflow-y-auto md:ml-64 transition-all duration-300 ease-in-out">
-        {!isSidebarOpen && (
-          <button
-            onClick={toggleSidebar}
-            className="md:hidden p-2 mb-2 -mt-2 sm:-mt-4 -ml-1 text-primary dark:text-primary-light rounded-md hover:bg-primary/5 dark:hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary z-40 fixed top-18 left-2 sm:left-3"
-            aria-label="Abrir menú lateral"
-          >
-            <DynamicIcon name={"PanelLeftOpen"} size={24} />
-          </button>
-        )}
-        <Outlet />
-      </main>
+    <div className="px-6 pt-8 pb-8">
+      <Outlet />
     </div>
   );
 };

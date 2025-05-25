@@ -1,40 +1,63 @@
-import React from "react";
 import DashboardCard from "../../components/admin/DashboardCard";
 import useAuthStore from "../../store/authStore";
 import { capitalizeWords } from "../../utils/textUtils";
+import useApiRequest from "../../hooks/useApiRequest";
+import CRLoader from "../../components/UI/CRLoader";
+import { DynamicIcon } from "../../utils/DynamicIcon";
+import CRButton from "../../components/UI/CRButton";
 
 const AdminDashboardPage = () => {
   const { user } = useAuthStore();
 
-  const dashboardData = {
-    totalNails: 1250,
-    monthlyVisitors: 3450,
-    scheduledAppointments: 85,
-  };
+  const {
+    data: dashboardData,
+    isLoading: isLoadingData,
+    error: errorData,
+    refetch: refetchData,
+  } = useApiRequest({
+    queryKey: ["dashboardStats"],
+    url: "/dashboard/estadisticas",
+    method: "GET",
+    notificationEnabled: false, // Las notificaciones de error se manejan localmente
+  });
 
   const cardItems = [
     {
       title: "Total de Diseños Registrados",
-      value: dashboardData.totalNails.toLocaleString(),
+      value: dashboardData?.totalDisenios?.toLocaleString() ?? "0",
       iconName: "Archive",
       iconBgClass: "bg-primary/10 dark:bg-primary/20",
       iconColorClass: "text-primary dark:text-primary-light",
     },
     {
       title: "Visitas este Mes",
-      value: dashboardData.monthlyVisitors.toLocaleString(),
+      value: dashboardData?.visitasEsteMes?.toLocaleString() ?? "0",
       iconName: "Users",
       iconBgClass: "bg-tertiary/10 dark:bg-tertiary/20",
       iconColorClass: "text-tertiary dark:text-tertiary",
     },
     {
-      title: "Citas Agendadas (Próximas)",
-      value: dashboardData.scheduledAppointments,
+      title: "Citas Próximas",
+      value: dashboardData?.citasProximas?.toLocaleString() ?? "0",
       iconName: "CalendarCheck2",
       iconBgClass: "bg-secondary/20 dark:bg-secondary/30",
       iconColorClass: "text-secondary-dark dark:text-secondary",
     },
   ];
+
+  if (isLoadingData) {
+    return <CRLoader text="Cargando datos del dashboard..." fullScreen={false} style="circle" size="lg" />;
+  }
+
+  if (errorData) {
+    return (
+      <div className="text-center p-8 text-red-500 dark:text-red-400">
+        <DynamicIcon name="AlertTriangle" className="mx-auto h-12 w-12 mb-4" />
+        <p className="text-xl">Error al cargar datos del dashboard: {errorData.message ?? "Error desconocido"}</p>
+        <CRButton onClick={() => refetchData()} title="Reintentar" className="mt-4 bg-primary text-white" />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -63,7 +86,7 @@ const AdminDashboardPage = () => {
         <p className="text-textSecondary dark:text-slate-400">Estamos trabajando para traerte más herramientas y análisis útiles. ¡Vuelve pronto!</p>
         <ul className="list-disc list-inside mt-3 text-sm text-textSecondary dark:text-slate-400 space-y-1">
           <li>Gráficos de rendimiento detallados.</li>
-          <li>Gestión de usuarios avanzada.</li>
+          <li>Gestión de citas completa.</li>
           <li>Reportes personalizables.</li>
         </ul>
       </div>

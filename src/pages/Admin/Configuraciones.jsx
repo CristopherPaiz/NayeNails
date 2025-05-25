@@ -1,25 +1,27 @@
 import React, { useState, useEffect } from "react";
-import CRInput from "../../components/UI/CRInput";
-import CRButton from "../../components/UI/CRButton";
 import CRLoader from "../../components/UI/CRLoader";
-import { DynamicIcon } from "../../utils/DynamicIcon";
 import useApiRequest from "../../hooks/useApiRequest";
-import useStoreNails from "../../store/store"; // Para obtener valores iniciales y actualizar el store
+import useStoreNails from "../../store/store";
+import ImageConfigSection from "./ImageConfigSection";
+
+const CONFIG_KEYS = {
+  CAROUSEL_PRINCIPAL: "carousel_principal_imagenes",
+  CAROUSEL_OBJETIVO: "carousel_objetivo_imagenes",
+  GALERIA_INICIAL: "galeria_inicial_imagenes",
+};
 
 const ConfiguracionesPage = () => {
   const { imagenesInicio, imagenesGaleria, fetchConfiguracionesSitio } = useStoreNails();
-
-  // Estados para las URLs de las imágenes
-  // Se almacenarán como strings JSON de arrays de objetos { url: "..." }
-  const [carouselPrincipalUrls, setCarouselPrincipalUrls] = useState("");
-  const [carouselObjetivoUrls, setCarouselObjetivoUrls] = useState(""); // Asumiendo que hay otro carrusel
-  const [galeriaInicialUrls, setGaleriaInicialUrls] = useState("");
-
+  const [configData, setConfigData] = useState({
+    [CONFIG_KEYS.CAROUSEL_PRINCIPAL]: "",
+    [CONFIG_KEYS.CAROUSEL_OBJETIVO]: "",
+    [CONFIG_KEYS.GALERIA_INICIAL]: "",
+  });
   const [errors, setErrors] = useState({});
 
-  // Cargar configuraciones existentes al montar
+  // Fetch site configurations
   const {
-    data: configsData,
+    data: apiConfigsData,
     isLoading: isLoadingConfigs,
     refetch: refetchConfigs,
   } = useApiRequest({
@@ -29,130 +31,120 @@ const ConfiguracionesPage = () => {
     notificationEnabled: false,
   });
 
-  useEffect(() => {
-    if (configsData) {
-      const principal = configsData.find((c) => c.clave === "carousel_principal_imagenes")?.valor ?? "[]";
-      const objetivo = configsData.find((c) => c.clave === "carousel_objetivo_imagenes")?.valor ?? "[]";
-      const galeria = configsData.find((c) => c.clave === "galeria_inicial_imagenes")?.valor ?? "[]";
-
-      setCarouselPrincipalUrls(JSON.stringify(JSON.parse(principal), null, 2));
-      setCarouselObjetivoUrls(JSON.stringify(JSON.parse(objetivo), null, 2));
-      setGaleriaInicialUrls(JSON.stringify(JSON.parse(galeria), null, 2));
-    } else {
-      // Si no hay datos de API, usar los del store como placeholder inicial
-      setCarouselPrincipalUrls(JSON.stringify(imagenesInicio, null, 2));
-      setGaleriaInicialUrls(JSON.stringify(imagenesGaleria, null, 2));
-      // setCarouselObjetivoUrls(...) si existe en el store
-    }
-  }, [configsData, imagenesInicio, imagenesGaleria]);
-
+  // Setup update mutation
   const updateConfigMutation = useApiRequest({
-    url: "/configuraciones-sitio", // Endpoint para guardar/actualizar una config
-    method: "POST", // O PUT si el backend espera una clave específica
+    url: "/configuraciones-sitio",
+    method: "POST",
     options: {
       onSuccess: () => {
-        refetchConfigs(); // Recargar todas las configs
-        fetchConfiguracionesSitio(); // Actualizar el store de Zustand
+        refetchConfigs();
+        fetchConfiguracionesSitio();
         setErrors({});
       },
       onError: (error, variables) => {
-        setErrors((prev) => ({ ...prev, [variables.clave]: error.response?.data?.message ?? "Error al guardar." }));
+        setErrors((prev) => ({
+          ...prev,
+          [variables.clave]: error.response?.data?.message || "Error al guardar.",
+        }));
       },
     },
     successMessage: "Configuración guardada con éxito.",
   });
 
-  const isValidJsonArrayOfImageObjects = (str, clave) => {
+  // Initialize data from API or store
+  useEffect(() => {
+    if (apiConfigsData) {
+      // Process API data
+      const getConfigValue = (key) => {
+        const configItem = apiConfigsData.find((c) => c.clave === key);
+        return configItem ? JSON.stringify(JSON.parse(configItem.valor), null, 2) : "[]";
+      };
+
+      setConfigData({
+        [CONFIG_KEYS.CAROUSEL_PRINCIPAL]: getConfigValue(CONFIG_KEYS.CAROUSEL_PRINCIPAL),
+        [CONFIG_KEYS.CAROUSEL_OBJETIVO]: getConfigValue(CONFIG_KEYS.CAROUSEL_OBJETIVO),
+        [CONFIG_KEYS.GALERIA_INICIAL]: getConfigValue(CONFIG_KEYS.GALERIA_INICIAL),
+      });
+    } else {
+      // Use store data as fallback
+      setConfigData({
+        [CONFIG_KEYS.CAROUSEL_PRINCIPAL]: JSON.stringify(imagenesInicio || [], null, 2),
+        [CONFIG_KEYS.CAROUSEL_OBJETIVO]: "[]", // Fallback
+        [CONFIG_KEYS.GALERIA_INICIAL]: JSON.stringify(imagenesGaleria || [], null, 2),
+      });
+    }
+  }, [apiConfigsData, imagenesInicio, imagenesGaleria]);
+
+  // Validate and save configuration
+  const handleSave = async (key) => {
     try {
-      const parsed = JSON.parse(str);
+      const jsonValue = configData[key];
+      const parsed = JSON.parse(jsonValue);
+
+      // Validate array and required fields
       if (!Array.isArray(parsed)) {
-        setErrors((prev) => ({ ...prev, [clave]: "Debe ser un array JSON." }));
-        return false;
+        throw new Error("Debe ser un array JSON.");
       }
+
       for (const item of parsed) {
-        if (typeof item !== "object" || item === null || typeof item.url !== "string" || !item.url.trim()) {
-          setErrors((prev) => ({ ...prev, [clave]: "Cada objeto en el array debe tener una propiedad 'url' (string no vacío)." }));
-          return false;
+        if (typeof item !== "object" || !item || typeof item.url !== "string" || !item.url.trim()) {
+          throw new Error("Cada objeto debe tener una propiedad 'url' válida.");
         }
       }
-      setErrors((prev) => ({ ...prev, [clave]: undefined })); // Limpiar error si es válido
-      return true;
+
+      // Clear error and submit
+      setErrors((prev) => ({ ...prev, [key]: undefined }));
+      await updateConfigMutation.mutateAsync({ clave: key, valor: jsonValue });
     } catch (e) {
-      setErrors((prev) => ({ ...prev, [clave]: "JSON inválido." }));
-      return false;
+      setErrors((prev) => ({ ...prev, [key]: `Error: ${e.message}` }));
     }
   };
 
-  const handleSave = async (clave, valorStringJson) => {
-    if (!isValidJsonArrayOfImageObjects(valorStringJson, clave)) {
-      return;
-    }
-    await updateConfigMutation.mutateAsync({ clave, valor: valorStringJson });
+  // Update config data
+  const handleChange = (key, value) => {
+    setConfigData((prev) => ({ ...prev, [key]: value }));
   };
 
   const isLoading = isLoadingConfigs || updateConfigMutation.isPending;
 
-  const renderConfigSection = (title, clave, value, setValue, iconName) => (
-    <div className="bg-background dark:bg-slate-800 p-6 rounded-xl shadow-lg mb-8">
-      <h2 className="text-xl font-semibold text-textPrimary dark:text-white mb-4 flex items-center">
-        <DynamicIcon name={iconName} className="w-6 h-6 mr-2 text-primary" />
-        {title}
-      </h2>
-      <p className="text-xs text-textSecondary dark:text-slate-400 mb-1">
-        Ingresa un array de objetos JSON. Cada objeto debe tener una propiedad "url". Ejemplo:
-      </p>
-      <pre className="text-xs bg-gray-100 dark:bg-slate-700 p-2 rounded mb-3 overflow-x-auto">
-        {`[
-  { "url": "https://ejemplo.com/imagen1.jpg", "legend": "Opcional" },
-  { "url": "https://ejemplo.com/imagen2.png" }
-]`}
-      </pre>
-      <textarea
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        rows={8}
-        className={`w-full p-2 border rounded-md shadow-sm bg-white dark:bg-slate-700 text-sm
-                    ${errors[clave] ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-slate-600"}
-                    focus:ring-primary focus:border-primary dark:text-white`}
-        placeholder="Pega aquí el JSON con las URLs de las imágenes."
-      />
-      {errors[clave] && <p className="text-xs text-red-500 dark:text-red-400 mt-1">{errors[clave]}</p>}
-      <CRButton
-        title="Guardar Cambios"
-        onClick={() => handleSave(clave, value)}
-        className="mt-4 bg-primary text-white"
-        loading={updateConfigMutation.isPending && updateConfigMutation.variables?.clave === clave}
-        disabled={isLoadingConfigs}
-      />
-    </div>
-  );
-
   return (
-    <div className="sm:px">
+    <div className="sm:px-4 ">
       {isLoading && <CRLoader fullScreen background="bg-black/30 dark:bg-black/50" style="dots" />}
+
       <h1 className="text-2xl md:text-3xl font-bold text-textPrimary dark:text-white mb-8">Configuraciones del Sitio</h1>
 
-      {renderConfigSection(
-        "Imágenes del Carrusel Principal",
-        "carousel_principal_imagenes",
-        carouselPrincipalUrls,
-        setCarouselPrincipalUrls,
-        "GalleryHorizontal"
-      )}
-      {renderConfigSection(
-        "Imágenes del Carrusel Objetivo",
-        "carousel_objetivo_imagenes",
-        carouselObjetivoUrls,
-        setCarouselObjetivoUrls,
-        "GalleryThumbnails"
-      )}
-      {renderConfigSection(
-        "Imágenes de la Galería Inicial",
-        "galeria_inicial_imagenes",
-        galeriaInicialUrls,
-        setGaleriaInicialUrls,
-        "GalleryVertical"
-      )}
+      <ImageConfigSection
+        title="Imágenes del Carrusel Principal"
+        configKey={CONFIG_KEYS.CAROUSEL_PRINCIPAL}
+        value={configData[CONFIG_KEYS.CAROUSEL_PRINCIPAL]}
+        onChange={(value) => handleChange(CONFIG_KEYS.CAROUSEL_PRINCIPAL, value)}
+        onSave={handleSave}
+        error={errors[CONFIG_KEYS.CAROUSEL_PRINCIPAL]}
+        isSubmitting={updateConfigMutation.isPending}
+        icon="GalleryHorizontal"
+      />
+
+      <ImageConfigSection
+        title="Imágenes del Carrusel Objetivo"
+        configKey={CONFIG_KEYS.CAROUSEL_OBJETIVO}
+        value={configData[CONFIG_KEYS.CAROUSEL_OBJETIVO]}
+        onChange={(value) => handleChange(CONFIG_KEYS.CAROUSEL_OBJETIVO, value)}
+        onSave={handleSave}
+        error={errors[CONFIG_KEYS.CAROUSEL_OBJETIVO]}
+        isSubmitting={updateConfigMutation.isPending}
+        icon="GalleryThumbnails"
+      />
+
+      <ImageConfigSection
+        title="Imágenes de la Galería Inicial"
+        configKey={CONFIG_KEYS.GALERIA_INICIAL}
+        value={configData[CONFIG_KEYS.GALERIA_INICIAL]}
+        onChange={(value) => handleChange(CONFIG_KEYS.GALERIA_INICIAL, value)}
+        onSave={handleSave}
+        error={errors[CONFIG_KEYS.GALERIA_INICIAL]}
+        isSubmitting={updateConfigMutation.isPending}
+        icon="GalleryVertical"
+      />
     </div>
   );
 };

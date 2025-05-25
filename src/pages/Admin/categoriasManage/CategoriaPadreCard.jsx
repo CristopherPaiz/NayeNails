@@ -1,24 +1,26 @@
 import { DynamicIcon } from "../../../utils/DynamicIcon";
 import CRButton from "../../../components/UI/CRButton";
 import SubcategoriasTable from "./SubcategoriasTable";
-import CRSwitch from "../../../components/UI/CRSwitch";
+import CustomSwitch from "../../../components/UI/CustomSwitch.jsx";
 
 const CategoriaPadreCard = ({
   categoria,
   isExpanded,
   onToggleExpand,
   onEdit,
-  onToggleActivo, // Espera el objeto categoría completo
+  onToggleActivo,
   onAddSubcategoria,
   onEditSubcategoria,
-  onToggleActivoSubcategoria, // Espera el objeto subcategoría completo
+  onToggleActivoSubcategoria,
+  disabledActions = false,
 }) => {
   const cardBgClass = categoria.activo ? "bg-background dark:bg-slate-800" : "bg-gray-100 dark:bg-slate-700 opacity-70";
   const textColorClass = categoria.activo ? "text-textPrimary dark:text-white" : "text-gray-500 dark:text-slate-400";
 
-  const handleSwitchClick = (e) => {
-    e.stopPropagation();
-    onToggleActivo(categoria); // Pasar el objeto categoría completo
+  const handleSwitchChange = () => {
+    if (!disabledActions) {
+      onToggleActivo(categoria);
+    }
   };
 
   return (
@@ -65,18 +67,13 @@ const CategoriaPadreCard = ({
               externalIcon={<DynamicIcon name="Edit3" className="w-4 h-4" />}
               onClick={(e) => {
                 e.stopPropagation();
-                onEdit();
+                if (!disabledActions) onEdit();
               }}
               className="!bg-orange-500 hover:!bg-orange-600 text-white !p-1.5"
               onlyIcon={true}
+              disabled={disabledActions}
             />
-            <div onClick={handleSwitchClick} className="flex items-center">
-              <CRSwitch
-                checked={!!categoria.activo} // Asegurar que sea booleano
-                onChange={() => {}} // El onChange es manejado por handleSwitchClick
-                colorOff="bg-red-500"
-              />
-            </div>
+            <CustomSwitch checked={!!categoria.activo} onChange={handleSwitchChange} colorOff="bg-red-500" disabled={disabledActions} size="small" />
           </div>
         </div>
 
@@ -86,14 +83,13 @@ const CategoriaPadreCard = ({
             externalIcon={<DynamicIcon name="Edit3" className="w-4 h-4" />}
             onClick={(e) => {
               e.stopPropagation();
-              onEdit();
+              if (!disabledActions) onEdit();
             }}
             className="!bg-orange-500 hover:!bg-orange-600 text-white !p-1.5 sm:!p-2"
             onlyIcon={true}
+            disabled={disabledActions}
           />
-          <div onClick={handleSwitchClick} className="flex items-center">
-            <CRSwitch checked={!!categoria.activo} colorOff="bg-red-500" />
-          </div>
+          <CustomSwitch checked={!!categoria.activo} onChange={handleSwitchChange} colorOff="bg-red-500" disabled={disabledActions} />
           <DynamicIcon
             name={isExpanded ? "ChevronUp" : "ChevronDown"}
             className={`w-5 h-5 transition-transform duration-200 hidden sm:flex ${textColorClass} ml-1`}
@@ -114,9 +110,10 @@ const CategoriaPadreCard = ({
               iconPosition="left"
               onClick={(e) => {
                 e.stopPropagation();
-                onAddSubcategoria();
+                if (!disabledActions) onAddSubcategoria();
               }}
               className="bg-secondary text-textPrimary hover:opacity-90 dark:bg-accent dark:text-primary dark:hover:opacity-80 !text-xs w-full sm:w-auto !py-2 !px-4 sm:!py-1.5 sm:!px-3"
+              disabled={disabledActions}
             />
           </div>
 
@@ -124,7 +121,8 @@ const CategoriaPadreCard = ({
             <SubcategoriasTable
               subcategorias={categoria.subcategorias}
               onEditSubcategoria={onEditSubcategoria}
-              onToggleActivoSubcategoria={onToggleActivoSubcategoria} // Pasa la función directamente
+              onToggleActivoSubcategoria={onToggleActivoSubcategoria}
+              disabledActions={disabledActions}
             />
           ) : (
             <p className="text-sm text-textSecondary dark:text-slate-400 text-center py-4">No hay subcategorías para mostrar.</p>

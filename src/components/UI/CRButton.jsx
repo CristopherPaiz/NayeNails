@@ -5,32 +5,6 @@ const isMobile = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 };
 
-/**
- * CRButton - Componente de botón configurable con soporte para íconos, estados de carga y deshabilitado.
- *
- * @param {Object} props - Propiedades del componente.
- * @param {string} [props.title] - Texto a mostrar en el botón. Se omite si `onlyIcon` es `true`.
- * @param {boolean} [props.disable=false] - Si está activado, deshabilita el botón y cambia el estilo visual para indicar que no se puede interactuar.
- * @param {"save"|"delete"|"continue"|"close"|"search"|"edit"|"back"|"down"|"up"|"home"|"profile"|"settings"} [props.icon] - Especifica el ícono a mostrar dentro del botón. Se renderiza antes o después del texto dependiendo de `iconPosition`.
- * @param {boolean} [props.onlyIcon=false] - Si está activado, solo muestra el ícono sin texto.
- * @param {"left"|"right"} [props.iconPosition="left"] - Determina la posición del ícono en relación con el texto. Puede ser "left" (izquierda) o "right" (derecha).
- * @param {React} [props.externalIcon] - Ícono personalizado a renderizar. Puede ser un componente React o una función que devuelve un componente.
- * @param {boolean} [props.loading=false] - Si está activado, muestra un ícono de carga y deshabilita el botón. Cambia el texto del botón a `loadingText` si es proporcionado.
- * @param {string} [props.loadingText="Cargando..."] - Texto a mostrar mientras el botón está en estado de carga. Se ignora si `onlyIcon` es `true`.
- * @param {string} [props.disableText] - Texto a mostrar cuando el botón está deshabilitado (`disable=true`). Se omite si no se proporciona.
- * @param {function} [props.onClick] - Función que se ejecuta cuando se hace clic en el botón, siempre que no esté deshabilitado o en estado de carga.
- * @param {string} [props.className] - Clases CSS adicionales para personalizar el botón. Sobrescribe los estilos de color por defecto del botón. Si no se proporciona, el botón tendrá un color de fondo azul (`bg-blue-500`) y texto blanco (`text-white`).
- * @param {"center"|"left"|"right"} [props.position="center"] - Alineación del botón dentro de su contenedor. Puede ser "center" (centrado), "left" (izquierda) o "right" (derecha).
- *
- * @returns {JSX.Element} - Componente de botón renderizado.
- *
- * @example
- * <CRButton title="Guardar" icon="save" onClick={handleSave} />
- * <CRButton title="Eliminar" icon="delete" onClick={handleDelete} />
- * <CRButton title="Buscar" icon="search" onClick={handleSearch} />
- * <CRButton title="Cerrar" icon="close" onClick={handleClose} />
- */
-
 const CRButton = ({
   title,
   disable = false,
@@ -45,7 +19,6 @@ const CRButton = ({
   className,
   position = "center",
 }) => {
-  // HOVER MOBILE
   const [isHovered, setIsHovered] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState(null);
 
@@ -74,7 +47,7 @@ const CRButton = ({
         clearTimeout(hoverTimeout);
       }
     };
-  }, [isHovered]);
+  }, [isHovered, hoverTimeout]);
 
   const renderIcon = () => {
     if (loading) {
@@ -102,14 +75,12 @@ const CRButton = ({
           className: `${externalIcon.props.className || ""} ${iconClasses}`.trim(),
         });
       } else {
-        console.warn("Invalid externalIcon prop");
         return null;
       }
 
       return <div className={wrapperClasses}>{iconElement}</div>;
     }
 
-    //CASO ICONO NORMAL
     switch (icon) {
       case "save":
         return (

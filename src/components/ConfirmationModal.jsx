@@ -9,7 +9,7 @@ const ConfirmationModal = ({ isOpen, onClose, title, children, type = "success" 
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 bg-opacity-60 dark:bg-opacity-75 z-50 flex justify-center items-center p-4 transition-opacity duration-300 ease-in-out"
+      className="fixed inset-0 bg-black/70 z-[5000] flex justify-center items-center p-4 transition-opacity duration-300 ease-in-out"
       onClick={onClose}
     >
       <div
@@ -29,27 +29,13 @@ const ConfirmationModal = ({ isOpen, onClose, title, children, type = "success" 
 
         <div className="text-sm sm:text-base text-gray-700 dark:text-gray-300 text-center mb-6">{children}</div>
 
-        <div className="mt-6 flex justify-center">
-          <button
-            onClick={onClose}
-            className={`px-6 py-2.5 cursor-pointer ${
-              type === "success"
-                ? "bg-primary hover:bg-primary dark:bg-primary dark:hover:bg-primary"
-                : "bg-yellow-500 hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700"
-            } text-white rounded-lg shadow-md hover:shadow-lg focus:outline-none focus:ring-2 ${
-              type === "success" ? "focus:ring-primary" : "focus:ring-yellow-500"
-            } focus:ring-offset-2 dark:focus:ring-offset-slate-800 transition-all duration-150 ease-in-out font-medium`}
-          >
-            Entendido
-          </button>
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
-            aria-label="Cerrar modal"
-          >
-            <X size={24} />
-          </button>
-        </div>
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+          aria-label="Cerrar modal"
+        >
+          <X size={24} />
+        </button>
       </div>
     </div>
   );

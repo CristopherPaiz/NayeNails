@@ -49,7 +49,7 @@ const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames =
       position: absolute;
       width: 100%;
       display: flex;
-      animation-duration: 35s; /* Ajusta la duración/velocidad */
+      animation-duration: 35s;
       animation-timing-function: linear;
       animation-iteration-count: infinite;
     }
@@ -63,15 +63,14 @@ const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames =
     .marquee-row-2 {
       top: 3.5rem; /* top-14 */
       animation-name: marquee-reverse-animation;
-      animation-duration: 40s; /* Ligeramente diferente velocidad */
+      animation-duration: 40s;
     }
     .marquee-content {
       display: flex;
       flex-shrink: 0;
-      align-items: center; /* Para centrar verticalmente los chips si tienen alturas variables */
+      align-items: center;
     }
     .marquee-chip {
-      /* Estilos de los chips (puedes usar clases de Tailwind aquí si prefieres para el chip en sí) */
       background-color: var(--chip-bg-color, #e5e7eb); /* bg-gray-200 */
       color: var(--chip-text-color, #374151); /* text-gray-700 */
       padding: 0.25rem 0.75rem; /* px-3 py-1 */
@@ -97,15 +96,14 @@ const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames =
   const [chipTextColor, setChipTextColor] = useState("#374151");
 
   useEffect(() => {
-    
     if (document.documentElement.classList.contains("dark")) {
-      setModalBgColor("#1f2937"); 
-      setChipBgColor("#4b5563"); 
-      setChipTextColor("#d1d5db"); 
+      setModalBgColor("#1f2937");
+      setChipBgColor("#4b5563");
+      setChipTextColor("#d1d5db");
     } else {
       setModalBgColor("white");
-      setChipBgColor("#e0e7ff"); 
-      setChipTextColor("#4338ca"); 
+      setChipBgColor("#e0e7ff");
+      setChipTextColor("#4338ca");
     }
   }, []);
 
@@ -118,7 +116,7 @@ const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames =
           .replace(/var\(--chip-text-color, #374151\)/g, chipTextColor)}
       </style>
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4 transition-opacity duration-300 ease-in-out"
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[5000] p-4 transition-opacity duration-300 ease-in-out"
         style={{ opacity: isOpen ? 1 : 0 }}
         onClick={onClose}
       >

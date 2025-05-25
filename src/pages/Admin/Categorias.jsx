@@ -8,6 +8,8 @@ import CategoriaFormModal from "../Admin/categoriasManage/CategoriaFormModal.jsx
 import ConfirmationModal from "../../components/ConfirmationModal";
 import useApiRequest from "../../hooks/useApiRequest.js";
 import { useQueryClient } from "@tanstack/react-query";
+import CustomSwitch from "../../components/UI/CustomSwitch.jsx";
+import CRAlert from "../../components/UI/CRAlert.jsx";
 
 const CategoriasPage = () => {
   const queryClient = useQueryClient();
@@ -19,19 +21,44 @@ const CategoriasPage = () => {
   const [currentCategoria, setCurrentCategoria] = useState(null);
 
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [confirmModalProps, setConfirmModalProps] = useState({ title: "", message: "", onConfirm: () => {} });
+  const [confirmModalProps, setConfirmModalProps] = useState({ title: "", children: null });
 
-  const [isLoadingAction, setIsLoadingAction] = useState(false); // Para acciones específicas como submit o toggle
+  const [isLoadingAction, setIsLoadingAction] = useState(false);
 
-  const iconOptions = useMemo(
-    () =>
-      Object.keys(LucideIcons)
-        .filter((name) => /^[A-Z]/.test(name) && !["createLucideIcon", "icons", "createElement", "LucideIcon", "LucideProps"].includes(name))
-        .map((name) => ({ label: name, value: name })),
-    []
-  );
+  const isValidReactComponent = (component) => {
+    return (
+      component &&
+      (typeof component === "function" || (typeof component === "object" && component.$$typeof && typeof component.render === "function"))
+    );
+  };
 
-  const queryKeyCategorias = ["/categorias"];
+  const iconOptions = useMemo(() => {
+    try {
+      const validIcons = [];
+      const allKeys = Object.getOwnPropertyNames(LucideIcons);
+      const excludeList = ["createLucideIcon", "default", "__esModule", "icons"];
+
+      const iconKeys = allKeys.filter((key) => !excludeList.includes(key) && !key.startsWith("_") && key[0] === key[0].toUpperCase());
+
+      iconKeys.forEach((iconName) => {
+        try {
+          const IconComponent = LucideIcons[iconName];
+          if (isValidReactComponent(IconComponent)) {
+            validIcons.push({ label: iconName, value: iconName });
+          }
+        } catch (error) {
+          console.warn(`Error al procesar icono ${iconName}:`, error);
+        }
+      });
+      validIcons.sort((a, b) => a.label.localeCompare(b.label));
+      return validIcons;
+    } catch (error) {
+      console.error("Error al cargar iconos:", error);
+      return [];
+    }
+  }, []);
+
+  const queryKeyCategorias = ["categorias"];
 
   const {
     data: categoriasData,
@@ -42,7 +69,7 @@ const CategoriasPage = () => {
     queryKey: queryKeyCategorias,
     url: "/categorias",
     method: "GET",
-    notificationEnabled: false, // Las notificaciones de error se manejan abajo
+    notificationEnabled: false,
   });
 
   useEffect(() => {
@@ -51,76 +78,94 @@ const CategoriasPage = () => {
     }
   }, [categoriasData]);
 
-  const mutationOptions = {
-    onSuccess: () => {
+  const commonMutationOptionsForToggle = {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeyCategorias });
-      closeFormModal();
+      setIsConfirmModalOpen(false);
       setIsLoadingAction(false);
+      CRAlert.alert({ title: "Éxito", message: data?.message || "Estado actualizado.", type: "success" });
     },
-    onError: () => {
+    onError: (error, variables) => {
+      setIsConfirmModalOpen(false);
       setIsLoadingAction(false);
-      // La notificación de error ya la maneja useApiRequest
+      CRAlert.alert({ title: "Error", message: error.response?.data?.message || "No se pudo actualizar el estado.", type: "error" });
     },
   };
 
   const addCategoriaPadreMutation = useApiRequest({
-    url: "/categorias",
+    url: "/categorias", // URL base para esta mutación
     method: "POST",
-    options: mutationOptions,
+    options: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: queryKeyCategorias });
+        closeFormModal();
+        setIsLoadingAction(false);
+      },
+      onError: () => {
+        setIsLoadingAction(false);
+      },
+    },
     successMessage: "Categoría padre creada con éxito.",
   });
 
   const editCategoriaPadreMutation = useApiRequest({
-    url: `/categorias/${currentCategoria?.id}`, // URL se actualiza cuando currentCategoria cambia
+    // No se define URL base aquí, se pasará dinámicamente
     method: "PUT",
-    options: mutationOptions,
+    options: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: queryKeyCategorias });
+        closeFormModal();
+        setIsLoadingAction(false);
+      },
+      onError: () => {
+        setIsLoadingAction(false);
+      },
+    },
     successMessage: "Categoría padre actualizada con éxito.",
   });
 
   const addSubcategoriaMutation = useApiRequest({
-    url: `/categorias/${currentCategoria?.idPadre}/subcategorias`, // URL se actualiza
+    // No se define URL base aquí
     method: "POST",
-    options: mutationOptions,
+    options: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: queryKeyCategorias });
+        closeFormModal();
+        setIsLoadingAction(false);
+      },
+      onError: () => {
+        setIsLoadingAction(false);
+      },
+    },
     successMessage: "Subcategoría creada con éxito.",
   });
 
   const editSubcategoriaMutation = useApiRequest({
-    url: `/subcategorias/${currentCategoria?.id}`, // URL se actualiza
+    // No se define URL base aquí
     method: "PUT",
-    options: mutationOptions,
+    options: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: queryKeyCategorias });
+        closeFormModal();
+        setIsLoadingAction(false);
+      },
+      onError: () => {
+        setIsLoadingAction(false);
+      },
+    },
     successMessage: "Subcategoría actualizada con éxito.",
   });
 
   const toggleActivoCategoriaPadreMutation = useApiRequest({
     method: "PATCH",
-    options: {
-      onSuccess: (data) => {
-        queryClient.invalidateQueries({ queryKey: queryKeyCategorias });
-        setIsConfirmModalOpen(false);
-        setIsLoadingAction(false);
-        // Notificación ya manejada por el hook
-      },
-      onError: () => {
-        setIsConfirmModalOpen(false);
-        setIsLoadingAction(false);
-      },
-    },
-    // successMessage se puede establecer dinámicamente si es necesario
+    options: commonMutationOptionsForToggle,
+    notificationEnabled: false, // Ya manejado en commonMutationOptionsForToggle
   });
 
   const toggleActivoSubcategoriaMutation = useApiRequest({
     method: "PATCH",
-    options: {
-      onSuccess: (data) => {
-        queryClient.invalidateQueries({ queryKey: queryKeyCategorias });
-        setIsConfirmModalOpen(false);
-        setIsLoadingAction(false);
-      },
-      onError: () => {
-        setIsConfirmModalOpen(false);
-        setIsLoadingAction(false);
-      },
-    },
+    options: commonMutationOptionsForToggle,
+    notificationEnabled: false, // Ya manejado en commonMutationOptionsForToggle
   });
 
   const handleToggleParent = (parentId) => {
@@ -132,9 +177,9 @@ const CategoriasPage = () => {
     if ((mode === "editParent" || mode === "editChild") && categoriaData) {
       setCurrentCategoria(categoriaData);
     } else if (mode === "addChild" && parentIdForNewChild) {
-      setCurrentCategoria({ idPadre: parentIdForNewChild }); // Solo idPadre para nueva subcategoría
+      setCurrentCategoria({ idPadre: parentIdForNewChild });
     } else {
-      setCurrentCategoria(null); // Para nueva categoría padre
+      setCurrentCategoria(null);
     }
     setIsFormModalOpen(true);
   };
@@ -148,44 +193,72 @@ const CategoriasPage = () => {
     setIsLoadingAction(true);
     try {
       if (modalMode === "addParent") {
-        await addCategoriaPadreMutation.mutateAsync(formData);
-      } else if (modalMode === "editParent") {
-        await editCategoriaPadreMutation.mutateAsync(formData);
-      } else if (modalMode === "addChild") {
-        // formData ya tiene idPadre del modal, pero la URL de la mutación lo usa del currentCategoria
-        await addSubcategoriaMutation.mutateAsync(formData);
-      } else if (modalMode === "editChild") {
-        await editSubcategoriaMutation.mutateAsync(formData);
+        await addCategoriaPadreMutation.mutateAsync({ data: formData }); // addCategoriaPadreMutation tiene URL base
+      } else if (modalMode === "editParent" && currentCategoria) {
+        await editCategoriaPadreMutation.mutateAsync({ url: `/categorias/${currentCategoria.id}`, data: formData });
+      } else if (modalMode === "addChild" && currentCategoria) {
+        await addSubcategoriaMutation.mutateAsync({ url: `/categorias/${currentCategoria.idPadre}/subcategorias`, data: formData });
+      } else if (modalMode === "editChild" && currentCategoria) {
+        await editSubcategoriaMutation.mutateAsync({ url: `/categorias/subcategorias/${currentCategoria.id}`, data: formData });
       }
     } catch (err) {
-      // El error ya es manejado y notificado por useApiRequest
-      setIsLoadingAction(false); // Asegurar que se detenga la carga en error
+      console.error("Error en la mutación del formulario:", err);
+      setIsLoadingAction(false);
     }
-    // onSuccess en las mutaciones se encarga de cerrar modal y setIsLoadingAction(false)
   };
 
-  const prepareToggleActivo = (itemType, item, parentId = null) => {
-    const actionText = item.activo ? "inactivar" : "activar";
+  const prepareToggleActivo = (itemType, item) => {
+    const actionText = item.activo ? "Deshabilitar" : "Habilitar";
     const itemName = item.nombre;
+    const typeText = itemType === "parent" ? "categoría padre" : "subcategoría";
+
     setConfirmModalProps({
-      title: `Confirmar ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}`,
-      message: `¿Estás seguro de que deseas ${actionText} "${itemName}"?`,
-      onConfirm: async () => {
-        setIsLoadingAction(true);
-        try {
-          if (itemType === "parent") {
-            await toggleActivoCategoriaPadreMutation.mutateAsync(null, {
-              url: `/categorias/${item.id}/toggle-activo`, // URL específica para esta mutación
-            });
-          } else if (itemType === "child") {
-            await toggleActivoSubcategoriaMutation.mutateAsync(null, {
-              url: `/subcategorias/${item.id}/toggle-activo`, // URL específica
-            });
-          }
-        } catch (err) {
-          setIsLoadingAction(false);
-        }
-      },
+      title: `${actionText} ${typeText}`,
+      children: (
+        <>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            ¿Estás seguro de que deseas {actionText.toLowerCase()} la {typeText} "{itemName}"?
+          </p>
+          <div className="mt-6 flex justify-end space-x-3">
+            <CRButton
+              title="Cancelar"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isLoadingAction && !isAnyMutationLoading) setIsConfirmModalOpen(false);
+              }}
+              className="bg-gray-300 hover:bg-gray-400 dark:bg-slate-600 dark:hover:bg-slate-500 text-textPrimary dark:text-white"
+              disabled={isLoadingAction || isAnyMutationLoading}
+            />
+            <CRButton
+              title={actionText}
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (isLoadingAction || isAnyMutationLoading) return;
+                setIsLoadingAction(true);
+                try {
+                  if (itemType === "parent") {
+                    await toggleActivoCategoriaPadreMutation.mutateAsync({
+                      url: `/categorias/${item.id}/toggle-activo`,
+                      data: null,
+                    });
+                  } else if (itemType === "child") {
+                    await toggleActivoSubcategoriaMutation.mutateAsync({
+                      url: `/categorias/subcategorias/${item.id}/toggle-activo`,
+                      data: null,
+                    });
+                  }
+                } catch (err) {
+                  console.error("Error en la mutación de toggle activo:", err);
+                  setIsLoadingAction(false);
+                }
+              }}
+              className={`${item.activo ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"} text-white`}
+              loading={isLoadingAction}
+              disabled={isLoadingAction || isAnyMutationLoading}
+            />
+          </div>
+        </>
+      ),
     });
     setIsConfirmModalOpen(true);
   };
@@ -204,15 +277,17 @@ const CategoriasPage = () => {
     );
   }
 
+  const isAnyMutationLoading =
+    addCategoriaPadreMutation.isPending ||
+    editCategoriaPadreMutation.isPending ||
+    addSubcategoriaMutation.isPending ||
+    editSubcategoriaMutation.isPending ||
+    toggleActivoCategoriaPadreMutation.isPending ||
+    toggleActivoSubcategoriaMutation.isPending;
+
   return (
     <div className="sm:px">
-      {(isLoadingAction ||
-        addCategoriaPadreMutation.isPending ||
-        editCategoriaPadreMutation.isPending ||
-        addSubcategoriaMutation.isPending ||
-        editSubcategoriaMutation.isPending ||
-        toggleActivoCategoriaPadreMutation.isPending ||
-        toggleActivoSubcategoriaMutation.isPending) && <CRLoader fullScreen background="bg-black/30 dark:bg-black/50" style="dots" />}
+      {(isLoadingAction || isAnyMutationLoading) && <CRLoader fullScreen background="bg-black/30 dark:bg-black/50" style="dots" />}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="text-2xl md:text-3xl font-bold text-textPrimary dark:text-white">Gestión de Categorías</h1>
         <div>
@@ -222,6 +297,7 @@ const CategoriasPage = () => {
             iconPosition="left"
             onClick={() => openFormModal("addParent")}
             className="bg-primary text-white hover:bg-opacity-90 text-sm py-2 px-4"
+            disabled={isLoadingAction || isAnyMutationLoading}
           />
         </div>
       </div>
@@ -243,8 +319,9 @@ const CategoriasPage = () => {
               onEdit={() => openFormModal("editParent", cat)}
               onToggleActivo={() => prepareToggleActivo("parent", cat)}
               onAddSubcategoria={() => openFormModal("addChild", null, cat.id)}
-              onEditSubcategoria={(subcat) => openFormModal("editChild", subcat)}
-              onToggleActivoSubcategoria={(subcat) => prepareToggleActivo("child", subcat, cat.id)}
+              onEditSubcategoria={(subcat) => openFormModal("editChild", { ...subcat, idPadre: cat.id })}
+              onToggleActivoSubcategoria={(subcat) => prepareToggleActivo("child", subcat)}
+              disabledActions={isLoadingAction || isAnyMutationLoading}
             />
           ))}
         </div>
@@ -258,36 +335,19 @@ const CategoriasPage = () => {
           mode={modalMode}
           categoriaToEdit={currentCategoria}
           iconOptions={iconOptions}
-          isLoading={isLoadingAction}
+          isLoading={isLoadingAction || isAnyMutationLoading}
         />
       )}
 
       <ConfirmationModal
         isOpen={isConfirmModalOpen}
         onClose={() => {
-          if (!isLoadingAction) setIsConfirmModalOpen(false);
+          if (!isLoadingAction && !isAnyMutationLoading) setIsConfirmModalOpen(false);
         }}
         title={confirmModalProps.title}
         type="warning"
       >
-        <p>{confirmModalProps.message}</p>
-        <div className="mt-6 flex justify-end space-x-3">
-          <CRButton
-            title="Cancelar"
-            onClick={() => {
-              if (!isLoadingAction) setIsConfirmModalOpen(false);
-            }}
-            className="bg-red-500 hover:bg-red-600 text-white"
-            disabled={isLoadingAction}
-          />
-          <CRButton
-            title="Confirmar"
-            onClick={confirmModalProps.onConfirm}
-            className="bg-green-500 hover:bg-green-600 text-white"
-            loading={isLoadingAction}
-            disabled={isLoadingAction}
-          />
-        </div>
+        {confirmModalProps.children}
       </ConfirmationModal>
     </div>
   );

@@ -4,7 +4,8 @@ import { ADMIN_ITEMS } from "../../constants/navbar";
 import { DynamicIcon } from "../../utils/DynamicIcon";
 import useAuthStore from "../../store/authStore";
 
-const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
+// Ahora Sidebar recibe isMobile e isAdminRoute
+const Sidebar = ({ isSidebarOpen, toggleSidebar, isMobile, isAdminRoute }) => {
   const { user } = useAuthStore();
 
   const adminNavItems = ADMIN_ITEMS.administracion?.categorías || [];
@@ -15,46 +16,64 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
   const activeLinkClass = "bg-primary text-white shadow-md font-medium";
 
   const handleLinkClick = () => {
-    if (isSidebarOpen && window.innerWidth < 768) {
+    if (isSidebarOpen && isMobile) {
+      // Solo cerrar si está abierto y es móvil
       toggleSidebar();
     }
   };
 
+  // Clases base del sidebar
+  let sidebarClasses = `
+    fixed top-16 left-0 w-64 bg-backgroundSecondary dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700
+    h-[calc(100vh-4rem)]
+    transform transition-transform duration-300 ease-in-out
+    flex flex-col
+  `;
+
+  // Lógica de clases condicionales
+  if (isMobile) {
+    sidebarClasses += ` ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} z-40`;
+  } else {
+    // Desktop
+    if (isAdminRoute) {
+      sidebarClasses += " md:translate-x-0 md:sticky md:top-16 z-30"; // Visible y fijo en admin
+    } else {
+      sidebarClasses += " md:-translate-x-full z-30"; // Oculto fuera de admin en desktop
+    }
+  }
+
   return (
-    <aside
-      className={`fixed top-16 left-0 z-30 w-64 bg-backgroundSecondary dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700
-                 h-[calc(100vh-4rem)]
-                 transform ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
-                 md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col`}
-    >
-      <nav className="flex-grow p-3 pt-4 space-y-1.5 overflow-y-auto">
-        <NavLink
-          to="/admin/dashboard"
-          onClick={handleLinkClick}
-          className={({ isActive }) => `${baseLinkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}
-        >
-          <DynamicIcon name="LayoutDashboard" className="w-5 h-5 mr-3" />
-          <span className="font-medium">Dashboard</span>
-        </NavLink>
-        {adminNavItems.map((item) => (
+    <aside id="admin-sidebar-panel" className={sidebarClasses}>
+      <div className="flex-grow flex flex-col">
+        <nav className="flex-grow p-3 pt-4 space-y-1.5 overflow-y-auto">
           <NavLink
-            key={item.slug}
-            to={item.slug}
+            to="/admin/dashboard"
             onClick={handleLinkClick}
             className={({ isActive }) => `${baseLinkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}
           >
-            {item.icon && <DynamicIcon name={item.icon} className="w-5 h-5 mr-3" />}
-            <span>{item.nombre}</span>
+            <DynamicIcon name="LayoutDashboard" className="w-5 h-5 mr-3" />
+            <span className="font-medium">Dashboard</span>
           </NavLink>
-        ))}
-      </nav>
+          {adminNavItems.map((item) => (
+            <NavLink
+              key={item.slug}
+              to={item.slug}
+              onClick={handleLinkClick}
+              className={({ isActive }) => `${baseLinkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}
+            >
+              {item.icon && <DynamicIcon name={item.icon} className="w-5 h-5 mr-3" />}
+              <span>{item.nombre}</span>
+            </NavLink>
+          ))}
+        </nav>
 
-      {user && (
-        <div className="p-4 border-t border-slate-200 dark:border-slate-700">
-          <p className="text-xs text-slate-500 dark:text-slate-400">Conectado como:</p>
-          <p className="text-sm font-medium text-textPrimary dark:text-white truncate">{user.nombre || user.username}</p>
-        </div>
-      )}
+        {user && (
+          <div className="p-4 border-t border-slate-200 dark:border-slate-700 mt-auto">
+            <p className="text-xs text-slate-500 dark:text-slate-400">Conectado como:</p>
+            <p className="text-sm font-medium text-textPrimary dark:text-white truncate">{user.nombre || user.username}</p>
+          </div>
+        )}
+      </div>
     </aside>
   );
 };

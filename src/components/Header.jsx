@@ -9,16 +9,16 @@ import useAuthStore from "../store/authStore.js";
 import { LogIn, LogOut, AlertTriangle, Loader2 } from "lucide-react";
 
 const Header = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false); // Para el menú principal del header en móvil
   const [activeDropdown, setActiveDropdown] = useState(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const dropdownRefs = useRef({});
   const hoverTimeoutRef = useRef(null);
   const { theme, setTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { dynamicNavItems, isLoadingDynamicNav, errorDynamicNav, fetchDynamicNavItems } = useStoreNails();
+  const { dynamicNavItems, isLoadingDynamicNav, errorDynamicNav, fetchDynamicNavItems, adminSidebarOpen, toggleAdminSidebar } = useStoreNails();
   const { isAuthenticated, logout: authLogoutAction, user } = useAuthStore();
 
   const combinedNavItems = useMemo(() => {
@@ -52,21 +52,16 @@ const Header = () => {
     const handleClickOutside = (event) => {
       if (activeDropdown) {
         const dropdownElement = dropdownRefs.current[activeDropdown];
-        const isClickInsideDropdown = dropdownElement && dropdownElement.contains(event.target);
-        if (!isClickInsideDropdown) {
+        if (dropdownElement && !dropdownElement.contains(event.target)) {
           setActiveDropdown(null);
         }
       }
 
-      if (isOpen) {
-        const mobileMenu = document.getElementById("mobile-menu");
-        const menuButton = document.querySelector("button[aria-controls='mobile-menu']");
-        const isClickInsideMobileMenu = mobileMenu && mobileMenu.contains(event.target);
-        const isClickOnMenuButton = menuButton && menuButton.contains(event.target);
+      const mobileMenuButton = document.getElementById("mobile-header-menu-button");
+      const mobileMenuContent = document.getElementById("mobile-menu-content");
 
-        if (!isClickInsideMobileMenu && !isClickOnMenuButton) {
-          setIsOpen(false);
-        }
+      if (isOpen && mobileMenuContent && !mobileMenuContent.contains(event.target) && mobileMenuButton && !mobileMenuButton.contains(event.target)) {
+        setIsOpen(false);
       }
     };
 
@@ -144,7 +139,7 @@ const Header = () => {
     );
   };
 
-  const DropdownItem = ({ sub, linkTo, isAdminMenu, isMobileVersion = false }) => (
+  const DropdownItem = ({ sub, linkTo, isMobileVersion = false }) => (
     <a
       href={linkTo}
       onClick={(e) => handleDropdownLinkClick(linkTo, e)}
@@ -351,62 +346,70 @@ const Header = () => {
   };
 
   return (
-    <header className="w-full sm:px-8 bg-background shadow-md sticky top-0 z-50">
-      <div className="mx-auto px-4 sm:px-0 py-2 sm:py-2 sm:pl-8 flex items-center justify-between relative h-16">
-        <div className="flex-shrink-0">
+    <header className="w-full bg-background shadow-md sticky top-0 z-50">
+      {/* Header con z-50 */}
+      <div className="mx-auto px-4 flex items-center justify-between h-16 relative">
+        {/* ---- Sección Izquierda ---- */}
+        <div className="flex-shrink-0 w-auto min-w-[40px]">
+          {/* Asegura un ancho mínimo para el botón */}
+          {isAuthenticated && isMobile ? (
+            <button
+              type="button"
+              onClick={toggleAdminSidebar}
+              className="p-2 rounded-md text-primary hover:bg-accent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label={adminSidebarOpen ? "Cerrar panel de administrador" : "Abrir panel de administrador"}
+            >
+              <DynamicIcon name={adminSidebarOpen ? "X" : "PanelLeftOpen"} size={24} />
+            </button>
+          ) : !isMobile ? (
+            <Link to="/" className="flex items-center" onClick={closeAllMenus}>
+              <img src="/nayeNails.svg" alt={BUSINESS_NAME} className="h-8 w-auto mr-2 dark:invert" />
+              <h1 className="text-primary text-xl sm:text-2xl font-bold tracking-tight">{BUSINESS_NAME}</h1>
+            </Link>
+          ) : (
+            <div className="w-10 h-10"></div>
+          )}
+        </div>
+
+        {/* ---- Sección Central (Título) ---- */}
+        <div
+          className={`
+          ${
+            (isAuthenticated && isMobile) || (!isAuthenticated && isMobile) /* Siempre visible en móvil */
+              ? "absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center"
+              : "hidden" /* Oculto en desktop ya que el título está a la izquierda */
+          }
+        `}
+        >
           <Link to="/" className="flex items-center" onClick={closeAllMenus}>
-            <img src="/nayeNails.svg" alt={BUSINESS_NAME} className="h-8 w-auto mr-2 hidden sm:block dark:invert" />
             <h1 className="text-primary text-xl sm:text-2xl font-bold tracking-tight">{BUSINESS_NAME}</h1>
           </Link>
         </div>
 
-        <nav className="hidden md:flex flex-grow justify-center items-center gap-x-1 lg:gap-x-2">
-          {renderNavItems(combinedNavItems)}
-          {isAuthenticated && user && renderNavItems(ADMIN_ITEMS, true)}
-        </nav>
-
-        <div className="hidden md:flex items-center flex-shrink-0 ml-auto">
-          <div className="flex items-center">
-            <label className="relative inline-flex items-center cursor-pointer mr-4">
-              <input
-                className="sr-only peer"
-                type="checkbox"
-                onChange={() => setTheme(theme === "light" ? "dark" : "light")}
-                checked={theme === "dark"}
-              />
-              <div className="w-12 h-6 rounded-full bg-gradient-to-r from-yellow-600 to-seconda peer-checked:from-purple-800 peer-checked:to-background transition-all duration-500 after:content-['☀️'] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:flex after:items-center after:justify-center after:transition-all after:duration-500 peer-checked:after:translate-x-6 peer-checked:after:content-['🌙'] after:shadow-md after:text-xs"></div>
-            </label>
-          </div>
-          <AuthButton forMobile={false} />
-        </div>
-
-        <div className="md:hidden flex-shrink-0">
-          <button
-            type="button"
-            className="flex items-center justify-center p-2 rounded-md text-primary hover:text-primary hover:bg-accent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary"
-            onClick={() => setIsOpen(!isOpen)}
-            aria-expanded={isOpen}
-            aria-controls="mobile-menu"
-            aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
-          >
-            <DynamicIcon name={isOpen ? "X" : "Menu"} size={24} />
-          </button>
-        </div>
-
-        {isOpen && (
-          <nav
-            id="mobile-menu"
-            className="absolute md:hidden top-full left-0 right-0 w-full bg-background shadow-md flex flex-col items-stretch gap-y-0 px-4 py-2 z-40 border-t border-border"
-          >
-            {renderMobileNavItems(combinedNavItems)}
-            {isAuthenticated && user && renderMobileNavItems(ADMIN_ITEMS, true)}
-            <div className="flex items-center justify-between w-full py-3 border-t border-border mt-2">
-              <div className="flex-shrink-0">
-                <AuthButton forMobile={true} />
-              </div>
-              <div className="flex items-center">
-                <p className="mr-2 flex text-textPrimary">Tema</p>
-                <label className="relative inline-flex items-center cursor-pointer">
+        {/* ---- Sección Derecha ---- */}
+        <div className="flex-shrink-0 min-w-[40px]">
+          {" "}
+          {/* Asegura un ancho mínimo */}
+          {isMobile ? (
+            <button
+              id="mobile-header-menu-button"
+              type="button"
+              className="p-2 rounded-md text-primary hover:bg-accent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary"
+              onClick={() => setIsOpen(!isOpen)}
+              aria-expanded={isOpen}
+              aria-controls="mobile-menu-content"
+              aria-label={isOpen ? "Cerrar menú principal" : "Abrir menú principal"}
+            >
+              <DynamicIcon name={isOpen ? "X" : "Menu"} size={24} />
+            </button>
+          ) : (
+            <div className="flex items-center">
+              <nav className="flex items-center gap-x-1 lg:gap-x-2">
+                {renderNavItems(combinedNavItems)}
+                {isAuthenticated && user && renderNavItems(ADMIN_ITEMS, true)}
+              </nav>
+              <div className="flex items-center ml-4">
+                <label className="relative inline-flex items-center cursor-pointer mr-4">
                   <input
                     className="sr-only peer"
                     type="checkbox"
@@ -415,11 +418,38 @@ const Header = () => {
                   />
                   <div className="w-12 h-6 rounded-full bg-gradient-to-r from-yellow-600 to-seconda peer-checked:from-purple-800 peer-checked:to-background transition-all duration-500 after:content-['☀️'] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:flex after:items-center after:justify-center after:transition-all after:duration-500 peer-checked:after:translate-x-6 peer-checked:after:content-['🌙'] after:shadow-md after:text-xs"></div>
                 </label>
+                <AuthButton forMobile={false} />
               </div>
             </div>
-          </nav>
-        )}
+          )}
+        </div>
       </div>
+      {isOpen && isMobile && (
+        <nav
+          id="mobile-menu-content"
+          className="absolute md:hidden top-full left-0 right-0 w-full bg-background shadow-lg flex flex-col items-stretch gap-y-0 px-4 py-2 z-40 border-t border-border" // z-40 para el menú principal
+        >
+          {renderMobileNavItems(combinedNavItems)}
+          {isAuthenticated && user && renderMobileNavItems(ADMIN_ITEMS, true)}
+          <div className="flex items-center justify-between w-full py-3 border-t border-border mt-2">
+            <div className="flex-shrink-0">
+              <AuthButton forMobile={true} />
+            </div>
+            <div className="flex items-center">
+              <p className="mr-2 flex text-textPrimary">Tema</p>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  className="sr-only peer"
+                  type="checkbox"
+                  onChange={() => setTheme(theme === "light" ? "dark" : "light")}
+                  checked={theme === "dark"}
+                />
+                <div className="w-12 h-6 rounded-full bg-gradient-to-r from-yellow-600 to-seconda peer-checked:from-purple-800 peer-checked:to-background transition-all duration-500 after:content-['☀️'] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:flex after:items-center after:justify-center after:transition-all after:duration-500 peer-checked:after:translate-x-6 peer-checked:after:content-['🌙'] after:shadow-md after:text-xs"></div>
+              </label>
+            </div>
+          </div>
+        </nav>
+      )}
     </header>
   );
 };

@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import CRModal from "../../../components/UI/CRModal";
 import CRButton from "../../../components/UI/CRButton";
-import { DynamicIcon } from "../../../utils/DynamicIcon";
+import CRInput from "../../../components/UI/CRInput";
+import IconSelector from "../IconSelector"; // Importar el nuevo componente
 
-const CategoriaFormModal = ({ isOpen, onClose, onSubmit, mode, categoriaToEdit, iconOptions: allIconOptions, isLoading }) => {
+const CategoriaFormModal = ({ isOpen, onClose, onSubmit, mode, categoriaToEdit, iconOptions: allIconOptions = [], isLoading }) => {
   const [nombre, setNombre] = useState("");
   const [iconoSeleccionado, setIconoSeleccionado] = useState("");
   const [errors, setErrors] = useState({});
-  const [searchTermIcono, setSearchTermIcono] = useState("");
 
   const isEditMode = mode === "editParent" || mode === "editChild";
   const isParentMode = mode === "addParent" || mode === "editParent";
@@ -20,7 +20,6 @@ const CategoriaFormModal = ({ isOpen, onClose, onSubmit, mode, categoriaToEdit, 
       setNombre("");
       setIconoSeleccionado("");
     }
-    setSearchTermIcono(""); // Resetear búsqueda de icono al popular
   }, [categoriaToEdit]);
 
   useEffect(() => {
@@ -29,14 +28,6 @@ const CategoriaFormModal = ({ isOpen, onClose, onSubmit, mode, categoriaToEdit, 
       setErrors({});
     }
   }, [isOpen, populateForm]);
-
-  const filteredIconOptions = useMemo(() => {
-    if (!searchTermIcono.trim()) {
-      return allIconOptions;
-    }
-    const lowerSearchTerm = searchTermIcono.toLowerCase();
-    return allIconOptions.filter((option) => option.label.toLowerCase().includes(lowerSearchTerm));
-  }, [allIconOptions, searchTermIcono]);
 
   const validate = () => {
     const newErrors = {};
@@ -54,17 +45,23 @@ const CategoriaFormModal = ({ isOpen, onClose, onSubmit, mode, categoriaToEdit, 
     }
     const formData = {
       nombre: nombre.trim(),
-      icono: iconoSeleccionado,
+      icono: iconoSeleccionado || null, // Enviar null si no hay icono (para subcategorías opcionales)
     };
-    if (mode === "editParent" && categoriaToEdit) {
-      formData.id = categoriaToEdit.id;
-    } else if (mode === "editChild" && categoriaToEdit) {
-      formData.id = categoriaToEdit.id;
-      formData.id_categoria_padre = categoriaToEdit.idPadre;
-    } else if (mode === "addChild" && categoriaToEdit) {
-      formData.idPadre = categoriaToEdit.idPadre;
-    }
+
+    // El ID y idPadre se manejan en CategoriasPage.jsx al llamar a la mutación
     onSubmit(formData);
+  };
+
+  const handleIconSelect = (iconName) => {
+    setIconoSeleccionado(iconName);
+    // Limpiar error de icono si se selecciona uno
+    if (errors.icono && iconName) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.icono;
+        return newErrors;
+      });
+    }
   };
 
   let modalTitleText = "";
@@ -73,83 +70,43 @@ const CategoriaFormModal = ({ isOpen, onClose, onSubmit, mode, categoriaToEdit, 
   else if (mode === "addChild") modalTitleText = "Añadir Subcategoría";
   else if (mode === "editChild") modalTitleText = `Editar Subcategoría: ${categoriaToEdit?.nombre ?? "..."}`;
 
-  const baseInputClass =
-    "mt-1 block w-full px-3 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm text-textPrimary dark:text-white";
-  const errorInputClass = "border-red-500 dark:border-red-400";
-
   return (
-    <CRModal isOpen={isOpen} setIsOpen={onClose} title={modalTitleText} width={window.innerWidth < 640 ? "90%" : 25}>
+    <CRModal isOpen={isOpen} setIsOpen={onClose} title={modalTitleText} width={window.innerWidth < 640 ? 90 : 30}>
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 p-2">
-        <div>
-          <label htmlFor="cat-nombre-form" className="block text-sm font-medium text-textPrimary dark:text-gray-200">
-            Nombre de la {isParentMode ? "Categoría" : "Subcategoría"} <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="cat-nombre-form"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            placeholder={`Ej: ${isParentMode ? "Uñas Acrílicas" : "Diseño Francés"}`}
-            maxLength={50}
-            className={`${baseInputClass} ${errors.nombre ? errorInputClass : ""}`}
-            autoComplete="off"
-          />
-          {errors.nombre && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.nombre}</p>}
-        </div>
+        <CRInput
+          title={`Nombre de la ${isParentMode ? "Categoría" : "Subcategoría"}`}
+          value={nombre}
+          setValue={setNombre}
+          placeholder={`Ej: ${isParentMode ? "Uñas Acrílicas" : "Diseño Francés"}`}
+          maxLength={50}
+          error={errors.nombre}
+          autoComplete="off"
+          id="cat-nombre-form"
+        />
 
-        <div>
-          <label htmlFor="cat-icono-search" className="block text-sm font-medium text-textPrimary dark:text-gray-200">
-            Buscar Icono
-          </label>
-          <div className="relative mt-1">
-            <input
-              type="text"
-              id="cat-icono-search"
-              value={searchTermIcono}
-              onChange={(e) => setSearchTermIcono(e.target.value)}
-              placeholder="Buscar por nombre (ej: Hand, Sparkle)"
-              className={`${baseInputClass} pl-10`}
-              autoComplete="off"
+        {/* Solo mostrar IconSelector si tenemos iconos disponibles */}
+        {Array.isArray(allIconOptions) && allIconOptions.length > 0 ? (
+          <>
+            <IconSelector
+              allIconOptions={allIconOptions}
+              selectedIcon={iconoSeleccionado}
+              onSelectIcon={handleIconSelect}
+              label="Icono"
+              required={isParentMode} // El icono es requerido solo para categorías padre
             />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 dark:text-gray-500">
-              <DynamicIcon name="Search" size={18} />
+            {errors.icono && isParentMode && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.icono}</p>}
+          </>
+        ) : (
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-textPrimary dark:text-gray-200">
+              Icono {isParentMode && <span className="text-red-500">*</span>}
+            </label>
+            <div className="p-3 border border-gray-300 dark:border-slate-600 rounded-md bg-gray-50 dark:bg-slate-800">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Cargando iconos disponibles...</p>
             </div>
+            {errors.icono && isParentMode && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.icono}</p>}
           </div>
-
-          <label htmlFor="cat-icono-form" className="block text-sm font-medium text-textPrimary dark:text-gray-200 mt-3">
-            Icono {isParentMode && <span className="text-red-500">*</span>}
-          </label>
-          <select
-            id="cat-icono-form"
-            value={iconoSeleccionado}
-            onChange={(e) => setIconoSeleccionado(e.target.value)}
-            className={`${baseInputClass} ${errors.icono && isParentMode ? errorInputClass : ""}`}
-            size={filteredIconOptions.length > 5 ? 5 : filteredIconOptions.length + 1} // Mostrar algunas opciones si hay pocas
-          >
-            <option value="">{isParentMode ? "Selecciona un icono..." : "Selecciona un icono (opcional)..."}</option>
-            {filteredIconOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {/* No se puede renderizar HTML (como un icono) directamente en <option> de forma estándar */}
-                {option.label}
-              </option>
-            ))}
-            {filteredIconOptions.length === 0 && searchTermIcono && <option disabled>No hay iconos para "{searchTermIcono}"</option>}
-          </select>
-          {errors.icono && isParentMode && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.icono}</p>}
-
-          {iconoSeleccionado && (
-            <div className="mt-2 flex items-center p-2 bg-gray-100 dark:bg-slate-700/50 rounded">
-              <span className="mr-2 text-sm text-textSecondary dark:text-slate-300">Vista previa:</span>
-              <DynamicIcon name={iconoSeleccionado} className="w-6 h-6 text-primary" />
-              <span className="ml-2 text-sm font-mono text-textSecondary dark:text-slate-400">{iconoSeleccionado}</span>
-            </div>
-          )}
-          <div className="w-full flex justify-end">
-            <a href="https://lucide.dev/icons/" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline mt-1">
-              Ver lista de iconos
-            </a>
-          </div>
-        </div>
+        )}
 
         <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-3 sm:pt-4">
           <CRButton

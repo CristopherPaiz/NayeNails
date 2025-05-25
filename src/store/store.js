@@ -58,6 +58,10 @@ const useStoreNails = create((set, get) => ({
   isLoadingDynamicNav: true,
   errorDynamicNav: null,
 
+  adminSidebarOpen: false,
+  toggleAdminSidebar: () => set((state) => ({ adminSidebarOpen: !state.adminSidebarOpen })),
+  setAdminSidebarOpen: (isOpen) => set({ adminSidebarOpen: isOpen }),
+
   fetchDynamicNavItems: async () => {
     if (!get().isLoadingDynamicNav) set({ isLoadingDynamicNav: true });
     set({ errorDynamicNav: null });
@@ -102,10 +106,8 @@ const useStoreNails = create((set, get) => ({
         };
 
         if (!newTagColors[filterTypeKey]) {
-          // Asegurar que no se repitan colores ya usados por las claves base (servicios, colores, efectos)
           let assignedColor = false;
           while (!assignedColor && colorIndex < colorPalette.length * 2) {
-            // Iterar más para encontrar uno no usado
             const colorName = colorPalette[colorIndex % colorPalette.length];
             if (!existingColorKeys.includes(colorName) && !Object.values(newTagColors).some((tc) => tc.bg.includes(colorName))) {
               newTagColors[filterTypeKey] = {
@@ -113,13 +115,12 @@ const useStoreNails = create((set, get) => ({
                 text: `text-${colorName}-700 dark:text-${colorName}-300`,
                 hoverBg: `hover:bg-${colorName}-200 dark:hover:bg-${colorName}-500/50`,
               };
-              existingColorKeys.push(filterTypeKey); // Marcar como usado para futuras asignaciones dinámicas
+              existingColorKeys.push(filterTypeKey);
               assignedColor = true;
             }
             colorIndex++;
           }
           if (!assignedColor) {
-            // Fallback si todos los colores de la paleta están "usados"
             newTagColors[filterTypeKey] = { ...newTagColors.default };
           }
         }
@@ -188,7 +189,6 @@ const useStoreNails = create((set, get) => ({
       });
     } catch (error) {
       console.error("Error fetching site configurations:", error);
-      // No se muestra alerta global aquí, se usarán los valores por defecto del store.
     }
   },
 

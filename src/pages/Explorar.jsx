@@ -415,7 +415,7 @@ const Explorar = () => {
                   >
                     <div className="relative overflow-hidden">
                       <img
-                        src={una.imagen ?? "https://via.placeholder.com/350x250?text=Nail+Art"}
+                        src={una.imagen_url ?? "https://via.placeholder.com/350x250?text=Nail+Art"}
                         alt={una.nombre}
                         className="w-full h-64 sm:h-56 object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
                       />

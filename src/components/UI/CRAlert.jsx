@@ -2,19 +2,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import PropTypes from "prop-types";
 
-// Constantes configurables
 const ALERT_WIDTH = 300;
 const ALERT_HEIGHT = 90;
 const ALERT_MARGIN = 15;
 const ALERT_SPACING = 80;
 const Z_INDEX = 500000;
 
-/**
- * Obtiene el ícono correspondiente según el tipo de alerta.
- *
- * @param {string} type - El tipo de alerta. Puede ser "info", "warning", "success" o "error".
- * @returns {JSX.Element|null} El ícono correspondiente o null si el tipo es inválido.
- */
 const getIcon = (type) => {
   switch (type) {
     case "info":
@@ -68,23 +61,6 @@ const CRAlert = (() => {
     }
   };
 
-  /**
-   * Componente de alerta.
-   *
-   * @component AlertComponent
-   * @param {Object} props - Propiedades del componente de alerta.
-   * @param {number} props.id - Identificador único de la alerta.
-   * @param {string} props.title - Título de la alerta.
-   * @param {string} props.message - Mensaje de la alerta.
-   * @param {("info"|"warning"|"success"|"error")} props.type - Tipo de alerta.
-   * @param {number} props.duration - Duración de la alerta en milisegundos.
-   * @param {function} props.onClose - Función que se ejecuta al cerrar la alerta.
-   * @param {boolean} props.persistent - Si la alerta es persistente.
-   * @param {("top"|"top-left"|"top-right"|"bottom"|"bottom-left"|"bottom-right")} props.position - Posición de la alerta en la pantalla.
-   * @param {number} props.fade - Duración de la animación de desvanecimiento.
-   * @param {number} props.index - Índice de la alerta en la lista de alertas.
-   * @param {boolean} props.progressBar - Si se debe mostrar una barra de progreso.
-   */
   const AlertComponent = ({ id, title, message, type, duration, onClose, persistent, position, fade, index, progressBar }) => {
     const [progress, setProgress] = useState(100);
     const [isVisible, setIsVisible] = useState(false);
@@ -147,9 +123,7 @@ const CRAlert = (() => {
         }}
         onClick={!persistent ? handleClose : undefined}
       >
-        {/* CONTENIDO DE ALERTA */}
         <div className={`flex flex-col flex-grow`}>
-          {/* TITLE */}
           <div className="pt-3 px-3 flex flex-col">
             <div className="flex justify-between pt-[2px]">
               <div className="flex flex-row items-center">
@@ -162,12 +136,10 @@ const CRAlert = (() => {
             </div>
             <div className="h-[1px] bg-white opacity-50 mt-1 p-0"></div>
           </div>
-          {/* MESSAGE */}
           <div className="flex flex-grow flex-col justify-center px-3">
             <div className="text-sm text-left">{message.length > 70 ? `${message.slice(0, 70)}...` : message}</div>
           </div>
 
-          {/* PROGRESS BAR */}
           {progressBar ? (
             <div className="w-full bg-white bg-opacity-30 h-[3px] bottom-0">
               <div className="h-full bg-white" style={{ width: `${progress}%`, transition: "width 100ms linear" }}></div>
@@ -192,31 +164,6 @@ const CRAlert = (() => {
     progressBar: PropTypes.bool.isRequired,
   };
 
-  /**
-   * Muestra una nueva alerta.
-   *
-   * @param {Object} alert - Opciones para la alerta.
-   * @param {string} alert.title - Título de la alerta, por defecto "Información".
-   * @param {string} alert.message - Mensaje de la alerta.
-   * @param {'info'|'warning'|'success'|'error'} [alert.type='info'] - Tipo de alerta, puede ser `info`, `warning`, `success` o `error`.
-   * @param {number} [alert.duration=3000] - Duración en milisegundos antes de que la alerta desaparezca, por defecto `3000`.
-   * @param {boolean} [alert.persistent=false] - Indica si la alerta debe permanecer visible, por defecto `false`.
-   * @param {'top'|'top-left'|'top-right'|'bottom'|'bottom-left'|'bottom-right'} [alert.position='top-right'] - Posición de la alerta, puede ser `top`, `top-left`, `top-right`, `bottom`, `bottom-left` o `bottom-right`.
-   * @param {number} [alert.fade=300] - Duración de la animación de desvanecimiento, por defecto `300`.
-   * @param {boolean} [alert.progressBar=true] - Indica si se debe mostrar una barra de progreso, por defecto `true`.
-   *
-   * @example
-   * CRAlert.alert({
-   *   title: "Éxito",
-   *   message: "La operación se completó correctamente.",
-   *   type: "success",
-   *   duration: 5000,
-   *   persistent: false,
-   *   position: "top-right",
-   *   fade: 300,
-   *   progressBar: true,
-   * });
-   */
   const alert = ({
     title = "Información",
     message = "",

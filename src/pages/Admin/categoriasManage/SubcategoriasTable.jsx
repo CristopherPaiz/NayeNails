@@ -1,12 +1,13 @@
 import React from "react";
 import { DynamicIcon } from "../../../utils/DynamicIcon";
 import CRButton from "../../../components/UI/CRButton";
-import CRSwitch from "../../../components/UI/CRSwitch";
+import CustomSwitch from "../../../components/UI/CustomSwitch.jsx";
 
-const SubcategoriaItem = ({ subcategoria, onEdit, onToggleActivo }) => {
-  const handleSwitchClick = (e) => {
-    e.stopPropagation();
-    onToggleActivo(subcategoria); // Pasar el objeto subcategoría completo
+const SubcategoriaItem = ({ subcategoria, onEdit, onToggleActivo, disabledActions = false }) => {
+  const handleSwitchChange = () => {
+    if (!disabledActions) {
+      onToggleActivo(subcategoria);
+    }
   };
 
   return (
@@ -42,33 +43,27 @@ const SubcategoriaItem = ({ subcategoria, onEdit, onToggleActivo }) => {
             externalIcon={<DynamicIcon name="Edit3" className="w-4 h-4" />}
             onClick={(e) => {
               e.stopPropagation();
-              onEdit(subcategoria);
+              if (!disabledActions) onEdit(subcategoria);
             }}
             className="!bg-orange-500 hover:!bg-orange-600 text-white !p-1.5"
             onlyIcon={true}
+            disabled={disabledActions}
           />
-          <div onClick={handleSwitchClick} className="flex items-center gap-2">
-            <span
-              className={`text-xs font-medium hidden sm:inline ${
-                subcategoria.activo ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-              }`}
-            >
-              {subcategoria.activo ? "Activa" : "Inactiva"}
-            </span>
-            <CRSwitch
-              checked={!!subcategoria.activo} // Asegurar que sea booleano
-              onChange={() => {}} // Manejado por handleSwitchClick
-              colorOff="bg-red-500"
-              className="flex-shrink-0"
-            />
-          </div>
+          <CustomSwitch
+            checked={!!subcategoria.activo}
+            onChange={handleSwitchChange}
+            colorOff="bg-red-500"
+            className="flex-shrink-0"
+            disabled={disabledActions}
+            size="small"
+          />
         </div>
       </div>
     </div>
   );
 };
 
-const SubcategoriasTable = ({ subcategorias, onEditSubcategoria, onToggleActivoSubcategoria }) => {
+const SubcategoriasTable = ({ subcategorias, onEditSubcategoria, onToggleActivoSubcategoria, disabledActions = false }) => {
   return (
     <div className="space-y-2">
       <h4 className="text-sm sm:text-base font-semibold mb-3 text-textSecondary dark:text-slate-300 pl-1">Subcategorías:</h4>
@@ -79,7 +74,8 @@ const SubcategoriasTable = ({ subcategorias, onEditSubcategoria, onToggleActivoS
             key={sub.id}
             subcategoria={sub}
             onEdit={onEditSubcategoria}
-            onToggleActivo={onToggleActivoSubcategoria} // Pasa la función directamente
+            onToggleActivo={onToggleActivoSubcategoria}
+            disabledActions={disabledActions}
           />
         ))}
       </div>
@@ -130,16 +126,15 @@ const SubcategoriasTable = ({ subcategorias, onEditSubcategoria, onToggleActivoS
                 </td>
                 <td className="px-3 py-2 sm:px-4 whitespace-nowrap text-sm text-center">
                   <div className="flex items-center justify-center gap-2">
-                    <span className={`text-xs font-medium ${sub.activo ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-                      {sub.activo ? "Activa" : "Inactiva"}
-                    </span>
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <CRSwitch
-                        checked={!!sub.activo} // Asegurar que sea booleano
-                        onChange={() => onToggleActivoSubcategoria(sub)} // Pasar el objeto subcategoría completo
-                        colorOff="bg-red-500"
-                      />
-                    </div>
+                    <CustomSwitch
+                      checked={!!sub.activo}
+                      onChange={() => {
+                        if (!disabledActions) onToggleActivoSubcategoria(sub);
+                      }}
+                      colorOff="bg-red-500"
+                      disabled={disabledActions}
+                      size="small"
+                    />
                   </div>
                 </td>
                 <td className="px-3 py-2 sm:px-4 whitespace-nowrap text-right text-sm font-medium">
@@ -148,10 +143,11 @@ const SubcategoriasTable = ({ subcategorias, onEditSubcategoria, onToggleActivoS
                     externalIcon={<DynamicIcon name="Edit3" className="w-4 h-4" />}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onEditSubcategoria(sub);
+                      if (!disabledActions) onEditSubcategoria(sub);
                     }}
                     className="!bg-orange-500 hover:!bg-orange-600 text-white !p-1.5"
                     onlyIcon={true}
+                    disabled={disabledActions}
                   />
                 </td>
               </tr>
