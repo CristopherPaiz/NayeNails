@@ -25,7 +25,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar, isMobile, isAdminRoute }) => {
   // Clases base del sidebar
   let sidebarClasses = `
     fixed top-16 left-0 w-64 bg-backgroundSecondary dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700
-    h-[calc(100vh-4rem)]
+    h-[calc(100vh-4rem)]  max-h-dvh
     transform transition-transform duration-300 ease-in-out
     flex flex-col
   `;
@@ -38,7 +38,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar, isMobile, isAdminRoute }) => {
     if (isAdminRoute) {
       sidebarClasses += " md:translate-x-0 md:sticky md:top-16 z-30"; // Visible y fijo en admin
     } else {
-      sidebarClasses += " md:-translate-x-full z-30"; // Oculto fuera de admin en desktop
+      sidebarClasses += " md:-translate-x-full z-30 h-dvh"; // Oculto fuera de admin en desktop
     }
   }
 
