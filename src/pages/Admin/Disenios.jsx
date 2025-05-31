@@ -1,14 +1,17 @@
-import { useState, useMemo, useEffect } from "react"; // Añadir useEffect
+import { useState, useMemo, useEffect, useRef } from "react";
 import CRButton from "../../components/UI/CRButton";
 import CRModal from "../../components/UI/CRModal";
 import CRInput from "../../components/UI/CRInput";
 import CRLoader from "../../components/UI/CRLoader";
 import ConfirmationModal from "../../components/ConfirmationModal";
+import Paginador from "../../components/UI/Paginador";
 import { DynamicIcon } from "../../utils/DynamicIcon";
 import useApiRequest from "../../hooks/useApiRequest";
 import { useQueryClient } from "@tanstack/react-query";
 import CategorySubcategorySelector from "../../components/admin/CategorySubcategorySelector";
 import CRAlert from "../../components/UI/CRAlert.jsx";
+
+const ITEMS_PER_PAGE_ADMIN = 6;
 
 const DiseniosAdminPage = () => {
   const queryClient = useQueryClient();
@@ -19,26 +22,31 @@ const DiseniosAdminPage = () => {
   const [formValues, setFormValues] = useState({
     nombre: "",
     descripcion: "",
-    imagen_file: null, // Cambiado de imagen_url a imagen_file
+    imagen_file: null,
     precio: "",
     oferta: "",
     duracion: "",
     subcategorias: [],
   });
-  const [imagePreview, setImagePreview] = useState(null); // Para previsualización
+  const [imagePreview, setImagePreview] = useState(null);
   const [errors, setErrors] = useState({});
   const [categorySelectorError, setCategorySelectorError] = useState(null);
 
-  // Estados para el selector de duración
   const [duracionHoras, setDuracionHoras] = useState(0);
   const [duracionMinutos, setDuracionMinutos] = useState(15);
 
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [confirmModalProps, setConfirmModalProps] = useState({ title: "", children: null, onConfirm: () => {} });
 
-  const queryKeyDiseniosAdmin = ["diseniosAdmin"];
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState(""); // Para el input
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(""); // Para la API
+  const [isFakeLoadingSearch, setIsFakeLoadingSearch] = useState(false);
+  const debounceTimeoutRef = useRef(null);
+
+  const queryKeyDiseniosAdmin = ["diseniosAdmin", currentPage, debouncedSearchTerm];
   const {
-    data: disenios,
+    data: apiData,
     isLoading: isLoadingDisenios,
     error: errorDisenios,
     refetch: refetchDisenios,
@@ -46,8 +54,20 @@ const DiseniosAdminPage = () => {
     queryKey: queryKeyDiseniosAdmin,
     url: "/disenios/admin",
     method: "GET",
+    config: {
+      params: {
+        page: currentPage,
+        limit: ITEMS_PER_PAGE_ADMIN,
+        search: debouncedSearchTerm,
+      },
+    },
+    options: { keepPreviousData: true },
     notificationEnabled: false,
   });
+
+  const disenios = apiData?.disenios ?? [];
+  const totalPages = apiData?.totalPages ?? 1;
+  // const totalDisenios = apiData?.totalDisenios ?? 0; // No se usa directamente en la UI de esta página
 
   const { data: todasLasCategorias, isLoading: isLoadingCategorias } = useApiRequest({
     queryKey: ["categorias"],
@@ -68,40 +88,45 @@ const DiseniosAdminPage = () => {
     );
   }, [todasLasCategorias]);
 
-  // Función para parsear la duración del formato string a horas y minutos
+  useEffect(() => {
+    // Cuando cambia el término de búsqueda, volver a la página 1
+    setCurrentPage(1);
+  }, [debouncedSearchTerm]);
+
+  const handleSearchInputChange = (value) => {
+    setSearchTerm(value);
+    setIsFakeLoadingSearch(true);
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    debounceTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearchTerm(value);
+      setIsFakeLoadingSearch(false);
+    }, 500);
+  };
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    window.scrollTo(0, 0);
+  };
+
   const parseDuracion = (duracionString) => {
     if (!duracionString) return { horas: 0, minutos: 15 };
-
     const horasMatch = duracionString.match(/(\d+)h/);
     const minutosMatch = duracionString.match(/(\d+)min/);
-
     const horas = horasMatch ? parseInt(horasMatch[1]) : 0;
     const minutos = minutosMatch ? parseInt(minutosMatch[1]) : 0;
-
-    // Si no hay horas ni minutos, por defecto 15 minutos
-    if (horas === 0 && minutos === 0) {
-      return { horas: 0, minutos: 15 };
-    }
-
+    if (horas === 0 && minutos === 0) return { horas: 0, minutos: 15 };
     return { horas, minutos };
   };
 
-  // Función para formatear la duración de horas y minutos a string
   const formatDuracion = (horas, minutos) => {
-    // Si ambos son 0, usar 15min como mínimo
     if (horas === 0 && minutos === 0) return "15min";
-
-    // Si solo hay minutos (sin horas)
     if (horas === 0) return `${minutos}min`;
-
-    // Si solo hay horas (sin minutos)
     if (minutos === 0) return `${horas}h`;
-
-    // Si hay ambos
     return `${horas}h ${minutos}min`;
   };
 
-  // Actualizar formValues.duracion cuando cambien los selectores
   useEffect(() => {
     const nuevaDuracion = formatDuracion(duracionHoras, duracionMinutos);
     setFormValues((prev) => ({ ...prev, duracion: nuevaDuracion }));
@@ -109,7 +134,7 @@ const DiseniosAdminPage = () => {
 
   const commonMutationOptions = (successMsg) => ({
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queryKeyDiseniosAdmin });
+      queryClient.invalidateQueries({ queryKey: ["diseniosAdmin"] }); // Invalida todas las páginas
       closeFormModal();
       setIsConfirmModalOpen(false);
       CRAlert.alert({ title: "Éxito", message: data?.message || successMsg, type: "success" });
@@ -149,16 +174,15 @@ const DiseniosAdminPage = () => {
     setModalMode(mode);
     setCurrentDisenio(disenio);
     setCategorySelectorError(null);
-    setImagePreview(disenio?.imagen_url || null); // Mostrar imagen actual en edición
+    setImagePreview(disenio?.imagen_url || null);
     if (mode === "edit" && disenio) {
       const { horas, minutos } = parseDuracion(disenio.duracion);
       setDuracionHoras(horas);
       setDuracionMinutos(minutos);
-
       setFormValues({
         nombre: disenio.nombre ?? "",
         descripcion: disenio.descripcion ?? "",
-        imagen_file: null, // Resetear el file input
+        imagen_file: null,
         precio: disenio.precio?.toString() ?? "",
         oferta: disenio.oferta?.toString() ?? "",
         duracion: disenio.duracion ?? "",
@@ -209,10 +233,9 @@ const DiseniosAdminPage = () => {
     if (file) {
       setFormValues((prev) => ({ ...prev, imagen_file: file }));
       setImagePreview(URL.createObjectURL(file));
-      setErrors((prev) => ({ ...prev, imagen_file: undefined })); // Limpiar error de imagen si se selecciona una
+      setErrors((prev) => ({ ...prev, imagen_file: undefined }));
     } else {
       setFormValues((prev) => ({ ...prev, imagen_file: null }));
-      // Si se deselecciona, y estamos editando, volver a la imagen actual del diseño
       setImagePreview(currentDisenio?.imagen_url || null);
     }
   };
@@ -228,19 +251,15 @@ const DiseniosAdminPage = () => {
   const validateForm = () => {
     const newErrors = {};
     if (!formValues.nombre.trim()) newErrors.nombre = "El nombre es obligatorio.";
-
-    // La imagen es obligatoria solo al crear. Al editar, si no se sube nueva, se mantiene la anterior.
     if (modalMode === "add" && !formValues.imagen_file) {
       newErrors.imagen_file = "La imagen es obligatoria.";
     }
     if (formValues.imagen_file && formValues.imagen_file.size > 10 * 1024 * 1024) {
-      // 10MB
       newErrors.imagen_file = "La imagen no debe exceder los 10MB.";
     }
     if (formValues.imagen_file && !formValues.imagen_file.type.startsWith("image/")) {
       newErrors.imagen_file = "El archivo debe ser una imagen.";
     }
-
     if (categorySelectorError) {
       newErrors.subcategoriasGlobal = categorySelectorError;
     }
@@ -248,7 +267,6 @@ const DiseniosAdminPage = () => {
       newErrors.subcategoriasGlobal =
         (newErrors.subcategoriasGlobal ? newErrors.subcategoriasGlobal + " " : "") + "Debe seleccionar al menos una subcategoría.";
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -256,7 +274,6 @@ const DiseniosAdminPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-
     const formData = new FormData();
     formData.append("nombre", formValues.nombre);
     formData.append("descripcion", formValues.descripcion || "");
@@ -266,7 +283,6 @@ const DiseniosAdminPage = () => {
     formData.append("precio", formValues.precio || "");
     formData.append("oferta", formValues.oferta || "");
     formData.append("duracion", formValues.duracion || "");
-
     formValues.subcategorias.forEach((subId) => formData.append("subcategorias", subId.toString()));
 
     if (modalMode === "add") {
@@ -291,7 +307,7 @@ const DiseniosAdminPage = () => {
       onConfirm: async () => {
         await toggleActivoDisenioMutation.mutateAsync({
           url: `/disenios/${disenio.id}/toggle-activo`,
-          data: null, // PATCH no necesita body aquí
+          data: null,
         });
       },
       confirmButtonText: actionText,
@@ -327,7 +343,6 @@ const DiseniosAdminPage = () => {
   }, [modalMode, currentDisenio, formValues.subcategorias]);
 
   useEffect(() => {
-    // Limpiar el object URL de la previsualización cuando el componente se desmonte o cambie la imagen
     return () => {
       if (imagePreview && imagePreview.startsWith("blob:")) {
         URL.revokeObjectURL(imagePreview);
@@ -335,7 +350,7 @@ const DiseniosAdminPage = () => {
     };
   }, [imagePreview]);
 
-  if (isLoadingDisenios || isLoadingCategorias) {
+  if ((isLoadingDisenios && !apiData) || isLoadingCategorias) {
     return <CRLoader text="Cargando datos..." fullScreen={false} style="circle" size="lg" />;
   }
 
@@ -364,67 +379,92 @@ const DiseniosAdminPage = () => {
         />
       </div>
 
+      <div className="mb-6 relative">
+        <CRInput
+          type="text"
+          placeholder="Buscar diseños por nombre o descripción..."
+          value={searchTerm}
+          setValue={handleSearchInputChange} // Usar la función que actualiza searchTerm y activa el loader falso
+          className="text-sm py-2.5 !pr-10" // Añadir padding a la derecha para el loader
+          title="" // Sin título para el input de búsqueda principal
+        />
+        {isFakeLoadingSearch && (
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 mt-[11px]">
+            {" "}
+            {/* Ajustar mt si es necesario */}
+            <DynamicIcon name="Loader2" className="w-4 h-4 animate-spin text-primary" />
+          </div>
+        )}
+      </div>
+
       {disenios?.length === 0 ? (
         <div className="text-center py-10 bg-background dark:bg-slate-800 rounded-lg shadow">
           <DynamicIcon name="ImageOff" className="mx-auto h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
-          <p className="text-xl text-textSecondary dark:text-slate-400">No hay diseños para mostrar.</p>
-          <p className="text-sm text-gray-500 dark:text-slate-500 mt-1">Empieza añadiendo un nuevo diseño.</p>
+          <p className="text-xl text-textSecondary dark:text-slate-400">
+            {debouncedSearchTerm ? "No hay diseños que coincidan con tu búsqueda." : "No hay diseños para mostrar."}
+          </p>
+          <p className="text-sm text-gray-500 dark:text-slate-500 mt-1">
+            {debouncedSearchTerm ? "Intenta con otro término." : "Empieza añadiendo un nuevo diseño."}
+          </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {disenios?.map((disenio) => (
-            <div
-              key={disenio.id}
-              className={`rounded-lg shadow-lg overflow-hidden ${
-                disenio.activo ? "bg-background dark:bg-slate-800" : "bg-gray-100 dark:bg-slate-700 opacity-70"
-              }`}
-            >
-              <img src={disenio.imagen_url} alt={disenio.nombre} className="w-full h-48 object-cover" />
-              <div className="p-4">
-                <h3
-                  className={`text-lg font-semibold mb-1 ${
-                    disenio.activo ? "text-textPrimary dark:text-white" : "text-gray-500 dark:text-slate-400"
-                  }`}
-                >
-                  {disenio.nombre}
-                </h3>
-                {!disenio.activo && <span className="text-xs font-normal text-yellow-600 dark:text-yellow-400">(Inactivo)</span>}
-                <p className="text-xs text-textSecondary dark:text-slate-400 mb-1 truncate">{disenio.descripcion}</p>
-                <p className="text-sm font-medium text-primary dark:text-primary-light mb-1">
-                  {disenio.precio ? `Q${parseFloat(disenio.precio).toFixed(2)}` : "Precio no definido"}
-                  {disenio.oferta && <span className="ml-2 text-red-500 dark:text-red-400">Oferta: Q{parseFloat(disenio.oferta).toFixed(2)}</span>}
-                </p>
-                <p className="text-xs text-textTertiary dark:text-slate-500">Duración: {disenio.duracion || "No especificada"}</p>
-                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-700 flex justify-end space-x-2">
-                  <CRButton
-                    title="Editar"
-                    onlyIcon
-                    externalIcon={<DynamicIcon name="Edit3" className="w-4 h-4" />}
-                    onClick={() => openFormModal("edit", disenio)}
-                    className="!bg-orange-500 hover:!bg-orange-600 text-white !p-1.5"
-                    disabled={isMutationLoading}
-                  />
-                  <CRButton
-                    title={disenio.activo ? "Inactivar" : "Activar"}
-                    onlyIcon
-                    externalIcon={<DynamicIcon name={disenio.activo ? "EyeOff" : "Eye"} className="w-4 h-4" />}
-                    onClick={() => prepareToggleActivo(disenio)}
-                    className={`text-white !p-1.5 ${disenio.activo ? "!bg-yellow-500 hover:!bg-yellow-600" : "!bg-green-500 hover:!bg-green-600"}`}
-                    disabled={isMutationLoading}
-                  />
-                  <CRButton
-                    title="Eliminar"
-                    onlyIcon
-                    externalIcon={<DynamicIcon name="Trash2" className="w-4 h-4" />}
-                    onClick={() => prepareDeleteDisenio(disenio)}
-                    className="!bg-red-600 hover:!bg-red-700 text-white !p-1.5"
-                    disabled={isMutationLoading}
-                  />
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {disenios?.map((disenio) => (
+              <div
+                key={disenio.id}
+                className={`rounded-lg shadow-lg overflow-hidden ${
+                  disenio.activo ? "bg-background dark:bg-slate-800" : "bg-gray-100 dark:bg-slate-700 opacity-70"
+                }`}
+              >
+                <img src={disenio.imagen_url} alt={disenio.nombre} className="w-full h-48 object-cover" />
+                <div className="p-4">
+                  <h3
+                    className={`text-lg font-semibold mb-1 ${
+                      disenio.activo ? "text-textPrimary dark:text-white" : "text-gray-500 dark:text-slate-400"
+                    }`}
+                  >
+                    {disenio.nombre}
+                  </h3>
+                  {!disenio.activo && <span className="text-xs font-normal text-yellow-600 dark:text-yellow-400">(Inactivo)</span>}
+                  <p className="text-xs text-textSecondary dark:text-slate-400 mb-1 truncate">{disenio.descripcion}</p>
+                  <p className="text-sm font-medium text-primary dark:text-primary-light mb-1">
+                    {disenio.precio ? `Q${parseFloat(disenio.precio).toFixed(2)}` : "Precio no definido"}
+                    {disenio.oferta && <span className="ml-2 text-red-500 dark:text-red-400">Oferta: Q{parseFloat(disenio.oferta).toFixed(2)}</span>}
+                  </p>
+                  <p className="text-xs text-textTertiary dark:text-slate-500">Duración: {disenio.duracion || "No especificada"}</p>
+                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-700 flex justify-end space-x-2">
+                    <CRButton
+                      title="Editar"
+                      onlyIcon
+                      externalIcon={<DynamicIcon name="Edit3" className="w-4 h-4" />}
+                      onClick={() => openFormModal("edit", disenio)}
+                      className="!bg-orange-500 hover:!bg-orange-600 text-white !p-1.5"
+                      disabled={isMutationLoading}
+                    />
+                    <CRButton
+                      title={disenio.activo ? "Inactivar" : "Activar"}
+                      onlyIcon
+                      externalIcon={<DynamicIcon name={disenio.activo ? "EyeOff" : "Eye"} className="w-4 h-4" />}
+                      onClick={() => prepareToggleActivo(disenio)}
+                      className={`text-white !p-1.5 ${disenio.activo ? "!bg-yellow-500 hover:!bg-yellow-600" : "!bg-green-500 hover:!bg-green-600"}`}
+                      disabled={isMutationLoading}
+                    />
+                    <CRButton
+                      title="Eliminar"
+                      onlyIcon
+                      externalIcon={<DynamicIcon name="Trash2" className="w-4 h-4" />}
+                      onClick={() => prepareDeleteDisenio(disenio)}
+                      className="!bg-red-600 hover:!bg-red-700 text-white !p-1.5"
+                      disabled={isMutationLoading}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+          <Paginador currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+        </>
       )}
 
       {isFormModalOpen && (
@@ -499,7 +539,6 @@ const DiseniosAdminPage = () => {
               />
             </div>
 
-            {/* Selector de Duración Personalizado */}
             <div>
               <label className="block text-sm font-medium text-textPrimary dark:text-gray-200 mb-2">Duración Estimada</label>
               <div className="grid grid-cols-2 gap-4">
