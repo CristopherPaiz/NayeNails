@@ -2,18 +2,142 @@ import React, { useState, useEffect, useCallback } from "react";
 import CRLoader from "../../components/UI/CRLoader";
 import useApiRequest from "../../hooks/useApiRequest";
 import useStoreNails from "../../store/store";
-import ImageManagerSection from "./ImageManagerSection"; // Nuevo componente
+import ImageManagerSection from "./ImageManagerSection";
 import CRButton from "../../components/UI/CRButton";
 import CRAlert from "../../components/UI/CRAlert";
 import { DynamicIcon } from "../../utils/DynamicIcon";
+import apiClient from "../../api/axios"; // Para subida de imagen de ubicación
 
 const CONFIG_KEYS = {
   CAROUSEL_PRINCIPAL: "carousel_principal_imagenes",
-  CAROUSEL_SECUNDARIO: "carousel_secundario_imagenes", // Cambiado de OBJETIVO a SECUNDARIO para consistencia
+  CAROUSEL_SECUNDARIO: "carousel_secundario_imagenes",
   GALERIA_INICIAL: "galeria_inicial_imagenes",
 };
 
+const LocationImageManager = ({ initialImageUrl, initialPublicId, onSave, isSubmittingGlobal }) => {
+  const [imageFile, setImageFile] = useState(null);
+  const [preview, setPreview] = useState(initialImageUrl || null);
+  const [currentPublicId, setCurrentPublicId] = useState(initialPublicId || null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    setPreview(initialImageUrl || null);
+    setCurrentPublicId(initialPublicId || null);
+  }, [initialImageUrl, initialPublicId]);
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setPreview(null);
+    // No se elimina el public_id aquí, se manejará al guardar la configuración general
+    // si el usuario decide guardar sin una imagen.
+  };
+
+  const handleUploadAndSave = async () => {
+    if (isSubmittingGlobal || isUploading) return;
+
+    if (imageFile) {
+      // Si hay un nuevo archivo para subir
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append("location_image", imageFile);
+      try {
+        const response = await apiClient.post("/site-uploads/location-image", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        setIsUploading(false);
+        onSave(response.data.imageData.secure_url, response.data.imageData.public_id);
+        setImageFile(null); // Limpiar archivo después de subir
+      } catch (error) {
+        setIsUploading(false);
+        CRAlert.alert({
+          title: "Error de Subida",
+          message: `No se pudo subir la imagen de ubicación: ${error.response?.data?.message || error.message}`,
+          type: "error",
+        });
+      }
+    } else if (!preview && initialImageUrl) {
+      // Si se eliminó la imagen existente y no hay nueva
+      onSave(null, null); // Enviar null para que se borre en la BD
+    } else if (preview === initialImageUrl) {
+      // Si no hubo cambios en la imagen
+      CRAlert.alert({ title: "Información", message: "No hay cambios en la imagen de ubicación para guardar.", type: "info" });
+    } else {
+      // Caso donde solo se limpió el preview pero no había initialImageUrl, o caso inesperado
+      onSave(preview, currentPublicId); // Guardar el estado actual (podría ser null si se borró)
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (preview && preview.startsWith("blob:")) {
+        URL.revokeObjectURL(preview);
+      }
+    };
+  }, [preview]);
+
+  return (
+    <div className="bg-background dark:bg-slate-800 p-5 rounded-xl shadow-lg mb-8">
+      <h3 className="text-xl font-semibold text-textPrimary dark:text-white mb-3">
+        <DynamicIcon name="MapPin" className="inline-block mr-2 w-5 h-5 text-primary" />
+        Imagen de Ubicación del Negocio
+      </h3>
+      <p className="text-xs text-textSecondary dark:text-slate-400 mb-3">
+        Esta imagen aparecerá en la página de inicio y en la sección de ubicación.
+      </p>
+      <div className="mb-4">
+        <label
+          htmlFor="location-image-upload"
+          className={`relative cursor-pointer bg-primary hover:bg-opacity-90 text-white font-medium py-2 px-4 rounded-md transition-colors duration-150 inline-flex items-center
+                      ${isUploading || isSubmittingGlobal ? "opacity-50 cursor-not-allowed" : ""}`}
+        >
+          <DynamicIcon name="UploadCloud" className="w-4 h-4 mr-2" />
+          {preview ? "Cambiar Imagen" : "Seleccionar Imagen"}
+          <input
+            id="location-image-upload"
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={handleFileChange}
+            disabled={isUploading || isSubmittingGlobal}
+          />
+        </label>
+        {isUploading && <span className="ml-3 text-sm text-primary animate-pulse">Subiendo...</span>}
+      </div>
+      {preview && (
+        <div className="relative inline-block mb-3">
+          <img src={preview} alt="Vista previa de ubicación" className="max-h-40 rounded-md border border-gray-300 dark:border-slate-600" />
+          <CRButton
+            title="Eliminar"
+            onClick={handleRemoveImage}
+            className="absolute top-1 right-1 !bg-red-500 hover:!bg-red-600 text-white !p-1 !m-0 text-xs"
+            externalIcon={<DynamicIcon name="X" className="w-3 h-3" />}
+            onlyIcon
+            disabled={isUploading || isSubmittingGlobal}
+          />
+        </div>
+      )}
+      {!preview && <p className="text-sm text-gray-500 dark:text-slate-400 italic">No hay imagen de ubicación seleccionada.</p>}
+      <CRButton
+        title="Guardar Imagen de Ubicación"
+        onClick={handleUploadAndSave}
+        className="mt-4 bg-green-600 hover:bg-green-700 text-white"
+        loading={isUploading || isSubmittingGlobal}
+        disabled={isUploading || isSubmittingGlobal}
+      />
+    </div>
+  );
+};
+
 const ConfiguracionesPage = () => {
+  const { textosColoresConfig, fetchTextosColoresConfig, isLoadingTextosColores } = useStoreNails();
   const { fetchConfiguracionesSitio: refreshStoreConfigs } = useStoreNails();
 
   const [managedSections, setManagedSections] = useState({
@@ -36,12 +160,10 @@ const ConfiguracionesPage = () => {
   });
 
   const updateConfigMutation = useApiRequest({
-    url: "/configuraciones-sitio", // POST a esta ruta para crear/actualizar
+    url: "/configuraciones-sitio",
     method: "POST",
     options: {
-      onSuccess: () => {
-        // No mostrar alerta individual aquí, se mostrará una global al final
-      },
+      onSuccess: () => {},
       onError: (error, variables) => {
         CRAlert.alert({
           title: "Error Guardando Sección",
@@ -50,7 +172,25 @@ const ConfiguracionesPage = () => {
         });
       },
     },
-    notificationEnabled: false, // Deshabilitar notificaciones individuales
+    notificationEnabled: false,
+  });
+
+  const updateTextosColoresMutation = useApiRequest({
+    url: "/textos-colores",
+    method: "PUT",
+    options: {
+      onSuccess: () => {
+        fetchTextosColoresConfig(); // Actualizar el store con la nueva imagen de ubicación
+      },
+      onError: (error) => {
+        CRAlert.alert({
+          title: "Error Guardando Imagen Ubicación",
+          message: `Error al guardar la imagen de ubicación: ${error.response?.data?.message || error.message}`,
+          type: "error",
+        });
+      },
+    },
+    notificationEnabled: false,
   });
 
   useEffect(() => {
@@ -91,7 +231,7 @@ const ConfiguracionesPage = () => {
     };
 
     for (const key in managedSections) {
-      const images = managedSections[key].filter((img) => !img.isLoading); // Excluir las que aún cargan
+      const images = managedSections[key].filter((img) => !img.isLoading);
       const meta = sectionsMeta[key];
       if (images.length < meta.min || images.length > meta.max) {
         CRAlert.alert({
@@ -106,7 +246,22 @@ const ConfiguracionesPage = () => {
     return isValid;
   };
 
-  const handleSaveAll = async () => {
+  const handleSaveLocationImage = async (newUrl, newPublicId) => {
+    const currentConfig = textosColoresConfig;
+    const payload = {
+      ...currentConfig,
+      imagen_ubicacion_url: newUrl,
+      imagen_ubicacion_public_id: newPublicId,
+    };
+    try {
+      await updateTextosColoresMutation.mutateAsync(payload);
+      CRAlert.alert({ title: "Éxito", message: "Imagen de ubicación guardada.", type: "success" });
+    } catch (e) {
+      // El onError de la mutación ya muestra la alerta
+    }
+  };
+
+  const handleSaveAllImageManagers = async () => {
     if (!validateSections()) {
       return;
     }
@@ -114,7 +269,7 @@ const ConfiguracionesPage = () => {
     let allSucceeded = true;
     for (const sectionKey of Object.keys(managedSections)) {
       const imagesToSave = managedSections[sectionKey]
-        .filter((img) => img.url) // Solo guardar imágenes que tienen URL (subidas)
+        .filter((img) => img.url)
         .map((img) => ({
           url: img.url,
           public_id: img.public_id,
@@ -128,28 +283,30 @@ const ConfiguracionesPage = () => {
           valor: JSON.stringify(imagesToSave),
         });
       } catch (error) {
-        console.log(`Error guardando sección ${sectionKey}:`, error);
         allSucceeded = false;
-        // El onError de la mutación ya muestra alerta
       }
     }
 
     if (allSucceeded) {
-      CRAlert.alert({ title: "Éxito", message: "Todas las configuraciones de imágenes se guardaron correctamente.", type: "success" });
-      refreshStoreConfigs(); // Actualizar el store global
-      refetchApiConfigs(); // Refrescar datos de la API para esta página
+      CRAlert.alert({
+        title: "Éxito",
+        message: "Todas las configuraciones de imágenes de carruseles/galería se guardaron correctamente.",
+        type: "success",
+      });
+      refreshStoreConfigs();
+      refetchApiConfigs();
     } else {
       CRAlert.alert({
         title: "Guardado Parcial",
-        message: "Algunas configuraciones no pudieron guardarse. Revisa los mensajes de error.",
+        message: "Algunas configuraciones de imágenes de carruseles/galería no pudieron guardarse.",
         type: "warning",
       });
     }
   };
 
-  const isLoading = isLoadingApiConfigs || updateConfigMutation.isPending;
+  const isLoading = isLoadingApiConfigs || updateConfigMutation.isPending || isLoadingTextosColores || updateTextosColoresMutation.isPending;
 
-  if (isLoadingApiConfigs && !initialDataLoaded) {
+  if ((isLoadingApiConfigs && !initialDataLoaded) || (isLoadingTextosColores && !textosColoresConfig.nombre_negocio)) {
     return <CRLoader text="Cargando configuraciones..." fullScreen={false} style="circle" size="lg" />;
   }
 
@@ -160,15 +317,22 @@ const ConfiguracionesPage = () => {
       <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
         <h1 className="text-2xl md:text-3xl font-bold text-textPrimary dark:text-white">Configuración de Imágenes del Sitio</h1>
         <CRButton
-          title="Guardar Todos los Cambios"
-          onClick={handleSaveAll}
+          title="Guardar Cambios (Carruseles/Galería)"
+          onClick={handleSaveAllImageManagers}
           className="bg-green-600 hover:bg-green-700 text-white"
           loading={updateConfigMutation.isPending}
           disabled={updateConfigMutation.isPending || isLoadingApiConfigs}
-          externalIcon={<DynamicIcon name="Save" className="w-4 h-4" />}
+          externalIcon={<DynamicIcon name="SaveAll" className="w-4 h-4" />}
           iconPosition="left"
         />
       </div>
+
+      <LocationImageManager
+        initialImageUrl={textosColoresConfig.imagen_ubicacion_url}
+        initialPublicId={textosColoresConfig.imagen_ubicacion_public_id}
+        onSave={handleSaveLocationImage}
+        isSubmittingGlobal={updateTextosColoresMutation.isPending}
+      />
 
       <ImageManagerSection
         title="Carrusel Principal"

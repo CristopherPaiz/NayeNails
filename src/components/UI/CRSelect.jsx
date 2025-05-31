@@ -1,58 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import PropTypes from "prop-types";
-
-/**
- * El componente CRSelect renderiza un menú desplegable personalizable con soporte para selección única o múltiple,
- * búsqueda, opciones para limpiar la selección, y manejo de varios estados como cargando, errores y estado deshabilitado.
- *
- * @param {object} props - Las propiedades del componente.
- * @param {string} [props.title] - El título o etiqueta para el componente select. Si existe colocará un label antes del select.
- * @param {boolean} [props.disable=false] - Indica si el select está deshabilitado.
- * @param {boolean} [props.chevron=true] - Indica si se muestra un ícono de flecha en el select.
- * @param {boolean} [props.loading=false] - Indica si el select está en estado de carga.
- * @param {string} [props.loadingText="Cargando..."] - El texto a mostrar cuando el select está en estado de carga.
- * @param {string} [props.disableText] - El texto a mostrar cuando el select está deshabilitado.
- * @param {boolean} [props.insensitive=false] - Indica si la búsqueda es insensible a tildes Por defecto es `false`.
- * @param {boolean} [props.multi=false] - Indica si se permite la selección múltiple. Si es `true` el select mostrará los elementos seleccionados en un contenedor.
- * @param {boolean} [props.clearable=true] - Indica si se muestra un ícono para limpiar la selección. Por defecto es `true`.
- * @param {boolean} [props.separator=false] - Indica si se muestra una línea separadora entre las opciones del select. Por defecto es `false`.
- * @param {string} [props.color="#3b82f6"] - El color de fondo de los elementos seleccionados en modo múltiple y en single. El color se debe pasar en formato hexadecimal. Por defecto es `#3b82f6`.
- * @param {number} [props.height=200] - La altura máxima del menú desplegable. Por defecto es `200`.
- * @param {string} [props.placeholder="Seleccione..."] - El texto a mostrar cuando no hay elementos seleccionados.
- * @param {string} [props.labelField="label"] - El nombre del campo que contiene el texto a mostrar en las opciones del select.
- * @param {string} [props.valueField="value"] - El nombre del campo que contiene el valor de la opción seleccionada.
- * @param {string} [props.icon] - El nombre del campo que contiene la URL de la imagen a mostrar en las opciones del select.
- * @param {array} [props.data=[]] - Un arreglo de objetos con las opciones a mostrar en el select.
- * @param {boolean} [props.searchable=false] - Indica si se muestra un campo de búsqueda en el menú desplegable. Por defecto es `false`.
- * @param {function} [props.setValue] - La función que se ejecuta al seleccionar una opción. Recibe como argumento el valor o valores seleccionados.
- * @param {boolean} [props.reset] - Indica si se debe limpiar la selección del select. No es necesario pasar un valor, solo con cambiar el estado se ejecutará la acción. En pocas palabras, si es true o false, pero si cambiar el valor anterior se reinicia.
- * @param {array[]} [props.defaultValue] - El valor o valores por defecto a seleccionar en el select. Puede ser un objeto o un arreglo de objetos.
- * @param {"auto"|"top"|"bottom"} [props.direction="auto"] - La dirección en la que se despliega el menú. Puede ser `auto`, `top` o `bottom`. Por defecto es `auto`.
- * @param {string} [props.searchField] - El nombre del campo por el cual se realizar la búsqueda en el menú desplegable. Por defecto es `labelField`.
- * @param {boolean} [props.autoClose=true] - Indica si el menú desplegable se cierra automáticamente al seleccionar una opción. Por defecto es `true`.
- * @param {string} [props.error] - El mensaje de error a mostrar debajo del select.
- * @param {boolean} [props.keyValue=true] - Indica si el arreglo de opciones es un objeto con llave y valor y no contienen labels para identificar los valores Por defecto es `true`.
- * @param {boolean} [props.onlySelectValues=false] - Indica si solo se deben retornar los valores de las opciones seleccionadas. Por defecto es `false`.
- * @returns {JSX.Element} - El componente select.
- *
- * @example
- * //Ejemplo básico
- * const countries = [{ label: "Colombia", value: "CO" }, { label: "Perú", value: "PE" }];
- * <CRSelect title="País" data={countries} setValue={setCountry} />
- *
- * //Especificar label y value por otro diferente
- * const countries = [{ countryName: "Colombia", countryCode: "CO" }, { countryName: "Perú", countryCode: "PE" }];
- * <CRSelect title="País" data={countries} labelField="countryName" valueField="countryCode" setValue={setCountry} />
- *
- * //Ejemplo de objeto y defaultValue
- * const countries = [{ name: "Colombia", code: "CO" }, { name: "Perú", code: "PE" }];
- * const defaultCountry = [{ name: "Colombia", code: "CO" }];
- * <CRSelect title="País" data={countries} labelField="name" valueField="code" setValue={setCountry} defaultValue={defaultCountry} />
- *
- * //Buscar por otro campo
- * <CRSelect title="País" data={countries} labelField="name" valueField="code" searchField="name" setValue={setCountry} />
- *
- */
 
 const CRSelect = ({
   title,
@@ -76,6 +23,7 @@ const CRSelect = ({
   setValue,
   reset,
   defaultValue,
+  value, // Añadida prop value
   direction = "auto",
   searchField,
   autoClose = true,
@@ -86,7 +34,7 @@ const CRSelect = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
-  const [filteredData, setFilteredData] = useState(data);
+  const [filteredData, setFilteredData] = useState([]); // Inicializar como array vacío
   const [searchTerm, setSearchTerm] = useState("");
   const selectRef = useRef(null);
 
@@ -94,48 +42,78 @@ const CRSelect = ({
   const [dataLoaded, setDataLoaded] = useState(false);
   const [timeoutExpired, setTimeoutExpired] = useState(false);
 
+  // Formatear datos iniciales si keyValue es true
+  const formattedInitialData = useMemo(() => {
+    if (keyValue && data.length > 0 && typeof data[0] === "object" && !Array.isArray(data[0])) {
+      return Object.entries(data[0]).map(([label, val]) => ({
+        [labelField]: label + " (" + val + ")",
+        [valueField]: val,
+      }));
+    }
+    return data;
+  }, [data, keyValue, labelField, valueField]);
+
   useEffect(() => {
-    if (dataLoaded && defaultValue && !timeoutExpired && !defaultApplied) {
-      const defaultItems = Array.isArray(defaultValue) ? defaultValue : [defaultValue];
-      const matchedItems = defaultItems.map((item) => data.find((dataItem) => dataItem[valueField] === item[valueField])).filter(Boolean);
+    setFilteredData(formattedInitialData);
+    if (formattedInitialData.length > 0) {
+      setDataLoaded(true);
+    }
+  }, [formattedInitialData]);
+
+  // Sincronizar selectedItems con la prop 'value'
+  useEffect(() => {
+    if (value !== undefined) {
+      // Solo actuar si 'value' está definida
+      const valueAsArray = multi ? value || [] : value ? [value] : [];
+
+      const newSelectedItems = valueAsArray
+        .map((vItem) => {
+          // Si vItem es un objeto, buscar por valueField. Si es un primitivo, buscar directamente.
+          const targetValue = typeof vItem === "object" && vItem !== null ? vItem[valueField] : vItem;
+          return formattedInitialData.find((dItem) => dItem[valueField] === targetValue);
+        })
+        .filter(Boolean); // Filtrar nulos o indefinidos
+
+      setSelectedItems(newSelectedItems);
+    }
+  }, [value, formattedInitialData, valueField, multi]);
+
+  useEffect(() => {
+    if (dataLoaded && defaultValue && !timeoutExpired && !defaultApplied && !value) {
+      // No aplicar si 'value' ya está controlando
+      const defaultItemsArray = Array.isArray(defaultValue) ? defaultValue : defaultValue ? [defaultValue] : [];
+      const matchedItems = defaultItemsArray
+        .map((item) => formattedInitialData.find((dataItem) => dataItem[valueField] === (typeof item === "object" ? item[valueField] : item)))
+        .filter(Boolean);
 
       if (matchedItems.length > 0) {
         setSelectedItems(matchedItems);
-        setValue && setValue(onlySelectValues ? matchedItems.map((item) => item[valueField]) : matchedItems);
+        if (setValue) {
+          const valueToSet = multi ? matchedItems : matchedItems[0];
+          setValue(onlySelectValues ? (multi ? matchedItems.map((i) => i[valueField]) : matchedItems[0]?.[valueField]) : valueToSet);
+        }
         setDefaultApplied(true);
       }
     }
-  }, [dataLoaded, defaultValue, timeoutExpired, defaultApplied, data, valueField, setValue, onlySelectValues]);
-
-  useEffect(() => {
-    if (data.length > 0) {
-      let formattedData = data;
-
-      if (keyValue) {
-        // Si keyValue es true, transforma el objeto a la estructura esperada
-        formattedData = Object.entries(data[0]).map(([label, value]) => ({
-          [labelField]: label + " (" + value + ")",
-          [valueField]: value,
-        }));
-      }
-
-      setFilteredData(formattedData);
-      setDataLoaded(true);
-    }
-  }, [data, keyValue, labelField, valueField]);
+  }, [dataLoaded, defaultValue, timeoutExpired, defaultApplied, formattedInitialData, valueField, setValue, onlySelectValues, multi, value]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setTimeoutExpired(true);
     }, 10000);
-
     return () => clearTimeout(timer);
   }, []);
 
+  const prevReset = useRef(reset);
   useEffect(() => {
-    setSelectedItems([]);
-    setSearchTerm("");
-    if (reset && setValue) setValue(multi ? [] : null);
+    if (prevReset.current !== reset && reset !== undefined) {
+      // Solo si 'reset' cambia
+      setSelectedItems([]);
+      setSearchTerm("");
+      if (setValue) setValue(multi ? [] : null);
+      setDefaultApplied(false); // Permitir que el default se reaplique si es necesario
+      prevReset.current = reset;
+    }
   }, [reset, setValue, multi]);
 
   useEffect(() => {
@@ -144,11 +122,8 @@ const CRSelect = ({
         setIsOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const toggleSelect = () => {
@@ -165,19 +140,28 @@ const CRSelect = ({
         : [...selectedItems, item];
     } else {
       updatedItems = [item];
-      if (autoClose) {
-        setIsOpen(false);
-      }
+      if (autoClose) setIsOpen(false);
     }
-    setSelectedItems(updatedItems);
-    setValue && setValue(onlySelectValues ? updatedItems.map((item) => item[valueField]) : updatedItems);
+
+    // No llamar a setSelectedItems aquí si 'value' es una prop controlada,
+    // la actualización vendrá del useEffect que observa 'value'.
+    // En su lugar, llamar a setValue para que el padre actualice 'value'.
+    if (setValue) {
+      const valueToSet = multi ? updatedItems : updatedItems.length > 0 ? updatedItems[0] : null;
+      setValue(onlySelectValues ? (multi ? updatedItems.map((i) => i[valueField]) : updatedItems[0]?.[valueField] ?? null) : valueToSet);
+    }
+    // Si no es controlado (value no es prop), actualizamos estado interno
+    if (value === undefined) {
+      setSelectedItems(updatedItems);
+    }
   };
 
   const handleSearch = (e) => {
     const term = e.target.value;
     setSearchTerm(term);
-    const filtered = data.filter((item) => {
-      const itemValue = item[labelField || searchField].toLowerCase();
+    const searchKey = searchField || labelField;
+    const filtered = formattedInitialData.filter((item) => {
+      const itemValue = String(item[searchKey] ?? "").toLowerCase();
       const searchValue = term.toLowerCase();
 
       if (insensitive) {
@@ -191,15 +175,23 @@ const CRSelect = ({
     setFilteredData(filtered);
   };
 
-  const removeItem = (item) => {
-    const updatedItems = selectedItems.filter((selectedItem) => selectedItem[valueField] !== item[valueField]);
-    setSelectedItems(updatedItems);
-    setValue && setValue(onlySelectValues ? updatedItems.map((item) => item[valueField]) : updatedItems);
+  const removeItem = (itemToRemove) => {
+    const updatedItems = selectedItems.filter((selectedItem) => selectedItem[valueField] !== itemToRemove[valueField]);
+    if (setValue) {
+      const valueToSet = multi ? updatedItems : updatedItems.length > 0 ? updatedItems[0] : null;
+      setValue(onlySelectValues ? (multi ? updatedItems.map((i) => i[valueField]) : updatedItems[0]?.[valueField] ?? null) : valueToSet);
+    }
+    if (value === undefined) {
+      setSelectedItems(updatedItems);
+    }
   };
 
   const clearSelection = () => {
-    setSelectedItems([]);
-    setValue && setValue(multi ? [] : null);
+    if (setValue) setValue(multi ? [] : null);
+    if (value === undefined) {
+      // Solo si no es controlado
+      setSelectedItems([]);
+    }
     setDefaultApplied(false);
   };
 
@@ -210,7 +202,7 @@ const CRSelect = ({
     if (multi) {
       return selectedItems.map((item, index) => (
         <div
-          key={item[valueField + index]}
+          key={item[valueField] + "-" + index} // Clave más robusta
           className="inline-flex items-center rounded-full px-2 py-1 text-sm mr-1 mb-1"
           style={{ backgroundColor: color, color: "white" }}
         >
@@ -232,7 +224,7 @@ const CRSelect = ({
         </div>
       ));
     }
-    return selectedItems[0][labelField];
+    return selectedItems[0]?.[labelField] || <span className={`${error ? "text-red-500" : "text-gray-400"}`}>{placeholder}</span>;
   };
 
   return (
@@ -245,14 +237,14 @@ const CRSelect = ({
       )}
       <div
         className={`relative w-full border rounded-md ${error ? "border-red-500" : "border-gray-300 dark:border-gray-500"} ${
-          disable || loading ? "bg-gray-100 cursor-not-allowed opacity-70 saturate-50" : "cursor-pointer"
+          disable || loading ? "bg-gray-100 cursor-not-allowed opacity-70 saturate-50" : "cursor-pointer bg-white dark:bg-neutral-800"
         }`}
         onClick={toggleSelect}
       >
         <div className="flex items-center p-2 min-h-[38px]">
           <div className="flex-grow overflow-hidden text-black dark:text-white">{renderValue()}</div>
           <div className="flex-shrink-0 ml-2 flex items-center">
-            {clearable && selectedItems.length > 0 && (
+            {clearable && selectedItems.length > 0 && !disable && !loading && (
               <svg
                 onClick={(e) => {
                   e.stopPropagation();
@@ -301,7 +293,7 @@ const CRSelect = ({
               scrollbarWidth: "thin",
               scrollbarColor: `${document.documentElement.classList.contains("dark") ? "#808080" : "#adadad"} ${
                 document.documentElement.classList.contains("dark") ? "rgb(38,38,38)" : "#ffffff"
-              }`, // Uno es el color del scrollbar y el otro el fondo del scrollbar por eso se repite el código
+              }`,
             }}
           >
             {searchable && (
@@ -320,16 +312,22 @@ const CRSelect = ({
               <div className="py-2 text-center text-gray-500">No hay datos</div>
             ) : (
               filteredData.map((item, index) => (
-                <React.Fragment key={item[valueField + index]}>
+                <React.Fragment key={item[valueField] + "--" + index}>
                   <div
-                    className={`py-2 pl-4 pr-2 hover:bg-opacity-10`}
+                    className={`py-2 pl-4 pr-2 hover:bg-opacity-10 cursor-pointer`}
                     style={{
                       backgroundColor: selectedItems.some((selectedItem) => selectedItem[valueField] === item[valueField]) ? color : "transparent",
                       color: selectedItems.some((selectedItem) => selectedItem[valueField] === item[valueField]) ? "white" : "inherit",
                     }}
                     onClick={() => handleItemClick(item)}
                   >
-                    <div className="flex items-center text-gray-800 dark:text-white">
+                    <div
+                      className={`flex items-center ${
+                        selectedItems.some((selectedItem) => selectedItem[valueField] === item[valueField])
+                          ? "text-white"
+                          : "text-gray-800 dark:text-white"
+                      }`}
+                    >
                       {item[icon] && <img src={item[icon]} alt="" className="w-6 h-6 mr-2 -ml-1 rounded-full" />}
                       {item[labelField]}
                     </div>
@@ -366,8 +364,9 @@ CRSelect.propTypes = {
   data: PropTypes.array,
   searchable: PropTypes.bool,
   setValue: PropTypes.func,
-  reset: PropTypes.bool,
-  defaultValue: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  reset: PropTypes.any, // Cambiado de bool a any para detectar cualquier cambio
+  defaultValue: PropTypes.oneOfType([PropTypes.object, PropTypes.array, PropTypes.string, PropTypes.number]),
+  value: PropTypes.oneOfType([PropTypes.object, PropTypes.array, PropTypes.string, PropTypes.number]), // Prop para controlar el valor
   direction: PropTypes.oneOf(["auto", "top", "bottom", "right", "left"]),
   searchField: PropTypes.string,
   autoClose: PropTypes.bool,

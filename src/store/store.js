@@ -24,8 +24,11 @@ const defaultTextosColores = {
   telefono_unificado: "+50249425739",
   url_facebook: "https://facebook.com/profile.php?id=61575180189391",
   coordenadas_mapa: "14.850236,-91.510423",
-  configuracion_colores: null, // Se usará CSS por defecto
-  configuracion_servicios: null, // Se usarán los servicios hardcodeados por defecto
+  configuracion_colores: null,
+  configuracion_servicios: null,
+  horario_negocio: "Lunes a Viernes: 9:00 AM - 5:00 PM", // Nuevo con valor por defecto
+  imagen_ubicacion_url: "/pics/local.png", // Nuevo con valor por defecto
+  imagen_ubicacion_public_id: null, // Nuevo
 };
 
 const useStoreNails = create((set, get) => ({
@@ -69,7 +72,6 @@ const useStoreNails = create((set, get) => ({
   toggleAdminSidebar: () => set((state) => ({ adminSidebarOpen: !state.adminSidebarOpen })),
   setAdminSidebarOpen: (isOpen) => set({ adminSidebarOpen: isOpen }),
 
-  // Nuevos estados para TextosColoresConfiguraciones
   textosColoresConfig: defaultTextosColores,
   isLoadingTextosColores: true,
   errorTextosColores: null,
@@ -80,22 +82,24 @@ const useStoreNails = create((set, get) => ({
     try {
       const response = await apiClient.get("/textos-colores");
       const data = response.data;
-      // Asegurar que los campos JSON sean objetos o null, no strings
       const parsedData = {
-        ...defaultTextosColores, // Empezar con fallbacks
-        ...data, // Sobrescribir con datos de la API
+        ...defaultTextosColores,
+        ...data,
         configuracion_colores:
           data.configuracion_colores && typeof data.configuracion_colores === "object"
             ? data.configuracion_colores
             : data.configuracion_colores && typeof data.configuracion_colores === "string"
             ? JSON.parse(data.configuracion_colores)
-            : null,
+            : defaultTextosColores.configuracion_colores, // Fallback a default si es inválido
         configuracion_servicios:
           data.configuracion_servicios && typeof data.configuracion_servicios === "object"
             ? data.configuracion_servicios
             : data.configuracion_servicios && typeof data.configuracion_servicios === "string"
             ? JSON.parse(data.configuracion_servicios)
-            : null,
+            : defaultTextosColores.configuracion_servicios, // Fallback a default
+        horario_negocio: data.horario_negocio || defaultTextosColores.horario_negocio,
+        imagen_ubicacion_url: data.imagen_ubicacion_url || defaultTextosColores.imagen_ubicacion_url,
+        imagen_ubicacion_public_id: data.imagen_ubicacion_public_id || defaultTextosColores.imagen_ubicacion_public_id,
       };
       set({ textosColoresConfig: parsedData, isLoadingTextosColores: false });
     } catch (error) {
@@ -103,7 +107,7 @@ const useStoreNails = create((set, get) => ({
       set({
         errorTextosColores: error.response?.data?.message ?? error.message ?? "Error al cargar configuraciones globales",
         isLoadingTextosColores: false,
-        textosColoresConfig: defaultTextosColores, // Mantener fallbacks en caso de error
+        textosColoresConfig: defaultTextosColores,
       });
     }
   },
@@ -186,7 +190,7 @@ const useStoreNails = create((set, get) => ({
     set({ errorTodasLasUnas: null });
     try {
       const response = await apiClient.get("/disenios");
-      const apiDisenios = response.data ?? [];
+      const apiDisenios = response.data?.disenios ?? []; // Asumiendo que los diseños están en response.data.disenios
       set({ todasLasUnas: apiDisenios, isLoadingTodasLasUnas: false });
     } catch (error) {
       console.error("Error fetching todas las unas:", error);

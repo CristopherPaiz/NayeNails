@@ -1,17 +1,22 @@
 import { Map, Navigation, ExternalLink, Phone, Home } from "lucide-react";
-import useStoreNails from "../store/store"; // Importar el store
+import useStoreNails from "../store/store";
 
 export default function Ubicacion() {
-  const { textosColoresConfig } = useStoreNails();
+  const { textosColoresConfig, isLoadingTextosColores } = useStoreNails();
 
   const direccion = textosColoresConfig?.texto_direccion_unificado || "12 Avenida 2-25, Zona 6, Quetzaltenango, Guatemala";
   const celular = textosColoresConfig?.telefono_unificado || "+50249425739";
   const coordenadas = textosColoresConfig?.coordenadas_mapa || "14.850236,-91.510423";
+  const imagenUbicacion = textosColoresConfig?.imagen_ubicacion_url || "/pics/local.png";
 
   const mapUrl = `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3838.8761753785793!2d${coordenadas.split(",")[1]}!3d${
     coordenadas.split(",")[0]
   }!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTTCsDUxJzAxLjAiTiA5McKwMzAnMzguMCJX!5e0!3m2!1ses!2sgt!4v1714768930733!5m2!1ses!2sgt`;
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${coordenadas}`;
+
+  if (isLoadingTextosColores && !textosColoresConfig.nombre_negocio) {
+    return <div className="w-full max-w-6xl mx-auto p-4 px-8 mb-14 text-center">Cargando...</div>;
+  }
 
   return (
     <div className="w-full max-w-6xl mx-auto p-4 px-8 mb-14">
@@ -20,7 +25,15 @@ export default function Ubicacion() {
       <div className="bg-primary/5 dark:bg-tertiary/10 rounded-2xl shadow-lg overflow-hidden border-2 border-primary dark:border-tertiary">
         <div className="flex flex-col md:flex-row">
           <div className="w-full md:w-2/5">
-            <img src="/pics/local.png" alt="Nuestras instalaciones en Quetzaltenango" className="w-full h-full object-cover" />
+            <img
+              src={imagenUbicacion}
+              alt="Nuestras instalaciones"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = "/pics/local.png";
+              }} // Fallback
+            />
           </div>
 
           <div className="w-full md:w-3/5 p-6 bg-gradient-to-br from-primary/5 to-tertiary/5 dark:from-tertiary/10 dark:to-primary/10">

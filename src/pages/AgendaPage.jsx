@@ -1,9 +1,14 @@
-import { useState, useEffect, useRef } from "react";
-import { User, Phone, CalendarDays, Clock, Send } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { User, Phone, CalendarDays, Clock, Send, MessageSquareText, Palette, Loader2 } from "lucide-react";
 import ConfirmationModal from "../components/ConfirmationModal";
 import { format, getDay, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import useScrollToTop from "../hooks/useScrollToTop";
+import CRInput from "../components/UI/CRInput";
+import CRSelect from "../components/UI/CRSelect";
+import useApiRequest from "../hooks/useApiRequest";
+// CRLoader no se usará globalmente aquí si el botón maneja su propio estado de carga
+import CRAlert from "../components/UI/CRAlert";
 
 const AgendaPage = () => {
   useScrollToTop();
@@ -11,6 +16,9 @@ const AgendaPage = () => {
   const [phone, setPhone] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
+  const [selectedServiceObject, setSelectedServiceObject] = useState(null);
+  const [notes, setNotes] = useState("");
+
   const [availableTimes, setAvailableTimes] = useState([]);
   const [isWeekend, setIsWeekend] = useState(false);
 
@@ -18,10 +26,64 @@ const AgendaPage = () => {
   const [modalContent, setModalContent] = useState({ title: "", message: "", type: "success" });
 
   const dateInputRef = useRef(null);
+  const [resetServicioSelect, setResetServicioSelect] = useState(false);
 
   const defaultTimes = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00"];
-
   const today = new Date().toISOString().split("T")[0];
+
+  const { data: categoriasData, isLoading: isLoadingCategorias } = useApiRequest({
+    queryKey: ["categoriasPublic"],
+    url: "/categorias",
+    method: "GET",
+    notificationEnabled: false,
+  });
+
+  const { mutate: crearCitaMutation, isLoading: isCreatingCita } = useApiRequest({
+    url: "/citas",
+    method: "POST",
+    options: {
+      onSuccess: () => {
+        const dateForDisplay = format(parseISO(selectedDate + "T00:00:00"), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: es });
+        const timeForDisplay = formatTimeToAMPM(selectedTime);
+        setModalContent({
+          title: "¡Cita Agendada!",
+          message: (
+            <>
+              <p className="mb-2">
+                ¡Gracias <strong className="text-primary">{name || "Cliente"}</strong>!
+              </p>
+              <p>
+                Tu cita para <strong className="text-primary">{selectedServiceObject?.label || "el servicio seleccionado"}</strong> fue agendada para
+                el día <strong className="text-primary">{dateForDisplay}</strong> a las <strong className="text-primary">{timeForDisplay}</strong>.
+              </p>
+              <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">Te confirmaremos por WhatsApp que hemos recibido tu cita.</p>
+            </>
+          ),
+          type: "success",
+        });
+        setIsModalOpen(true); // Mostrar modal DESPUÉS de que la carga termine
+      },
+      onError: (error) => {
+        CRAlert.alert({ title: "Error al Agendar", message: error.response?.data?.message || "No se pudo crear la cita.", type: "error" });
+      },
+    },
+    notificationEnabled: false, // Las notificaciones de éxito/error se manejan en onSuccess/onError
+  });
+
+  const serviciosOptions = useMemo(() => {
+    if (!categoriasData) return [];
+    const options = [];
+    categoriasData.forEach((catPadre) => {
+      if (catPadre.activo && catPadre.subcategorias && catPadre.subcategorias.length > 0) {
+        catPadre.subcategorias.forEach((sub) => {
+          if (sub.activo) {
+            options.push({ value: sub.id, label: `${catPadre.nombre} - ${sub.nombre}` });
+          }
+        });
+      }
+    });
+    return options;
+  }, [categoriasData]);
 
   const formatTimeToAMPM = (time24) => {
     if (!time24) return "";
@@ -57,36 +119,26 @@ const AgendaPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!selectedDate || !selectedTime || isWeekend) {
+    if (isCreatingCita) return;
+
+    if (!selectedDate || !selectedTime || isWeekend || !selectedServiceObject || !name.trim() || !phone.trim()) {
       setModalContent({
         title: "¡Atención!",
-        message: "Por favor, selecciona una fecha y hora válidas (no fin de semana).",
+        message: "Por favor, completa todos los campos obligatorios (*), y selecciona una fecha y hora válidas (no fin de semana).",
         type: "error",
       });
       setIsModalOpen(true);
       return;
     }
 
-    const dateForDisplay = format(parseISO(selectedDate + "T00:00:00"), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: es });
-    const timeForDisplay = formatTimeToAMPM(selectedTime);
-
-    setModalContent({
-      title: "¡Cita Agendada!",
-      message: (
-        <>
-          <p className="mb-2">
-            ¡Gracias <strong className="text-primary">{name || "Cliente"}</strong>!
-          </p>
-          <p>
-            Tu cita fue agendada para el día <strong className="text-primary">{dateForDisplay}</strong> a las{" "}
-            <strong className="text-primary">{timeForDisplay}</strong>.
-          </p>
-          <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">Te confirmaremos por WhatsApp que hemos recibido tu cita.</p>
-        </>
-      ),
-      type: "success",
+    crearCitaMutation({
+      nombre_cliente: name,
+      telefono_cliente: phone,
+      fecha_cita: selectedDate,
+      hora_cita: selectedTime,
+      id_subcategoria_servicio: selectedServiceObject.value,
+      notas: notes,
     });
-    setIsModalOpen(true);
   };
 
   const resetForm = () => {
@@ -94,6 +146,9 @@ const AgendaPage = () => {
     setPhone("");
     setSelectedDate("");
     setSelectedTime("");
+    setSelectedServiceObject(null);
+    setNotes("");
+    setResetServicioSelect((prev) => !prev);
   };
 
   const handleModalClose = () => {
@@ -118,6 +173,10 @@ const AgendaPage = () => {
     "block w-full pl-10 pr-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500";
   const iconTwClasses = "absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 dark:text-gray-500";
 
+  // Condición explícita para deshabilitar el botón
+  const isSubmitButtonDisabled =
+    isCreatingCita || isLoadingCategorias || !name.trim() || !phone.trim() || !selectedDate || !selectedTime || isWeekend || !selectedServiceObject;
+
   return (
     <div className="container mx-auto px-4 py-8 pt-20 sm:pt-24 min-h-[calc(100vh-80px)] flex flex-col items-center">
       <div className="text-center mb-8 sm:mb-12">
@@ -126,51 +185,37 @@ const AgendaPage = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="w-full max-w-lg bg-white dark:bg-background p-6 sm:p-8 rounded-xl shadow-2xl space-y-6">
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Nombre Completo
-          </label>
-          <div className="relative mt-1">
-            <div className={iconTwClasses}>
-              <User size={20} />
-            </div>
-            <input
-              type="text"
-              name="name"
-              id="name"
-              required
-              className={inputTwClasses}
-              placeholder="Ej: Ana Pérez"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-        </div>
+        <CRInput
+          title="Nombre Completo *"
+          type="text"
+          placeholder="Ej: Ana Pérez"
+          value={name}
+          setValue={setName}
+          disabled={isCreatingCita}
+          classNameWrapper="!py-0"
+          id="name-agenda"
+          autoComplete="name"
+          icon={<User size={20} className="text-gray-400 dark:text-gray-500" />}
+          required
+        />
 
-        <div>
-          <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Teléfono
-          </label>
-          <div className="relative mt-1">
-            <div className={iconTwClasses}>
-              <Phone size={20} />
-            </div>
-            <input
-              type="tel"
-              name="phone"
-              id="phone"
-              required
-              className={inputTwClasses}
-              placeholder="Ej: 34561234"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-          </div>
-        </div>
+        <CRInput
+          title="Teléfono *"
+          type="number"
+          placeholder="Ej: 34561234"
+          value={phone}
+          setValue={setPhone}
+          disabled={isCreatingCita}
+          classNameWrapper="!py-0"
+          id="phone-agenda"
+          autoComplete="tel"
+          icon={<Phone size={20} className="text-gray-400 dark:text-gray-500" />}
+          required
+        />
 
         <div>
           <label htmlFor="date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Fecha
+            Fecha *
           </label>
           <div className="relative mt-1 cursor-pointer" onClick={handleDateContainerClick}>
             <div className={iconTwClasses}>
@@ -186,6 +231,7 @@ const AgendaPage = () => {
               min={today}
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
+              disabled={isCreatingCita}
             />
           </div>
           {isWeekend && selectedDate && (
@@ -196,7 +242,7 @@ const AgendaPage = () => {
         {selectedDate && !isWeekend && availableTimes.length > 0 && (
           <div>
             <label htmlFor="time" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Hora Disponible
+              Hora Disponible *
             </label>
             <div className="relative mt-1">
               <div className={iconTwClasses}>
@@ -209,6 +255,7 @@ const AgendaPage = () => {
                 className={`${inputTwClasses} appearance-none`}
                 value={selectedTime}
                 onChange={(e) => setSelectedTime(e.target.value)}
+                disabled={isCreatingCita}
               >
                 <option value="" disabled>
                   Selecciona una hora
@@ -235,13 +282,51 @@ const AgendaPage = () => {
           <p className="mt-2 text-sm text-yellow-600 dark:text-yellow-400">No hay horarios disponibles para este día. Prueba otra fecha.</p>
         )}
 
+        <CRSelect
+          title="Servicio a Solicitar *"
+          data={serviciosOptions}
+          setValue={setSelectedServiceObject}
+          value={selectedServiceObject}
+          placeholder="Selecciona un servicio..."
+          labelField="label"
+          valueField="value"
+          disabled={isLoadingCategorias || isCreatingCita}
+          loading={isLoadingCategorias}
+          loadingText="Cargando servicios..."
+          clearable={true}
+          searchable={true}
+          reset={resetServicioSelect}
+          require
+        />
+
+        <CRInput
+          title="Notas Adicionales (opcional)"
+          type="textarea"
+          placeholder="Ej: Diseño específico, alergias, etc."
+          value={notes}
+          setValue={setNotes}
+          disabled={isCreatingCita}
+          classNameWrapper="!py-0"
+          id="notes-agenda"
+          icon={<MessageSquareText size={20} className="text-gray-400 dark:text-gray-500" />}
+        />
+
         <button
           type="submit"
-          disabled={!selectedDate || !selectedTime || isWeekend}
-          className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary dark:bg-secondary dark:hover:bg-primary dark:focus:ring-offset-slate-800 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
+          disabled={isSubmitButtonDisabled}
+          className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary dark:bg-secondary dark:hover:bg-primary dark:focus:ring-offset-slate-800 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-70 transition-colors"
         >
-          <Send size={18} />
-          Agendar Cita
+          {isCreatingCita ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Agendando...
+            </>
+          ) : (
+            <>
+              <Send size={18} />
+              Agendar Cita
+            </>
+          )}
         </button>
       </form>
 

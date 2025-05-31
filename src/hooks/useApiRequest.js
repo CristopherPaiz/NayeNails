@@ -9,23 +9,23 @@ const useApiRequest = ({
   config = {},
   options = {},
   notificationEnabled = true,
-  successMessage,
-  errorMessage,
+  successMessage, // Este es el mensaje personalizado para éxito
+  errorMessage, // Este es el mensaje personalizado para error
 }) => {
   const queryClient = useQueryClient();
 
   const queryKey = customQueryKey || (method.toUpperCase() === "GET" ? [baseUrl, config.params || {}] : [baseUrl]);
 
-  const defaultSuccessHandler = (data, defaultMsg) => {
+  const defaultSuccessHandler = (data, defaultMsgOverride) => {
     if (notificationEnabled) {
-      const msg = successMessage || data?.message || defaultMsg || "Operación exitosa";
+      const msg = successMessage || data?.message || defaultMsgOverride || "Operación exitosa";
       CRAlert.alert({ title: "Éxito", message: msg, type: "success" });
     }
   };
 
-  const defaultErrorHandler = (error, defaultMsg) => {
+  const defaultErrorHandler = (error, defaultMsgOverride) => {
     if (notificationEnabled) {
-      const msg = errorMessage || error.response?.data?.message || error.message || defaultMsg || "Ocurrió un error";
+      const msg = errorMessage || error.response?.data?.message || error.message || defaultMsgOverride || "Ocurrió un error";
       CRAlert.alert({ title: "Error", message: msg, type: "error" });
     }
   };
@@ -41,6 +41,7 @@ const useApiRequest = ({
       queryFn,
       enabled: options.enabled,
       onSuccess: (data) => {
+        // Para GET, no usamos defaultSuccessHandler a menos que se especifique
         if (options.onSuccess) options.onSuccess(data);
       },
       onError: (error) => {
@@ -50,6 +51,7 @@ const useApiRequest = ({
       ...options,
     });
   } else {
+    // Mutaciones (POST, PUT, PATCH, DELETE)
     const mutationFn = async (variables) => {
       let finalUrl = baseUrl;
       let dataPayload;
@@ -59,7 +61,7 @@ const useApiRequest = ({
         finalUrl = variables.url;
         dataPayload = variables.data;
       } else {
-        dataPayload = variables; // Si no hay .url, variables es el payload directamente
+        dataPayload = variables;
       }
 
       if (!finalUrl) {
@@ -67,9 +69,6 @@ const useApiRequest = ({
         throw new Error("No se proporcionó URL para la mutación.");
       }
 
-      // Asegurar que PATCH/POST/PUT envíen un cuerpo JSON incluso si dataPayload es null/undefined
-      // para evitar el error de JSON.parse en el backend.
-      // DELETE puede no necesitar cuerpo.
       if ((methodUpper === "POST" || methodUpper === "PUT" || methodUpper === "PATCH") && (dataPayload === null || dataPayload === undefined)) {
         dataPayload = {};
       }
@@ -78,18 +77,28 @@ const useApiRequest = ({
       return response.data;
     };
 
-    return useMutation({
+    const mutationResult = useMutation({
+      // Guardamos el resultado de useMutation
       mutationFn,
       onSuccess: (data, variables, context) => {
-        defaultSuccessHandler(data, "Operación exitosa");
+        defaultSuccessHandler(data, "Operación exitosa"); // Usar el successMessage personalizado si existe
         if (options.onSuccess) options.onSuccess(data, variables, context);
       },
       onError: (error, variables, context) => {
-        defaultErrorHandler(error, "La operación falló");
+        defaultErrorHandler(error, "La operación falló"); // Usar el errorMessage personalizado si existe
         if (options.onError) options.onError(error, variables, context);
       },
+      // No pasar 'isLoading' o 'isPending' directamente aquí en options
+      // ya que son parte del objeto que devuelve useMutation.
+      // Se propagan las demás opciones como retry, etc.
       ...options,
     });
+
+    // Devolvemos el objeto de mutación completo, y explícitamente mapeamos isPending a isLoading
+    return {
+      ...mutationResult,
+      isLoading: mutationResult.isPending,
+    };
   }
 };
 
