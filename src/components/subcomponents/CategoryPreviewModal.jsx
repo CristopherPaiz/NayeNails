@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { DynamicIcon } from "../../utils/DynamicIcon";
-import { CATALOGO_BASE_PATH } from "../../constants/navbar"; // Asegurar que se usa para la redirección
 
-const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames = [], ctaButtonText }) => {
+const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames = [], ctaButtonText, targetPath, navigate }) => {
   if (!isOpen) return null;
 
   const marqueeItems = useMemo(() => {
@@ -107,6 +105,18 @@ const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames =
     }
   }, []);
 
+  const handleNavigation = (e) => {
+    e.preventDefault();
+    // Primero cerrar el modal
+    onClose();
+
+    // Usar un pequeño timeout para dar tiempo a que se cierre el modal
+    // antes de la navegación
+    setTimeout(() => {
+      navigate(targetPath);
+    }, 50);
+  };
+
   return (
     <>
       <style>
@@ -178,14 +188,13 @@ const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames =
             </div>
           )}
 
-          <Link
-            to={CATALOGO_BASE_PATH} // Redirige a /explorar-unas
-            onClick={onClose}
+          <button
+            onClick={handleNavigation}
             className="w-full mt-8 bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center transition-colors duration-200"
           >
             {ctaButtonText || "Explorar Todos"}
             <DynamicIcon name="ArrowRight" className="w-5 h-5 ml-2" />
-          </Link>
+          </button>
         </div>
       </div>
     </>

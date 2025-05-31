@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { DynamicIcon } from "../utils/DynamicIcon";
 import CategoryPreviewModal from "./subcomponents/CategoryPreviewModal";
 import useStoreNails from "../store/store"; // Importar el store
@@ -7,6 +8,7 @@ import { CATALOGO_BASE_PATH } from "../constants/navbar"; // Para el botón del 
 const MODAL_HISTORY_STATE_ID = "categoryPreviewModalOpen";
 
 const Servicios = () => {
+  const navigate = useNavigate();
   const { textosColoresConfig } = useStoreNails(); // Obtener configuraciones del store
 
   const servicesDataFromConfig = textosColoresConfig?.configuracion_servicios;
@@ -47,7 +49,13 @@ const Servicios = () => {
   const servicesToRender = Array.isArray(servicesDataFromConfig) && servicesDataFromConfig.length > 0 ? servicesDataFromConfig : fallbackServicesData;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalData, setModalData] = useState({ title: "", icon: "", subcategoryNames: [], ctaButtonText: "" });
+  const [modalData, setModalData] = useState({
+    title: "",
+    icon: "",
+    subcategoryNames: [],
+    ctaButtonText: "",
+    targetPath: "",
+  });
 
   const performCloseModal = useCallback(() => {
     setIsModalOpen(false);
@@ -60,6 +68,7 @@ const Servicios = () => {
       icon: service.icono,
       subcategoryNames: service.opciones_modal || [],
       ctaButtonText: service.texto_boton_modal || "Explorar",
+      targetPath: CATALOGO_BASE_PATH,
     });
     setIsModalOpen(true);
     document.body.style.overflow = "hidden";
@@ -135,7 +144,8 @@ const Servicios = () => {
         icon={modalData.icon}
         subcategoryNames={modalData.subcategoryNames}
         ctaButtonText={modalData.ctaButtonText}
-        // El botón del modal en CategoryPreviewModal ya redirige a CATALOGO_BASE_PATH
+        targetPath={modalData.targetPath}
+        navigate={navigate}
       />
     </>
   );
