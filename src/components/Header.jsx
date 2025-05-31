@@ -217,12 +217,12 @@ const Header = () => {
                 {value.icon && <DynamicIcon name={value.icon} className="w-5 h-5 mr-2" />}
                 {key.charAt(0).toUpperCase() + key.slice(1)}
               </span>
-              <DynamicIcon name="ChevronDown" className={`w-4 h-4 ml-1 transition-transform duration-200 ${isActive ? "rotate-180" : ""}`} />
+              <DynamicIcon name="ChevronDown" className={`w-4 h-4 ml-0.5 mt-1 transition-transform duration-100 ${isActive ? "rotate-180" : ""}`} />
             </button>
 
             {isActive && (
-              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-background rounded-lg shadow-lg py-2 min-w-[12rem] z-50 border border-border">
-                <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-background border-l border-t border-border rotate-45"></div>
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-background rounded-lg shadow-lg py-2 min-w-[12rem] z-50 border border-primary/50">
+                <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-background border-l border-t border-primary/50 rotate-45"></div>
                 {value.categorías.map((sub) => {
                   let linkTo;
                   if (isAdminMenu) {
@@ -362,12 +362,7 @@ const Header = () => {
               <DynamicIcon name={adminSidebarOpen ? "X" : "PanelLeftOpen"} size={24} />
             </button>
           ) : !isMobile ? (
-            <Link to="/" className="flex items-center" onClick={closeAllMenus}>
-              <img
-                src={textosColoresConfig.logo_negocio_url || "/nayeNails.svg"}
-                alt={businessNameFromConfig}
-                className="h-8 w-auto mr-2 dark:invert"
-              />
+            <Link to="/" className="flex items-center ml-4" onClick={closeAllMenus}>
               <h1 className="text-primary text-xl sm:text-2xl font-bold tracking-tight">{businessNameFromConfig}</h1>
             </Link>
           ) : (

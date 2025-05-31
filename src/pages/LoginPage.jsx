@@ -21,21 +21,32 @@ const LoginPage = () => {
     }
   }, [isAuthenticated, authIsLoadingGlobal, navigate, from]);
 
+  // Función para manejar cambios en el username
+  const handleUsernameChange = (e) => {
+    const value = e.target.value;
+    // Convertir a minúsculas y quitar espacios
+    const cleanValue = value.toLowerCase().replace(/\s/g, "");
+    setUsername(cleanValue);
+  };
+
+  // Función para manejar cambios en la contraseña
+  const handlePasswordChange = (e) => {
+    const value = e.target.value;
+    // Quitar espacios en blanco
+    const cleanValue = value.replace(/\s/g, "");
+    setPassword(cleanValue);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {
-      
-      
       return;
     }
     setIsSubmitting(true);
     try {
       await login({ username, password });
-      
     } catch (error) {
       console.error("Error al iniciar sesión:", error);
-      
-      
     } finally {
       setIsSubmitting(false);
     }
@@ -51,8 +62,8 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="min-dvh mt-14 bg-backgroundSecondary flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-md bg-background dark:bg-gray-800 shadow-xl rounded-xl p-8 space-y-8 border border-transparent dark:border-gray-700">
+    <div className="bg-backgroundSecondary flex flex-col justify-center items-center p-4 h-dvh -mt-16 sm:-mt-24">
+      <div className="sm:mt-10 mt-0 w-full max-w-md bg-background dark:bg-gray-800 shadow-xl rounded-xl p-8 space-y-8 border border-transparent dark:border-gray-700">
         <div>
           <img className="mx-auto h-32 w-36 -mb-6 invert dark:invert-0" src="/nayeNails.svg" alt="Naye Nails Logo" />
           <h2 className="mt-6 text-center text-3xl sm:text-4xl font-extrabold text-primary dark:text-primary tracking-tight">Bienvenido/a</h2>
@@ -71,7 +82,7 @@ const LoginPage = () => {
               autoComplete="username"
               required
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={handleUsernameChange}
               placeholder="Tu nombre de usuario"
               className="appearance-none block w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-textTertiary dark:placeholder-gray-400 text-textPrimary dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-colors"
               disabled={isSubmitting || authIsLoadingGlobal}
@@ -89,7 +100,7 @@ const LoginPage = () => {
               autoComplete="current-password"
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={handlePasswordChange}
               placeholder="Tu contraseña"
               className="appearance-none block w-full px-4 py-3 pr-10 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-textTertiary dark:placeholder-gray-400 text-textPrimary dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-colors"
               disabled={isSubmitting || authIsLoadingGlobal}
