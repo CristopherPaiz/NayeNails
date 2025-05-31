@@ -29,6 +29,10 @@ const DiseniosAdminPage = () => {
   const [errors, setErrors] = useState({});
   const [categorySelectorError, setCategorySelectorError] = useState(null);
 
+  // Estados para el selector de duración
+  const [duracionHoras, setDuracionHoras] = useState(0);
+  const [duracionMinutos, setDuracionMinutos] = useState(15);
+
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [confirmModalProps, setConfirmModalProps] = useState({ title: "", children: null, onConfirm: () => {} });
 
@@ -63,6 +67,45 @@ const DiseniosAdminPage = () => {
         })) ?? []
     );
   }, [todasLasCategorias]);
+
+  // Función para parsear la duración del formato string a horas y minutos
+  const parseDuracion = (duracionString) => {
+    if (!duracionString) return { horas: 0, minutos: 15 };
+
+    const horasMatch = duracionString.match(/(\d+)h/);
+    const minutosMatch = duracionString.match(/(\d+)min/);
+
+    const horas = horasMatch ? parseInt(horasMatch[1]) : 0;
+    const minutos = minutosMatch ? parseInt(minutosMatch[1]) : 0;
+
+    // Si no hay horas ni minutos, por defecto 15 minutos
+    if (horas === 0 && minutos === 0) {
+      return { horas: 0, minutos: 15 };
+    }
+
+    return { horas, minutos };
+  };
+
+  // Función para formatear la duración de horas y minutos a string
+  const formatDuracion = (horas, minutos) => {
+    // Si ambos son 0, usar 15min como mínimo
+    if (horas === 0 && minutos === 0) return "15min";
+
+    // Si solo hay minutos (sin horas)
+    if (horas === 0) return `${minutos}min`;
+
+    // Si solo hay horas (sin minutos)
+    if (minutos === 0) return `${horas}h`;
+
+    // Si hay ambos
+    return `${horas}h ${minutos}min`;
+  };
+
+  // Actualizar formValues.duracion cuando cambien los selectores
+  useEffect(() => {
+    const nuevaDuracion = formatDuracion(duracionHoras, duracionMinutos);
+    setFormValues((prev) => ({ ...prev, duracion: nuevaDuracion }));
+  }, [duracionHoras, duracionMinutos]);
 
   const commonMutationOptions = (successMsg) => ({
     onSuccess: (data) => {
@@ -108,6 +151,10 @@ const DiseniosAdminPage = () => {
     setCategorySelectorError(null);
     setImagePreview(disenio?.imagen_url || null); // Mostrar imagen actual en edición
     if (mode === "edit" && disenio) {
+      const { horas, minutos } = parseDuracion(disenio.duracion);
+      setDuracionHoras(horas);
+      setDuracionMinutos(minutos);
+
       setFormValues({
         nombre: disenio.nombre ?? "",
         descripcion: disenio.descripcion ?? "",
@@ -118,13 +165,15 @@ const DiseniosAdminPage = () => {
         subcategorias: disenio.subcategorias_ids ?? [],
       });
     } else {
+      setDuracionHoras(0);
+      setDuracionMinutos(15);
       setFormValues({
         nombre: "",
         descripcion: "",
         imagen_file: null,
         precio: "",
         oferta: "",
-        duracion: "",
+        duracion: "15min",
         subcategorias: [],
       });
     }
@@ -135,6 +184,8 @@ const DiseniosAdminPage = () => {
   const closeFormModal = () => {
     setIsFormModalOpen(false);
     setCurrentDisenio(null);
+    setDuracionHoras(0);
+    setDuracionMinutos(15);
     setFormValues({
       nombre: "",
       descripcion: "",
@@ -447,13 +498,48 @@ const DiseniosAdminPage = () => {
                 step="0.01"
               />
             </div>
-            <CRInput
-              title="Duración Estimada"
-              name="duracion"
-              value={formValues.duracion}
-              setValue={(val) => handleInputChange({ target: { name: "duracion", value: val } })}
-              placeholder="Ej: 1h 30min"
-            />
+
+            {/* Selector de Duración Personalizado */}
+            <div>
+              <label className="block text-sm font-medium text-textPrimary dark:text-gray-200 mb-2">Duración Estimada</label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-textSecondary dark:text-gray-400 mb-1">Horas</label>
+                  <select
+                    value={duracionHoras}
+                    onChange={(e) => setDuracionHoras(parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md
+                             bg-white dark:bg-slate-700 text-textPrimary dark:text-white
+                             focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value={0}>0h</option>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((hora) => (
+                      <option key={hora} value={hora}>
+                        {hora}h
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-textSecondary dark:text-gray-400 mb-1">Minutos</label>
+                  <select
+                    value={duracionMinutos}
+                    onChange={(e) => setDuracionMinutos(parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md
+                             bg-white dark:bg-slate-700 text-textPrimary dark:text-white
+                             focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value={0}>0min</option>
+                    <option value={15}>15min</option>
+                    <option value={30}>30min</option>
+                    <option value={45}>45min</option>
+                  </select>
+                </div>
+              </div>
+              <div className="mt-1 text-xs text-textSecondary dark:text-gray-400">
+                Duración seleccionada: <span className="font-medium text-primary dark:text-primary-light">{formValues.duracion}</span>
+              </div>
+            </div>
 
             <div className="space-y-3 pt-3 border-t border-gray-200 dark:border-slate-700">
               <h4 className="text-base font-semibold text-textPrimary dark:text-gray-200">Selección de Categorías y Subcategorías</h4>

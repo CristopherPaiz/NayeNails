@@ -1,149 +1,206 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import CRLoader from "../../components/UI/CRLoader";
 import useApiRequest from "../../hooks/useApiRequest";
 import useStoreNails from "../../store/store";
-import ImageConfigSection from "./ImageConfigSection";
+import ImageManagerSection from "./ImageManagerSection"; // Nuevo componente
+import CRButton from "../../components/UI/CRButton";
+import CRAlert from "../../components/UI/CRAlert";
+import { DynamicIcon } from "../../utils/DynamicIcon";
 
 const CONFIG_KEYS = {
   CAROUSEL_PRINCIPAL: "carousel_principal_imagenes",
-  CAROUSEL_OBJETIVO: "carousel_objetivo_imagenes",
+  CAROUSEL_SECUNDARIO: "carousel_secundario_imagenes", // Cambiado de OBJETIVO a SECUNDARIO para consistencia
   GALERIA_INICIAL: "galeria_inicial_imagenes",
 };
 
 const ConfiguracionesPage = () => {
-  const { imagenesInicio, imagenesGaleria, fetchConfiguracionesSitio } = useStoreNails();
-  const [configData, setConfigData] = useState({
-    [CONFIG_KEYS.CAROUSEL_PRINCIPAL]: "",
-    [CONFIG_KEYS.CAROUSEL_OBJETIVO]: "",
-    [CONFIG_KEYS.GALERIA_INICIAL]: "",
-  });
-  const [errors, setErrors] = useState({});
+  const { fetchConfiguracionesSitio: refreshStoreConfigs } = useStoreNails();
 
-  // Fetch site configurations
+  const [managedSections, setManagedSections] = useState({
+    [CONFIG_KEYS.CAROUSEL_PRINCIPAL]: [],
+    [CONFIG_KEYS.CAROUSEL_SECUNDARIO]: [],
+    [CONFIG_KEYS.GALERIA_INICIAL]: [],
+  });
+
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+
   const {
     data: apiConfigsData,
-    isLoading: isLoadingConfigs,
-    refetch: refetchConfigs,
+    isLoading: isLoadingApiConfigs,
+    refetch: refetchApiConfigs,
   } = useApiRequest({
-    queryKey: ["/configuraciones-sitio"],
+    queryKey: ["configuracionesSitioAdmin"],
     url: "/configuraciones-sitio",
     method: "GET",
     notificationEnabled: false,
   });
 
-  // Setup update mutation
   const updateConfigMutation = useApiRequest({
-    url: "/configuraciones-sitio",
+    url: "/configuraciones-sitio", // POST a esta ruta para crear/actualizar
     method: "POST",
     options: {
       onSuccess: () => {
-        refetchConfigs();
-        fetchConfiguracionesSitio();
-        setErrors({});
+        // No mostrar alerta individual aquí, se mostrará una global al final
       },
       onError: (error, variables) => {
-        setErrors((prev) => ({
-          ...prev,
-          [variables.clave]: error.response?.data?.message || "Error al guardar.",
-        }));
+        CRAlert.alert({
+          title: "Error Guardando Sección",
+          message: `Error al guardar ${variables.clave}: ${error.response?.data?.message || error.message}`,
+          type: "error",
+        });
       },
     },
-    successMessage: "Configuración guardada con éxito.",
+    notificationEnabled: false, // Deshabilitar notificaciones individuales
   });
 
-  // Initialize data from API or store
   useEffect(() => {
-    if (apiConfigsData) {
-      // Process API data
-      const getConfigValue = (key) => {
+    if (apiConfigsData && !initialDataLoaded) {
+      const initialStates = {};
+      Object.values(CONFIG_KEYS).forEach((key) => {
         const configItem = apiConfigsData.find((c) => c.clave === key);
-        return configItem ? JSON.stringify(JSON.parse(configItem.valor), null, 2) : "[]";
-      };
-
-      setConfigData({
-        [CONFIG_KEYS.CAROUSEL_PRINCIPAL]: getConfigValue(CONFIG_KEYS.CAROUSEL_PRINCIPAL),
-        [CONFIG_KEYS.CAROUSEL_OBJETIVO]: getConfigValue(CONFIG_KEYS.CAROUSEL_OBJETIVO),
-        [CONFIG_KEYS.GALERIA_INICIAL]: getConfigValue(CONFIG_KEYS.GALERIA_INICIAL),
-      });
-    } else {
-      // Use store data as fallback
-      setConfigData({
-        [CONFIG_KEYS.CAROUSEL_PRINCIPAL]: JSON.stringify(imagenesInicio || [], null, 2),
-        [CONFIG_KEYS.CAROUSEL_OBJETIVO]: "[]", // Fallback
-        [CONFIG_KEYS.GALERIA_INICIAL]: JSON.stringify(imagenesGaleria || [], null, 2),
-      });
-    }
-  }, [apiConfigsData, imagenesInicio, imagenesGaleria]);
-
-  // Validate and save configuration
-  const handleSave = async (key) => {
-    try {
-      const jsonValue = configData[key];
-      const parsed = JSON.parse(jsonValue);
-
-      // Validate array and required fields
-      if (!Array.isArray(parsed)) {
-        throw new Error("Debe ser un array JSON.");
-      }
-
-      for (const item of parsed) {
-        if (typeof item !== "object" || !item || typeof item.url !== "string" || !item.url.trim()) {
-          throw new Error("Cada objeto debe tener una propiedad 'url' válida.");
+        let images = [];
+        if (configItem?.valor) {
+          try {
+            images = JSON.parse(configItem.valor);
+            if (!Array.isArray(images)) images = [];
+          } catch (e) {
+            console.error(`Error parseando JSON para ${key}:`, e);
+            images = [];
+          }
         }
-      }
+        initialStates[key] = images;
+      });
+      setManagedSections(initialStates);
+      setInitialDataLoaded(true);
+    }
+  }, [apiConfigsData, initialDataLoaded]);
 
-      // Clear error and submit
-      setErrors((prev) => ({ ...prev, [key]: undefined }));
-      await updateConfigMutation.mutateAsync({ clave: key, valor: jsonValue });
-    } catch (e) {
-      setErrors((prev) => ({ ...prev, [key]: `Error: ${e.message}` }));
+  const handleSectionChange = useCallback((sectionKey, updatedImages) => {
+    setManagedSections((prev) => ({
+      ...prev,
+      [sectionKey]: updatedImages,
+    }));
+  }, []);
+
+  const validateSections = () => {
+    let isValid = true;
+    const sectionsMeta = {
+      [CONFIG_KEYS.CAROUSEL_PRINCIPAL]: { min: 3, max: 5, name: "Carrusel Principal" },
+      [CONFIG_KEYS.CAROUSEL_SECUNDARIO]: { min: 3, max: 5, name: "Carrusel Secundario" },
+      [CONFIG_KEYS.GALERIA_INICIAL]: { min: 10, max: 15, name: "Galería Principal" },
+    };
+
+    for (const key in managedSections) {
+      const images = managedSections[key].filter((img) => !img.isLoading); // Excluir las que aún cargan
+      const meta = sectionsMeta[key];
+      if (images.length < meta.min || images.length > meta.max) {
+        CRAlert.alert({
+          title: "Error de Validación",
+          message: `La sección "${meta.name}" debe tener entre ${meta.min} y ${meta.max} imágenes. Actualmente tiene ${images.length}.`,
+          type: "error",
+        });
+        isValid = false;
+        break;
+      }
+    }
+    return isValid;
+  };
+
+  const handleSaveAll = async () => {
+    if (!validateSections()) {
+      return;
+    }
+
+    let allSucceeded = true;
+    for (const sectionKey of Object.keys(managedSections)) {
+      const imagesToSave = managedSections[sectionKey]
+        .filter((img) => img.url) // Solo guardar imágenes que tienen URL (subidas)
+        .map((img) => ({
+          url: img.url,
+          public_id: img.public_id,
+          legend: img.legend || "",
+          alt: img.alt || "",
+        }));
+
+      try {
+        await updateConfigMutation.mutateAsync({
+          clave: sectionKey,
+          valor: JSON.stringify(imagesToSave),
+        });
+      } catch (error) {
+        console.log(`Error guardando sección ${sectionKey}:`, error);
+        allSucceeded = false;
+        // El onError de la mutación ya muestra alerta
+      }
+    }
+
+    if (allSucceeded) {
+      CRAlert.alert({ title: "Éxito", message: "Todas las configuraciones de imágenes se guardaron correctamente.", type: "success" });
+      refreshStoreConfigs(); // Actualizar el store global
+      refetchApiConfigs(); // Refrescar datos de la API para esta página
+    } else {
+      CRAlert.alert({
+        title: "Guardado Parcial",
+        message: "Algunas configuraciones no pudieron guardarse. Revisa los mensajes de error.",
+        type: "warning",
+      });
     }
   };
 
-  // Update config data
-  const handleChange = (key, value) => {
-    setConfigData((prev) => ({ ...prev, [key]: value }));
-  };
+  const isLoading = isLoadingApiConfigs || updateConfigMutation.isPending;
 
-  const isLoading = isLoadingConfigs || updateConfigMutation.isPending;
+  if (isLoadingApiConfigs && !initialDataLoaded) {
+    return <CRLoader text="Cargando configuraciones..." fullScreen={false} style="circle" size="lg" />;
+  }
 
   return (
-    <div className="sm:px-4 ">
+    <div className="sm:px-4">
       {isLoading && <CRLoader fullScreen background="bg-black/30 dark:bg-black/50" style="dots" />}
 
-      <h1 className="text-2xl md:text-3xl font-bold text-textPrimary dark:text-white mb-8">Configuraciones del Sitio</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-textPrimary dark:text-white">Configuración de Imágenes del Sitio</h1>
+        <CRButton
+          title="Guardar Todos los Cambios"
+          onClick={handleSaveAll}
+          className="bg-green-600 hover:bg-green-700 text-white"
+          loading={updateConfigMutation.isPending}
+          disabled={updateConfigMutation.isPending || isLoadingApiConfigs}
+          externalIcon={<DynamicIcon name="Save" className="w-4 h-4" />}
+          iconPosition="left"
+        />
+      </div>
 
-      <ImageConfigSection
-        title="Imágenes del Carrusel Principal"
-        configKey={CONFIG_KEYS.CAROUSEL_PRINCIPAL}
-        value={configData[CONFIG_KEYS.CAROUSEL_PRINCIPAL]}
-        onChange={(value) => handleChange(CONFIG_KEYS.CAROUSEL_PRINCIPAL, value)}
-        onSave={handleSave}
-        error={errors[CONFIG_KEYS.CAROUSEL_PRINCIPAL]}
-        isSubmitting={updateConfigMutation.isPending}
-        icon="GalleryHorizontal"
+      <ImageManagerSection
+        title="Carrusel Principal"
+        sectionKey={CONFIG_KEYS.CAROUSEL_PRINCIPAL}
+        initialImagesData={managedSections[CONFIG_KEYS.CAROUSEL_PRINCIPAL]}
+        minImages={3}
+        maxImages={5}
+        itemFieldLabel="Legend"
+        onSectionChange={handleSectionChange}
+        isSubmittingGlobal={updateConfigMutation.isPending}
       />
 
-      <ImageConfigSection
-        title="Imágenes del Carrusel Objetivo"
-        configKey={CONFIG_KEYS.CAROUSEL_OBJETIVO}
-        value={configData[CONFIG_KEYS.CAROUSEL_OBJETIVO]}
-        onChange={(value) => handleChange(CONFIG_KEYS.CAROUSEL_OBJETIVO, value)}
-        onSave={handleSave}
-        error={errors[CONFIG_KEYS.CAROUSEL_OBJETIVO]}
-        isSubmitting={updateConfigMutation.isPending}
-        icon="GalleryThumbnails"
+      <ImageManagerSection
+        title="Carrusel Secundario (Objetivo)"
+        sectionKey={CONFIG_KEYS.CAROUSEL_SECUNDARIO}
+        initialImagesData={managedSections[CONFIG_KEYS.CAROUSEL_SECUNDARIO]}
+        minImages={3}
+        maxImages={5}
+        itemFieldLabel="Legend"
+        onSectionChange={handleSectionChange}
+        isSubmittingGlobal={updateConfigMutation.isPending}
       />
 
-      <ImageConfigSection
-        title="Imágenes de la Galería Inicial"
-        configKey={CONFIG_KEYS.GALERIA_INICIAL}
-        value={configData[CONFIG_KEYS.GALERIA_INICIAL]}
-        onChange={(value) => handleChange(CONFIG_KEYS.GALERIA_INICIAL, value)}
-        onSave={handleSave}
-        error={errors[CONFIG_KEYS.GALERIA_INICIAL]}
-        isSubmitting={updateConfigMutation.isPending}
-        icon="GalleryVertical"
+      <ImageManagerSection
+        title="Galería Principal"
+        sectionKey={CONFIG_KEYS.GALERIA_INICIAL}
+        initialImagesData={managedSections[CONFIG_KEYS.GALERIA_INICIAL]}
+        minImages={10}
+        maxImages={15}
+        itemFieldLabel="Alt"
+        onSectionChange={handleSectionChange}
+        isSubmittingGlobal={updateConfigMutation.isPending}
       />
     </div>
   );

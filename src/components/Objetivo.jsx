@@ -3,7 +3,7 @@ import useStoreNails from "../store/store";
 import CRCarousel from "./UI/CRCarousel";
 
 const Objetivo = () => {
-  const { imagenesInicio } = useStoreNails();
+  const { imagenesCarouselSecundario } = useStoreNails(); // Cambiado de imagenesInicio
   return (
     <div
       className="w-full bg-fixed bg-center bg-cover relative"
@@ -15,7 +15,7 @@ const Objetivo = () => {
       <CRCarousel
         transitionMode="blur"
         interval={5000}
-        data={imagenesInicio}
+        data={imagenesCarouselSecundario} // Usar el nuevo estado
         showIndicator={false}
         widthPercentage={100}
         height={300}

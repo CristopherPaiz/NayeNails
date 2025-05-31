@@ -3,29 +3,23 @@ import apiClient from "../api/axios.js";
 import { toSlug } from "../utils/textUtils.js";
 import CRAlert from "../components/UI/CRAlert.jsx";
 
+const fallbackPrincipal = [
+  { url: "https://via.placeholder.com/1920x1080.png?text=Principal+1", legend: "" },
+  { url: "https://via.placeholder.com/1920x1080.png?text=Principal+2", legend: "" },
+  { url: "https://via.placeholder.com/1920x1080.png?text=Principal+3", legend: "" },
+];
+const fallbackGaleria = Array.from({ length: 10 }, (_, i) => ({
+  id: `gal-fallback-${i + 1}`,
+  src: `https://via.placeholder.com/800x600.png?text=Galería+${i + 1}`,
+  thumb: `https://via.placeholder.com/400x300.png?text=Galería+${i + 1}`,
+  alt: `Imagen de galería ${i + 1}`,
+}));
+
 const useStoreNails = create((set, get) => ({
   message: "Hola Mundo desde Zustand!",
-  imagenesInicio: [
-    { url: "https://torridnails.it/cdn/shop/articles/Buy_your_kit_d05f3ce0-e86a-4845-b23b-4038f9160196.jpg", legend: "" },
-    { url: "https://media.vogue.es/photos/5e46dd6814cc4800084d7613/16:9/w_1280,c_limit/VOGUE-Manicura-Bolsos5332-copia.jpg", legend: "" },
-    {
-      url: "https://estaticosgn-cdn.deia.eus/clip/c20bfc11-6149-4868-8833-194cbeab1ed9_16-9-discover-aspect-ratio_default_0_x1480y2480.jpg",
-      legend: "",
-    },
-  ],
-  imagenesGaleria: [
-    { id: "img-1", src: "/pics/1.jpg", thumb: "/pics/1.jpg", alt: "Imagen 1", lgSize: "1920-1280" },
-    { id: "img-2", src: "/pics/2.jpg", thumb: "/pics/2.jpg", alt: "Imagen 2", lgSize: "1024-768" },
-    { id: "img-3", src: "/pics/3.jpg", thumb: "/pics/3.jpg", alt: "Imagen 3", lgSize: "1600-1200" },
-    { id: "img-4", src: "/pics/4.jpg", thumb: "/pics/4.jpg", alt: "Imagen 4", lgSize: "1280-853" },
-    { id: "img-5", src: "/pics/5.jpg", thumb: "/pics/5.jpg", alt: "Imagen 5", lgSize: "1920-1080" },
-    { id: "img-6", src: "/pics/6.jpg", thumb: "/pics/6.jpg", alt: "Imagen 6", lgSize: "1000-667" },
-    { id: "img-7", src: "/pics/7.jpg", thumb: "/pics/7.jpg", alt: "Imagen 7", lgSize: "1400-933" },
-    { id: "img-8", src: "/pics/8.jpg", thumb: "/pics/8.jpg", alt: "Imagen 8", lgSize: "900-600" },
-    { id: "img-9", src: "/pics/9.jpg", thumb: "/pics/9.jpg", alt: "Imagen 9", lgSize: "2048-1365" },
-    { id: "img-10", src: "/pics/10.jpg", thumb: "/pics/10.jpg", alt: "Imagen 10", lgSize: "1600-1067" },
-  ],
-  imagenesCarouselObjetivo: [],
+  imagenesInicio: fallbackPrincipal, // Fallback inicial
+  imagenesGaleria: fallbackGaleria, // Fallback inicial
+  imagenesCarouselSecundario: fallbackPrincipal, // Fallback inicial (usando el mismo que principal por ahora)
 
   todasLasUnas: [],
   isLoadingTodasLasUnas: true,
@@ -158,37 +152,53 @@ const useStoreNails = create((set, get) => ({
       const response = await apiClient.get("/configuraciones-sitio");
       const configs = response.data ?? [];
 
-      const parseConfigValue = (clave, fallback) => {
+      const parseConfigValue = (clave, fallbackValue) => {
         const config = configs.find((c) => c.clave === clave);
         if (config?.valor) {
           try {
             const parsedValue = JSON.parse(config.valor);
+            // Validar que sea un array y que los elementos tengan al menos 'url'
             if (
               Array.isArray(parsedValue) &&
               parsedValue.every((item) => typeof item === "object" && item !== null && typeof item.url === "string")
             ) {
-              return parsedValue;
+              return parsedValue.length > 0 ? parsedValue : fallbackValue;
             }
-            console.warn(`Valor de configuración para '${clave}' no es un array de objetos con URL válido. Usando fallback.`);
-            return fallback;
+            console.warn(`Valor de configuración para '${clave}' no es un array de objetos con URL válido o está vacío. Usando fallback.`);
+            return fallbackValue;
           } catch (e) {
             console.error(`Error parsing JSON para la clave '${clave}':`, e, "Valor recibido:", config.valor);
-            return fallback;
+            return fallbackValue;
           }
         }
-        return fallback;
+        return fallbackValue;
+      };
+
+      // Mapear las imágenes de la galería para que coincidan con la estructura esperada por LightGallery/Masonry
+      const galeriaTransformada = (galeriaItems) => {
+        if (!Array.isArray(galeriaItems)) return fallbackGaleria;
+        return galeriaItems.map((item, index) => ({
+          id: item.public_id || `gal-${index}-${Date.now()}`,
+          src: item.url,
+          thumb: item.url, // Usar la misma URL para thumb por simplicidad, o generar thumbs en Cloudinary
+          alt: item.alt || `Imagen de galería ${index + 1}`,
+          // lgSize: "1920-1080" // Podría obtenerse de Cloudinary si se guarda, o dejarlo opcional
+        }));
       };
 
       set({
         imagenesInicio: parseConfigValue("carousel_principal_imagenes", get().imagenesInicio),
-        imagenesGaleria: parseConfigValue("galeria_inicial_imagenes", get().imagenesGaleria),
-        imagenesCarouselObjetivo: parseConfigValue(
-          "carousel_objetivo_imagenes",
-          get().imagenesCarouselObjetivo.length > 0 ? get().imagenesCarouselObjetivo : []
-        ),
+        imagenesCarouselSecundario: parseConfigValue("carousel_secundario_imagenes", get().imagenesCarouselSecundario),
+        imagenesGaleria: galeriaTransformada(parseConfigValue("galeria_inicial_imagenes", [])), // Usar [] como fallback antes de transformar
       });
     } catch (error) {
       console.error("Error fetching site configurations:", error);
+      // Mantener los fallbacks si la carga falla
+      set({
+        imagenesInicio: get().imagenesInicio.length > 0 ? get().imagenesInicio : fallbackPrincipal,
+        imagenesCarouselSecundario: get().imagenesCarouselSecundario.length > 0 ? get().imagenesCarouselSecundario : fallbackPrincipal,
+        imagenesGaleria: get().imagenesGaleria.length > 0 ? get().imagenesGaleria : fallbackGaleria,
+      });
     }
   },
 

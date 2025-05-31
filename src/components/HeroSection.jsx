@@ -1,4 +1,3 @@
-
 import useStoreNails from "../store/store";
 import CRCarousel from "./UI/CRCarousel";
 
