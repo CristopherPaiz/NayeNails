@@ -1,104 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 
-/**
- * @component CRCarousel
- * @description Componente de carrusel altamente personalizable que soporta múltiples modos de transición,
- * miniaturas, indicadores y control de navegación. Ideal para mostrar galerías de imágenes con funcionalidades
- * avanzadas como carga perezosa y gestos táctiles.
- *
- * @param {Object} props - Las propiedades del componente.
- * @param {'horizontal'|'vertical'} [props.orientation] - Orientación del carrusel
- * @param {number} [props.widthPercentage] - Ancho del carrusel como porcentaje del contenedor
- * @param {string|number} [props.heightPercentage] - Altura del carrusel como porcentaje o valor dvh (ej: 100, "100dvh")
- * @param {boolean} [props.infiniteLoop] - Permite la navegación infinita del carrusel
- * @param {boolean} [props.lazy] - Activa la carga perezosa de imágenes
- * @param {'contain'|'cover'|'fill'} [props.contentFit] - Modo de ajuste de las imágenes
- * @param {number} [props.interval] - Intervalo de tiempo entre transiciones automáticas (mínimo 2000ms)
- * @param {number} [props.height] - Altura del carrusel en píxeles
- * @param {boolean} [props.showThumbnails] - Muestra miniaturas de las imágenes
- * @param {'inside'|'outside'} [props.thumbnailStyle] - Posición de las miniaturas
- * @param {boolean} [props.showArrows] - Muestra flechas de navegación
- * @param {boolean} [props.showIndicator] - Muestra indicadores de posición
- * @param {boolean} [props.showProgressBar] - Muestra barra de progreso de la transición
- * @param {boolean} [props.stopOnHover] - Detiene la transición automática al pasar el mouse
- * @param {'slide'|'blur'|'fade'} [props.transitionMode=="slide"] - Tipo de transición entre imágenes
- * @param {number} [props.thumbnailWidth] - Ancho de las miniaturas en píxeles
- * @param {string} [props.imgUrl] - Nombre de la propiedad que contiene la URL en los objetos de data
- * @param {Function} [onClickItem=()=>{}] - Callback al hacer clic en una imagen
- *
- * @example
- * 
- * const images = [
- *   { url: 'imagen1.jpg', legend: 'Primera imagen' },
- *   { url: 'imagen2.jpg', legend: 'Segunda imagen' }
- * ];
- *
- * function App() {
- *   return <CRCarousel data={images} />;
- * }
- *
- * @example
- * 
- * const images = [
- *   { url: 'imagen1.jpg', legend: 'Playa' },
- *   { url: 'imagen2.jpg', legend: 'Montaña' },
- *   { url: 'imagen3.jpg', legend: 'Ciudad' }
- * ];
- *
- * function Gallery() {
- *   return (
- *     <CRCarousel
- *       data={images}
- *       showThumbnails={true}
- *       thumbnailStyle="outside"
- *       showArrows={true}
- *       height={400}
- *       interval={5000}
- *     />
- *   );
- * }
- *
- * @example
- * 
- * const images = [
- *   { imageUrl: 'imagen1.jpg', legend: 'Amanecer' },
- *   { imageUrl: 'imagen2.jpg', legend: 'Atardecer' },
- *   { imageUrl: 'imagen3.jpg', legend: 'Noche' }
- * ];
- *
- * function AdvancedGallery() {
- *   const handleImageClick = ({ item, index, currentIndex }) => {
- *     console.log(`Clicked image ${index}: ${item.legend}`);
- *   };
- *
- *   return (
- *     <CRCarousel
- *       data={images}
- *       orientation="horizontal"
- *       widthPercentage={90}
- *       infiniteLoop={true}
- *       lazy={true}
- *       contentFit="cover"
- *       interval={3000}
- *       height={600}
- *       showThumbnails={true}
- *       thumbnailStyle="inside"
- *       showArrows={true}
- *       showIndicator={true}
- *       showProgressBar={true}
- *       stopOnHover={true}
- *       transitionMode="blur"
- *       thumbnailWidth={80}
- *       onClickItem={handleImageClick}
- *       imgUrl="imageUrl"
- *     />
- *   );
- * }
- *
- * @returns {JSX.Element} Componente de carrusel de imágenes
- */
-
 const CRCarousel = ({
   data = [],
   orientation = "horizontal",
@@ -138,18 +40,32 @@ const CRCarousel = ({
   const minSwipeDistance = 50;
 
   useEffect(() => {
-    if (lazy && currentIndex < data.length - 1) {
+    if (data && data.length > 0) {
+      setCurrentIndex(0);
+      setLoadedImages(lazy ? [0] : Array.from({ length: data.length }, (_, i) => i));
+      setProgress(100);
+      setImageErrors({});
+    } else {
+      setCurrentIndex(0);
+      setLoadedImages([]);
+      setProgress(100);
+      setImageErrors({});
+    }
+  }, [data, lazy]);
+
+  useEffect(() => {
+    if (lazy && data && data.length > 0 && currentIndex < data.length - 1) {
       const nextIndex = (currentIndex + 1) % data.length;
       if (!loadedImages.includes(nextIndex)) {
         setLoadedImages((prev) => [...prev, nextIndex]);
       }
     }
-  }, [currentIndex, data.length, lazy, loadedImages]);
+  }, [currentIndex, data, lazy, loadedImages]);
 
   useEffect(() => {
     const shouldPause = (stopOnHover && isHovered) || isMobileInteraction;
 
-    if (!shouldPause) {
+    if (!shouldPause && data && data.length > 0) {
       intervalRef.current = setInterval(() => {
         if (currentIndex === data.length - 1 && !infiniteLoop) {
           setCurrentIndex(0);
@@ -171,10 +87,9 @@ const CRCarousel = ({
       clearInterval(intervalRef.current);
       clearInterval(progressIntervalRef.current);
     };
-  }, [isHovered, isMobileInteraction, data.length, validInterval, stopOnHover, showProgressBar, infiniteLoop, currentIndex]);
+  }, [isHovered, isMobileInteraction, data, validInterval, stopOnHover, showProgressBar, infiniteLoop, currentIndex]);
 
   useEffect(() => {
-    
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setIsMobileInteraction(false);
@@ -188,6 +103,7 @@ const CRCarousel = ({
   }, []);
 
   const handleNext = () => {
+    if (!data || data.length === 0) return;
     if (currentIndex === data.length - 1 && !infiniteLoop) {
       return;
     }
@@ -196,6 +112,7 @@ const CRCarousel = ({
   };
 
   const handlePrev = () => {
+    if (!data || data.length === 0) return;
     if (currentIndex === 0 && !infiniteLoop) {
       return;
     }
@@ -207,12 +124,12 @@ const CRCarousel = ({
     e.stopPropagation();
     setCurrentIndex(index);
     setProgress(100);
-    
-    setLoadedImages([...Array(data.length).keys()]);
+    if (data && data.length > 0) {
+      setLoadedImages(Array.from({ length: data.length }, (_, i) => i));
+    }
   };
 
   const handleContainerClick = () => {
-    
     if ("ontouchstart" in window) {
       setIsMobileInteraction(true);
     }
@@ -226,7 +143,6 @@ const CRCarousel = ({
     onClickItem({ item, index, currentIndex });
   };
 
-  
   const onTouchStart = (e) => {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
@@ -251,7 +167,6 @@ const CRCarousel = ({
     }
   };
 
-  
   const onMouseDown = (e) => {
     setIsDragging(true);
     setStartX(e.pageX);
@@ -287,13 +202,33 @@ const CRCarousel = ({
   const shouldShowPrevArrow = showArrows && (infiniteLoop || currentIndex > 0);
   const shouldShowNextArrow = showArrows && (infiniteLoop || currentIndex < data.length - 1);
 
+  if (!data || data.length === 0) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center bg-gray-100 dark:bg-neutral-800"
+        style={{
+          width: `${widthPercentage}%`,
+          height:
+            height && !heightPercentage
+              ? `${height}px`
+              : `${heightPercentage}${heightPercentage && heightPercentage.toString().includes("dvh") ? "" : "%"}`,
+        }}
+      >
+        <p className="text-gray-500 dark:text-gray-400">No hay imágenes para mostrar.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center" style={{ width: `${widthPercentage}%` }} onClick={handleContainerClick}>
       <div
         ref={containerRef}
         className="relative overflow-hidden"
         style={{
-          height: height && !heightPercentage ? `${height}px` : `${heightPercentage}${heightPercentage.toString().includes("dvh", "vh") ? "" : "%"}`,
+          height:
+            height && !heightPercentage
+              ? `${height}px`
+              : `${heightPercentage}${heightPercentage && heightPercentage.toString().includes("dvh") ? "" : "%"}`,
           width: "100%",
         }}
         onMouseEnter={() => setIsHovered(true)}
@@ -421,7 +356,7 @@ CRCarousel.propTypes = {
       legend: PropTypes.string,
       url: PropTypes.string,
     })
-  ).isRequired,
+  ),
   orientation: PropTypes.oneOf(["horizontal", "vertical"]),
   widthPercentage: PropTypes.number,
   heightPercentage: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
