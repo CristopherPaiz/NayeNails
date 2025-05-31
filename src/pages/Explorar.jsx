@@ -372,7 +372,7 @@ const Explorar = () => {
   ]);
 
   return (
-    <div className="container mx-auto px-2 sm:px-4 py-6 md:py-8 pt-8 md:pt-8 min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="container mx-auto px-2 sm:px-4  min-h-screen bg-gray-100 dark:bg-gray-900">
       <div className="md:hidden mb-4 px-2">
         <button
           onClick={() => setIsFilterPanelOpenMobile((prev) => !prev)}
@@ -389,26 +389,10 @@ const Explorar = () => {
         <div className="hidden md:block">{renderFilterPanel()}</div>
 
         <main className="flex-1 md:pl-4 lg:pl-0">
-          <div className="mb-6 px-2 md:px-0">
-            <CRInput
-              type="text"
-              placeholder="Buscar diseños por nombre o descripción..."
-              value={searchTerm}
-              setValue={handleSearchInputChange}
-              className="text-sm py-2.5 !pr-10"
-              title=""
-            />
-            {isFakeLoadingSearch && (
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 mt-[11px]">
-                <DynamicIcon name="Loader2" className="w-4 h-4 animate-spin text-primary" />
-              </div>
-            )}
-          </div>
-
           <h1 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4 text-textPrimary text-center md:text-left px-2 md:px-0">
             Explora Nuestros Diseños
           </h1>
-          <div className="mb-4 sm:mb-6 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm mx-2 md:mx-0">
+          <div className="mb-4 sm:mb-3 p-3 bg-white/50 dark:bg-gray-800 rounded-lg shadow-sm mx-2 md:mx-0">
             {totalFiltrosActivosGeneral > 0 ? (
               <div className="flex flex-wrap gap-x-2 gap-y-1.5 items-center">
                 <span className="text-xs font-medium mr-1 text-textSecondary">Activos:</span>
@@ -433,11 +417,26 @@ const Explorar = () => {
             ) : isLoadingNavItemsStore && availableFilterOptions.length === 0 ? (
               <p className="text-xs text-gray-500 dark:text-gray-400">Cargando opciones de filtro...</p>
             ) : !isLoadingNavItemsStore && availableFilterOptions.length > 0 ? (
-              <p className="text-xs text-gray-500 dark:text-gray-400">Selecciona filtros para refinar tu búsqueda o explora todos los diseños.</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Prueba seleccionando un filtro o también puedes usar el buscador.</p>
             ) : (
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 No hay filtros disponibles o error al cargarlos. Explora todos nuestros diseños.
               </p>
+            )}
+          </div>
+          <div className="mb-6 px-2 md:px-0">
+            <CRInput
+              title="Busca diseños por algún nombre o descripción"
+              type="text"
+              placeholder="Ej. Flores, Ojo de gato, Acrílicas..."
+              value={searchTerm}
+              setValue={handleSearchInputChange}
+              className="text-sm py-2.5 !pr-10"
+            />
+            {isFakeLoadingSearch && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 mt-[11px]">
+                <DynamicIcon name="Loader2" className="w-4 h-4 animate-spin text-primary" />
+              </div>
             )}
           </div>
 
