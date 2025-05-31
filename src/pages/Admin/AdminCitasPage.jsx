@@ -258,7 +258,7 @@ const AdminCitasPage = () => {
 
   return (
     <div>
-      {(isLoading || isUpdatingCita) && <CRLoader fullScreen background="bg-black/30 dark:bg-black/50" style="dots" />}
+      {(isLoading || isUpdatingCita) && <CRLoader fullScreen background="bg-black/30 dark:bg-black/50" style="nailPaint" />}
       <h1 className="text-2xl md:text-3xl font-bold text-textPrimary dark:text-white mb-6">Gestión de Citas</h1>
 
       <div className="mb-6 p-4 bg-gray-50 dark:bg-slate-800 rounded-lg shadow grid grid-cols-1 md:grid-cols-2 gap-4 items-end">

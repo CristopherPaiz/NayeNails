@@ -46,7 +46,7 @@ const AppContent = () => {
   if (authIsLoading || isLoadingTextosColores) {
     return (
       <div className="fixed inset-0 bg-backgroundSecondary dark:bg-background flex flex-col justify-center items-center z-[9999]">
-        <CRLoader text="Cargando Naye Nails..." style="dots" size="lg" />
+        <CRLoader text="Cargando Naye Nails..." style="nailPaint" size="lg" />
       </div>
     );
   }

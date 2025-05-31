@@ -208,7 +208,7 @@ const Explorar = () => {
 
   const renderFilterPanelContent = useCallback(() => {
     if (isLoadingNavItemsStore && availableFilterOptions.length === 0) {
-      return <CRLoader text="Cargando filtros..." style="dots" size="md" />;
+      return <CRLoader text="Cargando filtros..." style="nailPaint" size="md" />;
     }
     if (errorDynamicNav && availableFilterOptions.length === 0) {
       return (
@@ -462,7 +462,7 @@ const Explorar = () => {
           </div>
 
           {isLoadingApiDisenios && !apiData ? (
-            <CRLoader text="Cargando diseños..." fullScreen={false} style="circle" size="lg" />
+            <CRLoader text="Cargando diseños..." fullScreen={false} style="nailPaint" size="lg" />
           ) : errorApiDisenios ? (
             <div className="text-center py-12 px-2 md:px-0">
               <DynamicIcon name="ServerCrash" size={48} className="mx-auto text-red-500 dark:text-red-400 mb-4" />
