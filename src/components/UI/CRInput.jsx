@@ -89,7 +89,9 @@ const CRInput = ({
           disabled={disabled}
           value={inputValue}
           onChange={handleChange}
-          className={`${baseStyle} ${disabled ? disabledStyle : ""} ${error ? errorStyle : ""} ${className || ""} ${inputPaddingRight}`}
+          className={`placeholder:text-textPrimary/50 ${baseStyle} ${disabled ? disabledStyle : ""} ${error ? errorStyle : ""} ${
+            className || ""
+          } ${inputPaddingRight}`}
           {...props}
           autoComplete={autoComplete ? "on" : "off"}
         />
