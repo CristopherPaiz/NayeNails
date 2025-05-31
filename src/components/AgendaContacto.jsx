@@ -1,12 +1,15 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { CalendarPlus } from "lucide-react";
+import useStoreNails from "../store/store"; // Importar el store
 
 const AgendaContacto = () => {
-  const nombreDelNegocio = "Naye Nails";
-  const numeroWhatsAppRaw = "+50249425739";
+  const { textosColoresConfig } = useStoreNails();
+
+  const nombreDelNegocio = textosColoresConfig?.nombre_negocio || "Naye Nails";
+  const numeroWhatsAppRaw = textosColoresConfig?.telefono_unificado || "+50249425739";
   const numeroWhatsAppParaLink = numeroWhatsAppRaw.replace(/\D/g, "");
-  const urlFacebook = "https://facebook.com/profile.php?id=61575180189391";
+  const urlFacebook = textosColoresConfig?.url_facebook || "https://facebook.com/profile.php?id=61575180189391";
 
   const obtenerSaludoDelDia = () => {
     const horaActual = new Date().getHours();

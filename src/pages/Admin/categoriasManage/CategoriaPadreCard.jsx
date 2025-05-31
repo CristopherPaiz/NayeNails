@@ -1,7 +1,7 @@
 import { DynamicIcon } from "../../../utils/DynamicIcon";
 import CRButton from "../../../components/UI/CRButton";
 import SubcategoriasTable from "./SubcategoriasTable";
-import CustomSwitch from "../../../components/UI/CustomSwitch.jsx";
+import CRSwitch from "../../../components/UI/CRSwitch.jsx"; // Cambiado de CustomSwitch
 
 const CategoriaPadreCard = ({
   categoria,
@@ -73,7 +73,7 @@ const CategoriaPadreCard = ({
               onlyIcon={true}
               disabled={disabledActions}
             />
-            <CustomSwitch checked={!!categoria.activo} onChange={handleSwitchChange} colorOff="bg-red-500" disabled={disabledActions} size="small" />
+            <CRSwitch checked={!!categoria.activo} onChange={handleSwitchChange} colorOff="bg-red-500" disabled={disabledActions} />
           </div>
         </div>
 
@@ -89,7 +89,7 @@ const CategoriaPadreCard = ({
             onlyIcon={true}
             disabled={disabledActions}
           />
-          <CustomSwitch checked={!!categoria.activo} onChange={handleSwitchChange} colorOff="bg-red-500" disabled={disabledActions} />
+          <CRSwitch checked={!!categoria.activo} onChange={handleSwitchChange} colorOff="bg-red-500" disabled={disabledActions} />
           <DynamicIcon
             name={isExpanded ? "ChevronUp" : "ChevronDown"}
             className={`w-5 h-5 transition-transform duration-200 hidden sm:flex ${textColorClass} ml-1`}

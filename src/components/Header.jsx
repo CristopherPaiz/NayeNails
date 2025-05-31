@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { BUSINESS_NAME, STATIC_NAV_ITEMS, CATALOGO_BASE_PATH, ADMIN_ITEMS } from "../constants/navbar.jsx";
+import { STATIC_NAV_ITEMS, CATALOGO_BASE_PATH, ADMIN_ITEMS } from "../constants/navbar.jsx"; // BUSINESS_NAME ya no se usa aquí
 import CRButton from "./UI/CRButton.jsx";
 import { useTheme } from "../context/ThemeProvider.jsx";
 import { DynamicIcon } from "../utils/DynamicIcon.jsx";
@@ -9,7 +9,7 @@ import useAuthStore from "../store/authStore.js";
 import { LogIn, LogOut, AlertTriangle, Loader2 } from "lucide-react";
 
 const Header = () => {
-  const [isOpen, setIsOpen] = useState(false); // Para el menú principal del header en móvil
+  const [isOpen, setIsOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const dropdownRefs = useRef({});
@@ -18,8 +18,11 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { dynamicNavItems, isLoadingDynamicNav, errorDynamicNav, fetchDynamicNavItems, adminSidebarOpen, toggleAdminSidebar } = useStoreNails();
+  const { dynamicNavItems, isLoadingDynamicNav, errorDynamicNav, fetchDynamicNavItems, adminSidebarOpen, toggleAdminSidebar, textosColoresConfig } =
+    useStoreNails();
   const { isAuthenticated, logout: authLogoutAction, user } = useAuthStore();
+
+  const businessNameFromConfig = textosColoresConfig?.nombre_negocio || "Naye Nails"; // Usa el nombre de la config o fallback
 
   const combinedNavItems = useMemo(() => {
     const safeDynamicNavItems = typeof dynamicNavItems === "object" && dynamicNavItems !== null ? dynamicNavItems : {};
@@ -347,11 +350,8 @@ const Header = () => {
 
   return (
     <header className="w-full bg-background shadow-md sticky top-0 z-50">
-      {/* Header con z-50 */}
       <div className="mx-auto px-4 flex items-center justify-between h-16 relative">
-        {/* ---- Sección Izquierda ---- */}
         <div className="flex-shrink-0 w-auto min-w-[40px]">
-          {/* Asegura un ancho mínimo para el botón */}
           {isAuthenticated && isMobile ? (
             <button
               type="button"
@@ -363,33 +363,33 @@ const Header = () => {
             </button>
           ) : !isMobile ? (
             <Link to="/" className="flex items-center" onClick={closeAllMenus}>
-              <img src="/nayeNails.svg" alt={BUSINESS_NAME} className="h-8 w-auto mr-2 dark:invert" />
-              <h1 className="text-primary text-xl sm:text-2xl font-bold tracking-tight">{BUSINESS_NAME}</h1>
+              <img
+                src={textosColoresConfig.logo_negocio_url || "/nayeNails.svg"}
+                alt={businessNameFromConfig}
+                className="h-8 w-auto mr-2 dark:invert"
+              />
+              <h1 className="text-primary text-xl sm:text-2xl font-bold tracking-tight">{businessNameFromConfig}</h1>
             </Link>
           ) : (
             <div className="w-10 h-10"></div>
           )}
         </div>
 
-        {/* ---- Sección Central (Título) ---- */}
         <div
           className={`
           ${
-            (isAuthenticated && isMobile) || (!isAuthenticated && isMobile) /* Siempre visible en móvil */
+            (isAuthenticated && isMobile) || (!isAuthenticated && isMobile)
               ? "absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center"
-              : "hidden" /* Oculto en desktop ya que el título está a la izquierda */
+              : "hidden"
           }
         `}
         >
           <Link to="/" className="flex items-center" onClick={closeAllMenus}>
-            <h1 className="text-primary text-xl sm:text-2xl font-bold tracking-tight">{BUSINESS_NAME}</h1>
+            <h1 className="text-primary text-xl sm:text-2xl font-bold tracking-tight">{businessNameFromConfig}</h1>
           </Link>
         </div>
 
-        {/* ---- Sección Derecha ---- */}
         <div className="flex-shrink-0 min-w-[40px]">
-          {" "}
-          {/* Asegura un ancho mínimo */}
           {isMobile ? (
             <button
               id="mobile-header-menu-button"
@@ -427,7 +427,7 @@ const Header = () => {
       {isOpen && isMobile && (
         <nav
           id="mobile-menu-content"
-          className="absolute md:hidden top-full left-0 right-0 w-full bg-background shadow-lg flex flex-col items-stretch gap-y-0 px-4 py-2 z-40 border-t border-border" // z-40 para el menú principal
+          className="absolute md:hidden top-full left-0 right-0 w-full bg-background shadow-lg flex flex-col items-stretch gap-y-0 px-4 py-2 z-40 border-t border-border"
         >
           {renderMobileNavItems(combinedNavItems)}
           {isAuthenticated && user && renderMobileNavItems(ADMIN_ITEMS, true)}

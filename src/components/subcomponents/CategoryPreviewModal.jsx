@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { DynamicIcon } from "../../utils/DynamicIcon";
-import { CATALOGO_BASE_PATH } from "../../constants/navbar";
+import { CATALOGO_BASE_PATH } from "../../constants/navbar"; // Asegurar que se usa para la redirección
 
 const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames = [], ctaButtonText }) => {
   if (!isOpen) return null;
@@ -179,7 +179,7 @@ const CategoryPreviewModal = ({ isOpen, onClose, title, icon, subcategoryNames =
           )}
 
           <Link
-            to={CATALOGO_BASE_PATH}
+            to={CATALOGO_BASE_PATH} // Redirige a /explorar-unas
             onClick={onClose}
             className="w-full mt-8 bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center transition-colors duration-200"
           >

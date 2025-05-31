@@ -1,13 +1,16 @@
 import { Map, Navigation, ExternalLink, Phone, Clock } from "lucide-react";
 import useScrollToTop from "../hooks/useScrollToTop";
+import useStoreNails from "../store/store"; // Importar el store
 
 const UbicacionPage = () => {
   useScrollToTop();
-  const Direccion = "12 Avenida 2-25, Zona 6, Quetzaltenango, Guatemala";
-  const Celular = "XXXX-XXXX";
-  const Horario = "Lunes a Viernes: 9:00 AM - 5:00 PM";
+  const { textosColoresConfig } = useStoreNails();
 
-  const coordenadas = "14.850236,-91.510423";
+  const direccion = textosColoresConfig?.texto_direccion_unificado || "12 Avenida 2-25, Zona 6, Quetzaltenango, Guatemala";
+  const celular = textosColoresConfig?.telefono_unificado || "+50249425739";
+  const coordenadas = textosColoresConfig?.coordenadas_mapa || "14.850236,-91.510423";
+  const horario = "Lunes a Viernes: 9:00 AM - 5:00 PM"; // Este no está en la config, se puede añadir si se desea
+
   const mapUrl = `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3838.8761753785793!2d${coordenadas.split(",")[1]}!3d${
     coordenadas.split(",")[0]
   }!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTTCsDUxJzAxLjAiTiA5McKwMzAnMzguMCJX!5e0!3m2!1ses!2sgt!4v1714768930733!5m2!1ses!2sgt`;
@@ -28,15 +31,15 @@ const UbicacionPage = () => {
               <div className="space-y-4 text-textPrimary dark:text-textPrimary">
                 <p className="flex items-start">
                   <Navigation className="mr-3 text-primary dark:text-tertiary flex-shrink-0 mt-1" size={20} />
-                  <span>{Direccion}</span>
+                  <span>{direccion}</span>
                 </p>
                 <p className="flex items-center">
                   <Phone className="mr-3 text-primary dark:text-tertiary" size={20} />
-                  <span>{Celular}</span>
+                  <span>{celular}</span>
                 </p>
                 <p className="flex items-center">
                   <Clock className="mr-3 text-primary dark:text-tertiary" size={20} />
-                  <span>{Horario}</span>
+                  <span>{horario}</span>
                 </p>
               </div>
             </div>

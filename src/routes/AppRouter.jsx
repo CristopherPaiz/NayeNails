@@ -11,10 +11,11 @@ import ProtectedRoute from "../layouts/ProtectedRoute";
 
 import { CATALOGO_BASE_PATH } from "../constants/navbar";
 import Explorar from "../pages/Explorar";
-import Configuraciones from "../pages/Admin/Configuraciones";
+import Configuraciones from "../pages/Admin/Configuraciones"; // Para imágenes de carruseles/galería
 import Perfil from "../pages/Admin/Perfil";
 import Disenios from "../pages/Admin/Disenios";
 import Categorias from "../pages/Admin/Categorias";
+import TextosColoresPage from "../pages/Admin/TextosColoresPage"; // NUEVA PÁGINA
 
 const AppRouter = () => {
   return (
@@ -32,7 +33,8 @@ const AppRouter = () => {
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="categorias" element={<Categorias />} />
           <Route path="disenios" element={<Disenios />} />
-          <Route path="config" element={<Configuraciones />} />
+          <Route path="config" element={<Configuraciones />} /> {/* Para imágenes de carruseles/galería */}
+          <Route path="textos-colores" element={<TextosColoresPage />} /> {/* NUEVA RUTA */}
           <Route path="perfil" element={<Perfil />} />
         </Route>
       </Route>

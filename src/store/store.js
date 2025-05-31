@@ -15,11 +15,24 @@ const fallbackGaleria = Array.from({ length: 10 }, (_, i) => ({
   alt: `Imagen de galería ${i + 1}`,
 }));
 
+const defaultTextosColores = {
+  nombre_negocio: "Naye Nails",
+  slogan_negocio: "Donde la perfeccion es el estándar",
+  logo_negocio_url: "/nayeNails.svg",
+  texto_carrusel_secundario: "El compromiso principal es satisfacer las necesidades de nuestras clientas.",
+  texto_direccion_unificado: "12 Avenida 2-25, Zona 6, Quetzaltenango, Guatemala",
+  telefono_unificado: "+50249425739",
+  url_facebook: "https://facebook.com/profile.php?id=61575180189391",
+  coordenadas_mapa: "14.850236,-91.510423",
+  configuracion_colores: null, // Se usará CSS por defecto
+  configuracion_servicios: null, // Se usarán los servicios hardcodeados por defecto
+};
+
 const useStoreNails = create((set, get) => ({
   message: "Hola Mundo desde Zustand!",
-  imagenesInicio: fallbackPrincipal, // Fallback inicial
-  imagenesGaleria: fallbackGaleria, // Fallback inicial
-  imagenesCarouselSecundario: fallbackPrincipal, // Fallback inicial (usando el mismo que principal por ahora)
+  imagenesInicio: fallbackPrincipal,
+  imagenesGaleria: fallbackGaleria,
+  imagenesCarouselSecundario: fallbackPrincipal,
 
   todasLasUnas: [],
   isLoadingTodasLasUnas: true,
@@ -55,6 +68,45 @@ const useStoreNails = create((set, get) => ({
   adminSidebarOpen: false,
   toggleAdminSidebar: () => set((state) => ({ adminSidebarOpen: !state.adminSidebarOpen })),
   setAdminSidebarOpen: (isOpen) => set({ adminSidebarOpen: isOpen }),
+
+  // Nuevos estados para TextosColoresConfiguraciones
+  textosColoresConfig: defaultTextosColores,
+  isLoadingTextosColores: true,
+  errorTextosColores: null,
+
+  fetchTextosColoresConfig: async () => {
+    if (!get().isLoadingTextosColores) set({ isLoadingTextosColores: true });
+    set({ errorTextosColores: null });
+    try {
+      const response = await apiClient.get("/textos-colores");
+      const data = response.data;
+      // Asegurar que los campos JSON sean objetos o null, no strings
+      const parsedData = {
+        ...defaultTextosColores, // Empezar con fallbacks
+        ...data, // Sobrescribir con datos de la API
+        configuracion_colores:
+          data.configuracion_colores && typeof data.configuracion_colores === "object"
+            ? data.configuracion_colores
+            : data.configuracion_colores && typeof data.configuracion_colores === "string"
+            ? JSON.parse(data.configuracion_colores)
+            : null,
+        configuracion_servicios:
+          data.configuracion_servicios && typeof data.configuracion_servicios === "object"
+            ? data.configuracion_servicios
+            : data.configuracion_servicios && typeof data.configuracion_servicios === "string"
+            ? JSON.parse(data.configuracion_servicios)
+            : null,
+      };
+      set({ textosColoresConfig: parsedData, isLoadingTextosColores: false });
+    } catch (error) {
+      console.error("Error fetching textosColoresConfig:", error);
+      set({
+        errorTextosColores: error.response?.data?.message ?? error.message ?? "Error al cargar configuraciones globales",
+        isLoadingTextosColores: false,
+        textosColoresConfig: defaultTextosColores, // Mantener fallbacks en caso de error
+      });
+    }
+  },
 
   fetchDynamicNavItems: async () => {
     if (!get().isLoadingDynamicNav) set({ isLoadingDynamicNav: true });
@@ -157,7 +209,6 @@ const useStoreNails = create((set, get) => ({
         if (config?.valor) {
           try {
             const parsedValue = JSON.parse(config.valor);
-            // Validar que sea un array y que los elementos tengan al menos 'url'
             if (
               Array.isArray(parsedValue) &&
               parsedValue.every((item) => typeof item === "object" && item !== null && typeof item.url === "string")
@@ -174,26 +225,23 @@ const useStoreNails = create((set, get) => ({
         return fallbackValue;
       };
 
-      // Mapear las imágenes de la galería para que coincidan con la estructura esperada por LightGallery/Masonry
       const galeriaTransformada = (galeriaItems) => {
         if (!Array.isArray(galeriaItems)) return fallbackGaleria;
         return galeriaItems.map((item, index) => ({
           id: item.public_id || `gal-${index}-${Date.now()}`,
           src: item.url,
-          thumb: item.url, // Usar la misma URL para thumb por simplicidad, o generar thumbs en Cloudinary
+          thumb: item.url,
           alt: item.alt || `Imagen de galería ${index + 1}`,
-          // lgSize: "1920-1080" // Podría obtenerse de Cloudinary si se guarda, o dejarlo opcional
         }));
       };
 
       set({
         imagenesInicio: parseConfigValue("carousel_principal_imagenes", get().imagenesInicio),
         imagenesCarouselSecundario: parseConfigValue("carousel_secundario_imagenes", get().imagenesCarouselSecundario),
-        imagenesGaleria: galeriaTransformada(parseConfigValue("galeria_inicial_imagenes", [])), // Usar [] como fallback antes de transformar
+        imagenesGaleria: galeriaTransformada(parseConfigValue("galeria_inicial_imagenes", [])),
       });
     } catch (error) {
       console.error("Error fetching site configurations:", error);
-      // Mantener los fallbacks si la carga falla
       set({
         imagenesInicio: get().imagenesInicio.length > 0 ? get().imagenesInicio : fallbackPrincipal,
         imagenesCarouselSecundario: get().imagenesCarouselSecundario.length > 0 ? get().imagenesCarouselSecundario : fallbackPrincipal,

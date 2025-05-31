@@ -1,7 +1,7 @@
 import React from "react";
 import { DynamicIcon } from "../../../utils/DynamicIcon";
 import CRButton from "../../../components/UI/CRButton";
-import CustomSwitch from "../../../components/UI/CustomSwitch.jsx";
+import CRSwitch from "../../../components/UI/CRSwitch.jsx"; // Cambiado de CustomSwitch
 
 const SubcategoriaItem = ({ subcategoria, onEdit, onToggleActivo, disabledActions = false }) => {
   const handleSwitchChange = () => {
@@ -49,13 +49,12 @@ const SubcategoriaItem = ({ subcategoria, onEdit, onToggleActivo, disabledAction
             onlyIcon={true}
             disabled={disabledActions}
           />
-          <CustomSwitch
+          <CRSwitch
             checked={!!subcategoria.activo}
             onChange={handleSwitchChange}
             colorOff="bg-red-500"
             className="flex-shrink-0"
             disabled={disabledActions}
-            size="small"
           />
         </div>
       </div>
@@ -126,14 +125,13 @@ const SubcategoriasTable = ({ subcategorias, onEditSubcategoria, onToggleActivoS
                 </td>
                 <td className="px-3 py-2 sm:px-4 whitespace-nowrap text-sm text-center">
                   <div className="flex items-center justify-center gap-2">
-                    <CustomSwitch
+                    <CRSwitch
                       checked={!!sub.activo}
                       onChange={() => {
                         if (!disabledActions) onToggleActivoSubcategoria(sub);
                       }}
                       colorOff="bg-red-500"
                       disabled={disabledActions}
-                      size="small"
                     />
                   </div>
                 </td>
