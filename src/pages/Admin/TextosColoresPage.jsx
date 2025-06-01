@@ -9,6 +9,7 @@ import { DynamicIcon } from "../../utils/DynamicIcon";
 import apiClient from "../../api/axios";
 import IconSelector from "./IconSelector";
 import * as LucideIcons from "lucide-react";
+import useScrollToTop from "../../hooks/useScrollToTop";
 
 const initialColorConfig = {
   light: {
@@ -95,6 +96,7 @@ const deepCopy = (obj) => {
 };
 
 const TextosColoresPage = () => {
+  useScrollToTop();
   const { textosColoresConfig, fetchTextosColoresConfig, isLoadingTextosColores } = useStoreNails();
 
   const [formState, setFormState] = useState(() => {

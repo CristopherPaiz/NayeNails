@@ -7,6 +7,7 @@ import CRButton from "../../components/UI/CRButton";
 import CRAlert from "../../components/UI/CRAlert";
 import { DynamicIcon } from "../../utils/DynamicIcon";
 import apiClient from "../../api/axios"; // Para subida de imagen de ubicación
+import useScrollToTop from "../../hooks/useScrollToTop";
 
 const CONFIG_KEYS = {
   CAROUSEL_PRINCIPAL: "carousel_principal_imagenes",
@@ -15,6 +16,7 @@ const CONFIG_KEYS = {
 };
 
 const LocationImageManager = ({ initialImageUrl, initialPublicId, onSave, isSubmittingGlobal }) => {
+  useScrollToTop();
   const [imageFile, setImageFile] = useState(null);
   const [preview, setPreview] = useState(initialImageUrl || null);
   const [currentPublicId, setCurrentPublicId] = useState(initialPublicId || null);
@@ -257,6 +259,7 @@ const ConfiguracionesPage = () => {
       await updateTextosColoresMutation.mutateAsync(payload);
       CRAlert.alert({ title: "Éxito", message: "Imagen de ubicación guardada.", type: "success" });
     } catch (e) {
+      console.log("e", e);
       // El onError de la mutación ya muestra la alerta
     }
   };
@@ -283,6 +286,7 @@ const ConfiguracionesPage = () => {
           valor: JSON.stringify(imagesToSave),
         });
       } catch (error) {
+        console.log("e", error);
         allSucceeded = false;
       }
     }

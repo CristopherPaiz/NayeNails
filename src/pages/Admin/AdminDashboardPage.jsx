@@ -13,7 +13,7 @@ import {
   Filler,
 } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
-import { format, parse, parseISO, subDays, startOfMonth, endOfMonth, eachMonthOfInterval, eachDayOfInterval } from "date-fns";
+import { format, subDays, startOfMonth, endOfMonth, eachMonthOfInterval, eachDayOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
 
 import DashboardCard from "../../components/admin/DashboardCard";
@@ -25,10 +25,12 @@ import { DynamicIcon } from "../../utils/DynamicIcon";
 import CRButton from "../../components/UI/CRButton";
 import { useTheme } from "../../context/ThemeProvider";
 import useStoreNails from "../../store/store";
+import useScrollToTop from "../../hooks/useScrollToTop";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement, Filler);
 
 const AdminDashboardPage = () => {
+  useScrollToTop();
   const { user } = useAuthStore();
   const { theme } = useTheme();
   const { textosColoresConfig } = useStoreNails();

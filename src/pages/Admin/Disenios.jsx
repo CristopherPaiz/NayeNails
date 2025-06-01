@@ -10,10 +10,12 @@ import useApiRequest from "../../hooks/useApiRequest";
 import { useQueryClient } from "@tanstack/react-query";
 import CategorySubcategorySelector from "../../components/admin/CategorySubcategorySelector";
 import CRAlert from "../../components/UI/CRAlert.jsx";
+import useScrollToTop from "../../hooks/useScrollToTop.jsx";
 
 const ITEMS_PER_PAGE_ADMIN = 6;
 
 const DiseniosAdminPage = () => {
+  useScrollToTop();
   const queryClient = useQueryClient();
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);

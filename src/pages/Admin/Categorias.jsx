@@ -10,8 +10,10 @@ import useApiRequest from "../../hooks/useApiRequest.js";
 import { useQueryClient } from "@tanstack/react-query";
 import CustomSwitch from "../../components/UI/CustomSwitch.jsx";
 import CRAlert from "../../components/UI/CRAlert.jsx";
+import useScrollToTop from "../../hooks/useScrollToTop.jsx";
 
 const CategoriasPage = () => {
+  useScrollToTop();
   const queryClient = useQueryClient();
   const [categorias, setCategorias] = useState([]);
   const [selectedParentId, setSelectedParentId] = useState(null);

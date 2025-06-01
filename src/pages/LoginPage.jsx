@@ -3,8 +3,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import useAuthStore from "../store/authStore";
 import CRButton from "../components/UI/CRButton";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import useScrollToTop from "../hooks/useScrollToTop";
 
 const LoginPage = () => {
+  useScrollToTop();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);

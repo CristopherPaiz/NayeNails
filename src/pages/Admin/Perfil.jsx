@@ -6,8 +6,10 @@ import { DynamicIcon } from "../../utils/DynamicIcon";
 import useAuthStore from "../../store/authStore";
 import useApiRequest from "../../hooks/useApiRequest";
 import { capitalizeWords } from "../../utils/textUtils";
+import useScrollToTop from "../../hooks/useScrollToTop";
 
 const PerfilPage = () => {
+  useScrollToTop();
   const { user, checkAuthStatus } = useAuthStore();
   const [nombre, setNombre] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -25,7 +27,7 @@ const PerfilPage = () => {
     url: "/usuarios/me/nombre", // Endpoint para actualizar nombre
     method: "PUT",
     options: {
-      onSuccess: (data) => {
+      onSuccess: () => {
         checkAuthStatus(); // Actualizar el estado del usuario en Zustand
         setErrors({});
       },

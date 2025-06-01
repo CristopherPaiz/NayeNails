@@ -10,8 +10,10 @@ import CRSelect from "../../components/UI/CRSelect";
 import { DynamicIcon } from "../../utils/DynamicIcon";
 import CRAlert from "../../components/UI/CRAlert";
 import useStoreNails from "../../store/store";
+import useScrollToTop from "../../hooks/useScrollToTop";
 
 const AdminCitasPage = () => {
+  useScrollToTop();
   const { textosColoresConfig } = useStoreNails();
 
   const [filtroMesAnio, setFiltroMesAnio] = useState(format(new Date(), "yyyy-MM"));

@@ -17,6 +17,7 @@ import {
   calculateTotalFiltrosActivos,
   performGlobalFilterSearch,
 } from "../utils/filterUtils";
+import useScrollToTop from "../hooks/useScrollToTop";
 
 const ITEMS_PER_PAGE_INITIAL_CATEGORY = 4;
 const MAX_VISIBLE_TAGS_ON_CARD = 3;
@@ -45,6 +46,7 @@ const getDynamicFilterCategories = (dynamicNavItems) => {
 };
 
 const Explorar = () => {
+  useScrollToTop();
   const location = useLocation();
   const navigate = useNavigate();
   const { TAG_COLORS, dynamicNavItems, isLoadingDynamicNav: isLoadingNavItemsStore, errorDynamicNav, fetchDynamicNavItems } = useStoreNails();
