@@ -4,7 +4,7 @@ import { API_BASE_URL } from "../constants/api";
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
-  timeout: 10000,
+  timeout: 60000,
   // No establecer Content-Type globalmente aquí para permitir que Axios lo maneje para FormData
 });
 
