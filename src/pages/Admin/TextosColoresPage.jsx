@@ -110,7 +110,6 @@ const TextosColoresPage = () => {
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(textosColoresConfig.logo_negocio_url);
 
-  // Estado para manejar el input de opciones por servicio individual
   const [serviceOptionsInputs, setServiceOptionsInputs] = useState({});
 
   const { mutate: updateConfigMutation, isLoading: isUpdating } = useApiRequest({
@@ -143,6 +142,7 @@ const TextosColoresPage = () => {
             validIcons.push({ label: iconName, value: iconName });
           }
         } catch (error) {
+          console.log("Error al procesar icono:", iconName, error);
           // Silenciar
         }
       });
@@ -230,7 +230,6 @@ const TextosColoresPage = () => {
     const newOptions = [...currentOptions, ...optionsToAdd];
     handleServiceChange(index, "opciones_modal", newOptions);
 
-    // Limpiar el input después de añadir
     setServiceOptionsInputs((prev) => ({
       ...prev,
       [index]: "",
@@ -250,7 +249,7 @@ const TextosColoresPage = () => {
   };
 
   const addNewService = (e) => {
-    e.preventDefault(); // Prevenir submit del formulario
+    e.preventDefault();
     const newService = {
       id: `servicio-nuevo-${Date.now()}`,
       icono: "Sparkle",
@@ -265,12 +264,11 @@ const TextosColoresPage = () => {
   };
 
   const removeService = (indexToRemove, e) => {
-    e.preventDefault(); // Prevenir submit del formulario
+    e.preventDefault();
     const currentServices = deepCopy(formState.configuracion_servicios || []);
     const updatedServices = currentServices.filter((_, i) => i !== indexToRemove);
     setFormState((prev) => ({ ...prev, configuracion_servicios: updatedServices }));
 
-    // Limpiar el input de opciones para este servicio
     setServiceOptionsInputs((prev) => {
       const newInputs = { ...prev };
       delete newInputs[indexToRemove];
@@ -386,6 +384,15 @@ const TextosColoresPage = () => {
               name="coordenadas_mapa"
               value={formState.coordenadas_mapa || ""}
               setValue={(value) => handleInputChange({ target: { name: "coordenadas_mapa", value } })}
+            />
+            <CRInput
+              title="Horario del Negocio"
+              name="horario_negocio"
+              type="textarea"
+              rows={3}
+              value={formState.horario_negocio || ""}
+              setValue={(value) => handleInputChange({ target: { name: "horario_negocio", value } })}
+              placeholder="Ej: Lunes a Viernes: 9 AM - 6 PM, Sábados: 9 AM - 2 PM"
             />
             <div>
               <label className="block text-sm font-medium text-textPrimary dark:text-gray-200 mb-1">Logo del Negocio</label>

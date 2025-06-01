@@ -64,9 +64,9 @@ const CRModal = ({
 
   const modalStyle = {
     width: fullScreen ? "100vw" : width === "auto" ? "auto" : `${width}%`,
-    height: fullScreen ? "100vh" : height === "auto" ? "auto" : `${height}%`,
+    height: fullScreen ? "100dvh" : height === "auto" ? "auto" : `${height}%`,
     maxWidth: fullScreen ? "100vw" : "95vw",
-    maxHeight: fullScreen ? "100vh" : "90vh",
+    maxHeight: fullScreen ? "100dvh" : "90vh",
   };
 
   return (

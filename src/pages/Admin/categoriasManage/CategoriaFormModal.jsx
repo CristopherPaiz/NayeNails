@@ -8,6 +8,7 @@ const CategoriaFormModal = ({ isOpen, onClose, onSubmit, mode, categoriaToEdit, 
   const [nombre, setNombre] = useState("");
   const [iconoSeleccionado, setIconoSeleccionado] = useState("");
   const [errors, setErrors] = useState({});
+  const [openIconSelector, setOpenIconSelector] = useState(false);
 
   const isEditMode = mode === "editParent" || mode === "editChild";
   const isParentMode = mode === "addParent" || mode === "editParent";
@@ -71,7 +72,13 @@ const CategoriaFormModal = ({ isOpen, onClose, onSubmit, mode, categoriaToEdit, 
   else if (mode === "editChild") modalTitleText = `Editar Subcategoría: ${categoriaToEdit?.nombre ?? "..."}`;
 
   return (
-    <CRModal isOpen={isOpen} setIsOpen={onClose} title={modalTitleText} width={window.innerWidth < 640 ? 90 : 30}>
+    <CRModal
+      isOpen={isOpen}
+      setIsOpen={onClose}
+      title={modalTitleText}
+      width={window.innerWidth < 640 ? 90 : 30}
+      height={window.innerWidth < 640 ? (openIconSelector ? 65 : 55) : openIconSelector ? 75 : 60}
+    >
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 p-2">
         <CRInput
           title={`Nombre de la ${isParentMode ? "Categoría" : "Subcategoría"}`}
@@ -93,11 +100,12 @@ const CategoriaFormModal = ({ isOpen, onClose, onSubmit, mode, categoriaToEdit, 
               onSelectIcon={handleIconSelect}
               label="Icono"
               required={isParentMode} // El icono es requerido solo para categorías padre
+              setOpenIconSelector={setOpenIconSelector} // No necesitamos abrir un selector externo
             />
             {errors.icono && isParentMode && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{errors.icono}</p>}
           </>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 mt-24">
             <label className="block text-sm font-medium text-textPrimary dark:text-gray-200">
               Icono {isParentMode && <span className="text-red-500">*</span>}
             </label>

@@ -23,7 +23,7 @@ const CRSelect = ({
   setValue,
   reset,
   defaultValue,
-  value, // Añadida prop value
+  value,
   direction = "auto",
   searchField,
   autoClose = true,
@@ -34,7 +34,7 @@ const CRSelect = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
-  const [filteredData, setFilteredData] = useState([]); // Inicializar como array vacío
+  const [filteredData, setFilteredData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const selectRef = useRef(null);
 
@@ -42,7 +42,6 @@ const CRSelect = ({
   const [dataLoaded, setDataLoaded] = useState(false);
   const [timeoutExpired, setTimeoutExpired] = useState(false);
 
-  // Formatear datos iniciales si keyValue es true
   const formattedInitialData = useMemo(() => {
     if (keyValue && data.length > 0 && typeof data[0] === "object" && !Array.isArray(data[0])) {
       return Object.entries(data[0]).map(([label, val]) => ({
@@ -60,19 +59,16 @@ const CRSelect = ({
     }
   }, [formattedInitialData]);
 
-  // Sincronizar selectedItems con la prop 'value'
   useEffect(() => {
     if (value !== undefined) {
-      // Solo actuar si 'value' está definida
       const valueAsArray = multi ? value || [] : value ? [value] : [];
 
       const newSelectedItems = valueAsArray
         .map((vItem) => {
-          // Si vItem es un objeto, buscar por valueField. Si es un primitivo, buscar directamente.
           const targetValue = typeof vItem === "object" && vItem !== null ? vItem[valueField] : vItem;
           return formattedInitialData.find((dItem) => dItem[valueField] === targetValue);
         })
-        .filter(Boolean); // Filtrar nulos o indefinidos
+        .filter(Boolean);
 
       setSelectedItems(newSelectedItems);
     }
@@ -80,7 +76,6 @@ const CRSelect = ({
 
   useEffect(() => {
     if (dataLoaded && defaultValue && !timeoutExpired && !defaultApplied && !value) {
-      // No aplicar si 'value' ya está controlando
       const defaultItemsArray = Array.isArray(defaultValue) ? defaultValue : defaultValue ? [defaultValue] : [];
       const matchedItems = defaultItemsArray
         .map((item) => formattedInitialData.find((dataItem) => dataItem[valueField] === (typeof item === "object" ? item[valueField] : item)))
@@ -107,11 +102,10 @@ const CRSelect = ({
   const prevReset = useRef(reset);
   useEffect(() => {
     if (prevReset.current !== reset && reset !== undefined) {
-      // Solo si 'reset' cambia
       setSelectedItems([]);
       setSearchTerm("");
       if (setValue) setValue(multi ? [] : null);
-      setDefaultApplied(false); // Permitir que el default se reaplique si es necesario
+      setDefaultApplied(false);
       prevReset.current = reset;
     }
   }, [reset, setValue, multi]);
@@ -143,14 +137,10 @@ const CRSelect = ({
       if (autoClose) setIsOpen(false);
     }
 
-    // No llamar a setSelectedItems aquí si 'value' es una prop controlada,
-    // la actualización vendrá del useEffect que observa 'value'.
-    // En su lugar, llamar a setValue para que el padre actualice 'value'.
     if (setValue) {
       const valueToSet = multi ? updatedItems : updatedItems.length > 0 ? updatedItems[0] : null;
       setValue(onlySelectValues ? (multi ? updatedItems.map((i) => i[valueField]) : updatedItems[0]?.[valueField] ?? null) : valueToSet);
     }
-    // Si no es controlado (value no es prop), actualizamos estado interno
     if (value === undefined) {
       setSelectedItems(updatedItems);
     }
@@ -189,7 +179,6 @@ const CRSelect = ({
   const clearSelection = () => {
     if (setValue) setValue(multi ? [] : null);
     if (value === undefined) {
-      // Solo si no es controlado
       setSelectedItems([]);
     }
     setDefaultApplied(false);
@@ -202,7 +191,7 @@ const CRSelect = ({
     if (multi) {
       return selectedItems.map((item, index) => (
         <div
-          key={item[valueField] + "-" + index} // Clave más robusta
+          key={item[valueField] + "-" + index}
           className="inline-flex items-center rounded-full px-2 py-1 text-sm mr-1 mb-1"
           style={{ backgroundColor: color, color: "white" }}
         >
@@ -364,9 +353,9 @@ CRSelect.propTypes = {
   data: PropTypes.array,
   searchable: PropTypes.bool,
   setValue: PropTypes.func,
-  reset: PropTypes.any, // Cambiado de bool a any para detectar cualquier cambio
+  reset: PropTypes.any,
   defaultValue: PropTypes.oneOfType([PropTypes.object, PropTypes.array, PropTypes.string, PropTypes.number]),
-  value: PropTypes.oneOfType([PropTypes.object, PropTypes.array, PropTypes.string, PropTypes.number]), // Prop para controlar el valor
+  value: PropTypes.oneOfType([PropTypes.object, PropTypes.array, PropTypes.string, PropTypes.number]),
   direction: PropTypes.oneOf(["auto", "top", "bottom", "right", "left"]),
   searchField: PropTypes.string,
   autoClose: PropTypes.bool,

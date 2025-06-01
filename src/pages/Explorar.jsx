@@ -13,7 +13,6 @@ import { capitalizeWords } from "../utils/textUtils";
 import {
   getInitialVisibleCounts,
   parseFiltersFromUrl,
-  calculateDisplayedNails,
   getNombreFiltroFromSlug,
   calculateTotalFiltrosActivos,
   performGlobalFilterSearch,
@@ -83,20 +82,21 @@ const Explorar = () => {
         ...parsedFiltersFromUrl,
       },
     },
+    queryKey: ["diseniosExplorar", currentPage, debouncedSearchTerm, JSON.stringify(parsedFiltersFromUrl)],
     options: {
-      keepPreviousData: true,
+      // keepPreviousData: true, // Eliminado para evitar mostrar totalPages obsoleto
       enabled: !isLoadingNavItemsStore,
     },
     notificationEnabled: false,
   });
 
   const diseniosFromApi = apiData?.disenios ?? [];
-  const totalPages = apiData?.totalPages ?? 1;
+  const totalPagesApi = apiData?.totalPages ?? 1;
+  // const totalDiseniosApi = apiData?.totalDisenios ?? 0; // No se usa directamente en este render
 
-  const displayedNails = useMemo(
-    () => calculateDisplayedNails(diseniosFromApi, parsedFiltersFromUrl, availableFilterOptions),
-    [diseniosFromApi, parsedFiltersFromUrl, availableFilterOptions]
-  );
+  // Ya no se necesita calculateDisplayedNails si el backend hace todo el filtrado.
+  // Los diseños de `diseniosFromApi` ya vienen filtrados y paginados.
+  const displayedNails = diseniosFromApi;
 
   const [isFilterPanelOpenMobile, setIsFilterPanelOpenMobile] = useState(false);
   const [globalSearchTermFilters, setGlobalSearchTermFilters] = useState("");
@@ -113,8 +113,21 @@ const Explorar = () => {
   }, [initialVisibleCountsCalculated]);
 
   useEffect(() => {
-    setCurrentPage(1);
+    setCurrentPage(1); // Resetear a la página 1 cuando cambian los filtros o la búsqueda
   }, [debouncedSearchTerm, location.search]);
+
+  useEffect(() => {
+    // Si después de una carga, la página actual es mayor que el total de páginas,
+    // o si totalPages es 0 (y currentPage no es 1), ajustar a 1.
+    if (!isLoadingApiDisenios && apiData) {
+      // Solo actuar cuando no está cargando y hay datos
+      if (totalPagesApi === 0 && currentPage !== 1) {
+        setCurrentPage(1);
+      } else if (currentPage > totalPagesApi && totalPagesApi > 0) {
+        setCurrentPage(1); // Ir a la primera página si la actual es inválida
+      }
+    }
+  }, [apiData, isLoadingApiDisenios, currentPage, totalPagesApi]);
 
   const handleSearchInputChange = (value) => {
     setSearchTerm(value);
@@ -461,7 +474,7 @@ const Explorar = () => {
             ) : null}
           </div>
 
-          {isLoadingApiDisenios && !apiData ? (
+          {isLoadingApiDisenios && !apiData ? ( // Muestra el loader si está cargando Y no hay datos previos (o keepPreviousData está off)
             <CRLoader text="Cargando diseños..." fullScreen={false} style="nailPaint" size="lg" />
           ) : errorApiDisenios ? (
             <div className="text-center py-12 px-2 md:px-0">
@@ -542,7 +555,6 @@ const Explorar = () => {
                               <span>{una.duracion}</span>
                             </div>
                           )}
-                          {/* PRECIO */}
                           <div className="text-right">
                             {hasOffer ? (
                               <>
@@ -605,7 +617,7 @@ const Explorar = () => {
                   );
                 })}
               </div>
-              <Paginador currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+              <Paginador currentPage={currentPage} totalPages={totalPagesApi} onPageChange={handlePageChange} />
             </>
           ) : (
             <div className="text-center py-12 px-2 md:px-0">

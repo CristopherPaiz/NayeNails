@@ -79,13 +79,13 @@ const CategoriasPage = () => {
   }, [categoriasData]);
 
   const commonMutationOptionsForToggle = {
-    onSuccess: (data, variables) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeyCategorias });
       setIsConfirmModalOpen(false);
       setIsLoadingAction(false);
       CRAlert.alert({ title: "Éxito", message: data?.message || "Estado actualizado.", type: "success" });
     },
-    onError: (error, variables) => {
+    onError: (error) => {
       setIsConfirmModalOpen(false);
       setIsLoadingAction(false);
       CRAlert.alert({ title: "Error", message: error.response?.data?.message || "No se pudo actualizar el estado.", type: "error" });
@@ -93,7 +93,7 @@ const CategoriasPage = () => {
   };
 
   const addCategoriaPadreMutation = useApiRequest({
-    url: "/categorias", // URL base para esta mutación
+    url: "/categorias",
     method: "POST",
     options: {
       onSuccess: () => {
@@ -109,7 +109,6 @@ const CategoriasPage = () => {
   });
 
   const editCategoriaPadreMutation = useApiRequest({
-    // No se define URL base aquí, se pasará dinámicamente
     method: "PUT",
     options: {
       onSuccess: () => {
@@ -125,7 +124,6 @@ const CategoriasPage = () => {
   });
 
   const addSubcategoriaMutation = useApiRequest({
-    // No se define URL base aquí
     method: "POST",
     options: {
       onSuccess: () => {
@@ -141,7 +139,6 @@ const CategoriasPage = () => {
   });
 
   const editSubcategoriaMutation = useApiRequest({
-    // No se define URL base aquí
     method: "PUT",
     options: {
       onSuccess: () => {
@@ -159,13 +156,13 @@ const CategoriasPage = () => {
   const toggleActivoCategoriaPadreMutation = useApiRequest({
     method: "PATCH",
     options: commonMutationOptionsForToggle,
-    notificationEnabled: false, // Ya manejado en commonMutationOptionsForToggle
+    notificationEnabled: false,
   });
 
   const toggleActivoSubcategoriaMutation = useApiRequest({
     method: "PATCH",
     options: commonMutationOptionsForToggle,
-    notificationEnabled: false, // Ya manejado en commonMutationOptionsForToggle
+    notificationEnabled: false,
   });
 
   const handleToggleParent = (parentId) => {
@@ -193,7 +190,7 @@ const CategoriasPage = () => {
     setIsLoadingAction(true);
     try {
       if (modalMode === "addParent") {
-        await addCategoriaPadreMutation.mutateAsync({ data: formData }); // addCategoriaPadreMutation tiene URL base
+        await addCategoriaPadreMutation.mutateAsync(formData);
       } else if (modalMode === "editParent" && currentCategoria) {
         await editCategoriaPadreMutation.mutateAsync({ url: `/categorias/${currentCategoria.id}`, data: formData });
       } else if (modalMode === "addChild" && currentCategoria) {
