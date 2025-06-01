@@ -8,6 +8,7 @@ const IconSelector = ({ allIconOptions = [], selectedIcon, onSelectIcon, label, 
   const [startIndex, setStartIndex] = useState(0);
   const dropdownRef = useRef(null);
   const containerRef = useRef(null);
+  const firstIconRef = useRef(null); // Nueva referencia para el primer icono
 
   const ICONS_PER_PAGE = 50;
   const MAX_VISIBLE_ICONS = 100;
@@ -39,6 +40,22 @@ const IconSelector = ({ allIconOptions = [], selectedIcon, onSelectIcon, label, 
       },
     };
   }, [filteredIcons, startIndex]);
+
+  // Función helper para hacer scroll al primer elemento
+  const scrollToFirstIcon = useCallback(() => {
+    setTimeout(() => {
+      if (firstIconRef.current) {
+        firstIconRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+          inline: "nearest",
+        });
+      } else if (dropdownRef.current) {
+        // Fallback: scroll al top del dropdown
+        dropdownRef.current.scrollTop = 0;
+      }
+    }, 50); // Pequeño delay para asegurar que el DOM se haya actualizado
+  }, []);
 
   // Resetear paginación cuando cambia la búsqueda
   useEffect(() => {
@@ -78,24 +95,30 @@ const IconSelector = ({ allIconOptions = [], selectedIcon, onSelectIcon, label, 
     [onSelectIcon]
   );
 
-  const loadPreviousIcons = useCallback((event) => {
-    event.stopPropagation();
-    setStartIndex((prev) => Math.max(0, prev - ICONS_PER_PAGE));
-
-    // Scroll al top del dropdown después de cargar iconos anteriores
-    setTimeout(() => {
-      if (dropdownRef.current) {
-        dropdownRef.current.scrollTop = 0;
-      }
-    }, 0);
-  }, []);
+  const loadPreviousIcons = useCallback(
+    (event) => {
+      event.stopPropagation();
+      setStartIndex((prev) => {
+        const newIndex = Math.max(0, prev - ICONS_PER_PAGE);
+        // Hacer scroll después de que se actualice el estado
+        setTimeout(() => scrollToFirstIcon(), 0);
+        return newIndex;
+      });
+    },
+    [scrollToFirstIcon]
+  );
 
   const loadNextIcons = useCallback(
     (event) => {
       event.stopPropagation();
-      setStartIndex((prev) => Math.min(prev + ICONS_PER_PAGE, filteredIcons.length - MAX_VISIBLE_ICONS));
+      setStartIndex((prev) => {
+        const newIndex = Math.min(prev + ICONS_PER_PAGE, filteredIcons.length - MAX_VISIBLE_ICONS);
+        // Hacer scroll después de que se actualice el estado
+        setTimeout(() => scrollToFirstIcon(), 0);
+        return newIndex;
+      });
     },
-    [filteredIcons.length]
+    [filteredIcons.length, scrollToFirstIcon]
   );
 
   const handleShowList = useCallback(() => {
@@ -111,9 +134,10 @@ const IconSelector = ({ allIconOptions = [], selectedIcon, onSelectIcon, label, 
     event.stopPropagation();
   }, []);
 
-  const IconItem = memo(({ icon }) => (
+  const IconItem = memo(({ icon, isFirst = false }) => (
     <div
       key={icon.value}
+      ref={isFirst ? firstIconRef : null} // Asignar ref solo al primer elemento
       onClick={() => handleIconClick(icon.value)}
       className="flex items-center p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded cursor-pointer"
     >
@@ -199,8 +223,12 @@ const IconSelector = ({ allIconOptions = [], selectedIcon, onSelectIcon, label, 
           {/* Lista de iconos */}
           {visibleIcons.length > 0 ? (
             <>
-              {visibleIcons.map((icon) => (
-                <IconItem key={icon.value} icon={icon} />
+              {visibleIcons.map((icon, index) => (
+                <IconItem
+                  key={icon.value}
+                  icon={icon}
+                  isFirst={index === 0} // Marcar el primer elemento
+                />
               ))}
 
               {/* Botón cargar más (inferior) */}
