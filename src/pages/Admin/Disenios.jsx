@@ -256,8 +256,8 @@ const DiseniosAdminPage = () => {
     if (modalMode === "add" && !formValues.imagen_file) {
       newErrors.imagen_file = "La imagen es obligatoria.";
     }
-    if (formValues.imagen_file && formValues.imagen_file.size > 10 * 1024 * 1024) {
-      newErrors.imagen_file = "La imagen no debe exceder los 10MB.";
+    if (formValues.imagen_file && formValues.imagen_file.size > 15 * 1024 * 1024) {
+      newErrors.imagen_file = "La imagen no debe exceder los 15MB.";
     }
     if (formValues.imagen_file && !formValues.imagen_file.type.startsWith("image/")) {
       newErrors.imagen_file = "El archivo debe ser una imagen.";
