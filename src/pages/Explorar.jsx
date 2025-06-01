@@ -401,7 +401,7 @@ const Explorar = () => {
       ></div>
 
       <aside
-        className={`fixed top-0 mt-16 sm:mt-0 left-0 w-72 h-full bg-backgroundSecondary dark:bg-gray-800 shadow-xl z-40 transform transition-transform duration-300 ease-in-out md:hidden p-4 overflow-y-auto ${
+        className={`fixed top-0 mt-16 sm:mt-0 left-0 w-72 h-full bg-backgroundSecondary pb-20 dark:bg-gray-800 shadow-xl z-40 transform transition-transform duration-300 ease-in-out md:hidden p-4 overflow-y-auto ${
           isFilterPanelOpenMobile ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -409,7 +409,7 @@ const Explorar = () => {
       </aside>
 
       <div className="flex justify-start items-start">
-        <aside className="hidden md:block mr-8">
+        <aside className="hidden md:block mr-8 max-h-[900px] overflow-auto">
           <div className="p-4 bg-background dark:bg-gray-800 rounded-xl shadow-xl sticky top-20 border border-gray-200 dark:border-gray-700">
             {renderFilterPanelContent()}
           </div>
