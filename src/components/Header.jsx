@@ -24,9 +24,42 @@ const Header = () => {
 
   const businessNameFromConfig = textosColoresConfig?.nombre_negocio || "Naye Nails"; // Usa el nombre de la config o fallback
 
+  // Crear el grupo de citas y agregar el botón "Ver Diseños"
   const combinedNavItems = useMemo(() => {
     const safeDynamicNavItems = typeof dynamicNavItems === "object" && dynamicNavItems !== null ? dynamicNavItems : {};
-    return { ...safeDynamicNavItems, ...STATIC_NAV_ITEMS };
+
+    // Crear el grupo de citas
+    const citasGroup = {
+      citas: {
+        icon: "Calendar",
+        categorías: [
+          { nombre: "Agendar Cita", slug: "/agendar-cita", icon: "CalendarPlus" },
+          { nombre: "Contacto", slug: "/contacto", icon: "Phone" },
+          { nombre: "Ubicación", slug: "/ubicacion", icon: "MapPin" },
+        ],
+        filterType: null, // No es filtro, son links directos
+      },
+    };
+
+    // Agregar botón "Ver Diseños"
+    const verDisenosItem = {
+      "Explorar diseños": {
+        link: "/explorar-unas",
+        icon: "Grip",
+      },
+    };
+
+    // Combinar todos los elementos, excluyendo los items individuales de citas del STATIC_NAV_ITEMS
+    const filteredStaticItems = Object.fromEntries(
+      Object.entries(STATIC_NAV_ITEMS).filter(([key]) => !["agendar cita", "contacto", "ubicación"].includes(key.toLowerCase()))
+    );
+
+    return {
+      ...verDisenosItem,
+      ...safeDynamicNavItems,
+      ...filteredStaticItems,
+      ...citasGroup,
+    };
   }, [dynamicNavItems]);
 
   const closeAllMenus = () => {
@@ -128,13 +161,13 @@ const Header = () => {
     return (
       <Link to="/login" onClick={closeAllMenus}>
         <CRButton
-          title="Login"
+          title={window.innerWidth < 768 ? "Iniciar sesión" : ""}
           externalIcon={<LogIn className={forMobile ? "w-5 h-5" : "w-4 h-4"} />}
           iconPosition="left"
           className={
             forMobile
               ? "bg-transparent text-textPrimary hover:text-primary w-full justify-start !my-0 px-0 py-2"
-              : "border border-border text-textPrimary hover:border-primary hover:text-primary !my-0 px-2 py-1 text-sm"
+              : "text-textPrimary hover:border-primary hover:text-primary !my-0 px-2 py-1 text-sm"
           }
           position={forMobile ? "left" : undefined}
         />
@@ -190,11 +223,13 @@ const Header = () => {
         return null;
       }
 
+      // Para el grupo de citas, verificar que tenga categorías pero no filterType
+      const isDirectLinksDropdown = value.categorías && Array.isArray(value.categorías) && value.categorías.length > 0 && !value.filterType;
       const isFilterDropdown =
         value.categorías && Array.isArray(value.categorías) && value.categorías.length > 0 && (value.filterType || isAdminMenu);
       const isActive = activeDropdown === key;
 
-      if (isFilterDropdown) {
+      if (isDirectLinksDropdown || isFilterDropdown) {
         return (
           <div
             key={key}
@@ -227,11 +262,24 @@ const Header = () => {
                   let linkTo;
                   if (isAdminMenu) {
                     linkTo = sub.slug;
+                  } else if (isDirectLinksDropdown) {
+                    // Para links directos como el grupo de citas
+                    linkTo = sub.slug;
                   } else {
+                    // Para filtros normales
                     const filterQuery = `${value.filterType}=${sub.slug}`;
                     linkTo = `${CATALOGO_BASE_PATH}?${filterQuery}`;
                   }
-                  return <DropdownItem key={sub.slug + linkTo} sub={sub} linkTo={linkTo} isAdminMenu={isAdminMenu} isMobileVersion={false} />;
+                  return (
+                    <DropdownItem
+                      key={sub.slug + linkTo}
+                      sub={sub}
+                      linkTo={linkTo}
+                      isAdminMenu={isAdminMenu}
+                      isMobileVersion={false}
+                      isDirectLink={isDirectLinksDropdown}
+                    />
+                  );
                 })}
               </div>
             )}
@@ -289,11 +337,13 @@ const Header = () => {
         return null;
       }
 
+      // Para el grupo de citas, verificar que tenga categorías pero no filterType
+      const isDirectLinksDropdown = value.categorías && Array.isArray(value.categorías) && value.categorías.length > 0 && !value.filterType;
       const isFilterDropdown =
         value.categorías && Array.isArray(value.categorías) && value.categorías.length > 0 && (value.filterType || isAdminMenu);
       const isActive = activeDropdown === key;
 
-      if (isFilterDropdown) {
+      if (isDirectLinksDropdown || isFilterDropdown) {
         return (
           <div key={key} ref={(el) => (dropdownRefs.current[key] = el)} className="w-full mt-1">
             <button
@@ -319,11 +369,24 @@ const Header = () => {
                   let linkTo;
                   if (isAdminMenu) {
                     linkTo = sub.slug;
+                  } else if (isDirectLinksDropdown) {
+                    // Para links directos como el grupo de citas
+                    linkTo = sub.slug;
                   } else {
+                    // Para filtros normales
                     const filterQuery = `${value.filterType}=${sub.slug}`;
                     linkTo = `${CATALOGO_BASE_PATH}?${filterQuery}`;
                   }
-                  return <DropdownItem key={sub.slug + linkTo} sub={sub} linkTo={linkTo} isAdminMenu={isAdminMenu} isMobileVersion={true} />;
+                  return (
+                    <DropdownItem
+                      key={sub.slug + linkTo}
+                      sub={sub}
+                      linkTo={linkTo}
+                      isAdminMenu={isAdminMenu}
+                      isMobileVersion={true}
+                      isDirectLink={isDirectLinksDropdown}
+                    />
+                  );
                 })}
               </div>
             )}
@@ -422,7 +485,7 @@ const Header = () => {
       {isOpen && isMobile && (
         <nav
           id="mobile-menu-content"
-          className="absolute md:hidden top-full left-0 right-0 w-full bg-background shadow-lg flex flex-col items-stretch gap-y-0 px-4 py-2 z-40 border-t border-border"
+          className="absolute md:hidden top-full left-0 right-0 w-full bg-background shadow-2xl flex flex-col items-stretch gap-y-0 px-4 py-2 z-40 border-t border-border"
         >
           {renderMobileNavItems(combinedNavItems)}
           {isAuthenticated && user && renderMobileNavItems(ADMIN_ITEMS, true)}

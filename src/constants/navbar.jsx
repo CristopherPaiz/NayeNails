@@ -6,14 +6,6 @@ export const STATIC_NAV_ITEMS = {
     link: "/agendar-cita",
     icon: "Calendar",
   },
-  Ubicacion: {
-    link: "/ubicacion",
-    icon: "MapPin",
-  },
-  Contacto: {
-    link: "/contacto",
-    icon: "Mail",
-  },
 };
 
 export const ADMIN_ITEMS = {
@@ -21,7 +13,7 @@ export const ADMIN_ITEMS = {
     categorías: [
       { nombre: "Categorías", slug: "/admin/categorias", icon: "ListTree" },
       { nombre: "Diseños", slug: "/admin/disenios", icon: "Paintbrush" },
-      { nombre: "Citas", slug: "/admin/citas", icon: "CalendarCheck" }, // NUEVO ENLACE CITAS
+      { nombre: "Citas", slug: "/admin/citas", icon: "CalendarCheck" },
       { nombre: "Imágenes Sitio", slug: "/admin/config", icon: "Image" },
       { nombre: "Textos y Colores", slug: "/admin/textos-colores", icon: "Palette" },
       { nombre: "Perfil", slug: "/admin/perfil", icon: "User" },
