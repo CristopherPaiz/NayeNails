@@ -643,7 +643,7 @@ const Explorar = () => {
                               ) : una.precio ? (
                                 <p className="text-lg font-bold text-primary dark:text-primary-light">{`Q${parseFloat(una.precio).toFixed(2)}`}</p>
                               ) : (
-                                <p className="text-xs text-textTertiary italic">Consultar</p>
+                                <p className="text-xs text-textTertiary italic"></p>
                               )}
                             </div>
                           </div>
