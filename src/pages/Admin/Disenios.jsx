@@ -11,6 +11,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import CategorySubcategorySelector from "../../components/admin/CategorySubcategorySelector";
 import CRAlert from "../../components/UI/CRAlert.jsx";
 import useScrollToTop from "../../hooks/useScrollToTop.jsx";
+import ReactCrop from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
 
 const ITEMS_PER_PAGE_ADMIN = 6;
 
@@ -30,6 +32,21 @@ const DiseniosAdminPage = () => {
     duracion: "",
     subcategorias: [],
   });
+
+  const [crop, setCrop] = useState({
+    unit: "%",
+    width: 90,
+    height: 90,
+    x: 5,
+    y: 5,
+    aspect: 1,
+  });
+  const [completedCrop, setCompletedCrop] = useState(null);
+  const [imgRef, setImgRef] = useState(null);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [originalImageFile, setOriginalImageFile] = useState(null);
+  const [originalImagePreview, setOriginalImagePreview] = useState(null);
+
   const [imagePreview, setImagePreview] = useState(null);
   const [errors, setErrors] = useState({});
   const [categorySelectorError, setCategorySelectorError] = useState(null);
@@ -129,6 +146,29 @@ const DiseniosAdminPage = () => {
     return `${horas}h ${minutos}min`;
   };
 
+  const getCroppedImg = (image, crop) => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+
+    canvas.width = crop.width * scaleX;
+    canvas.height = crop.height * scaleY;
+
+    ctx.drawImage(image, crop.x * scaleX, crop.y * scaleY, crop.width * scaleX, crop.height * scaleY, 0, 0, canvas.width, canvas.height);
+
+    return new Promise((resolve) => {
+      canvas.toBlob(
+        (blob) => {
+          resolve(blob);
+        },
+        "image/jpeg",
+        1
+      );
+    });
+  };
+
   useEffect(() => {
     const nuevaDuracion = formatDuracion(duracionHoras, duracionMinutos);
     setFormValues((prev) => ({ ...prev, duracion: nuevaDuracion }));
@@ -207,24 +247,6 @@ const DiseniosAdminPage = () => {
     setIsFormModalOpen(true);
   };
 
-  const closeFormModal = () => {
-    setIsFormModalOpen(false);
-    setCurrentDisenio(null);
-    setDuracionHoras(0);
-    setDuracionMinutos(15);
-    setFormValues({
-      nombre: "",
-      descripcion: "",
-      imagen_file: null,
-      precio: "",
-      oferta: "",
-      duracion: "",
-      subcategorias: [],
-    });
-    setImagePreview(null);
-    setCategorySelectorError(null);
-  };
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormValues((prev) => ({ ...prev, [name]: value }));
@@ -233,8 +255,10 @@ const DiseniosAdminPage = () => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setFormValues((prev) => ({ ...prev, imagen_file: file }));
-      setImagePreview(URL.createObjectURL(file));
+      setOriginalImageFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setOriginalImagePreview(previewUrl);
+      setShowCropModal(true);
       setErrors((prev) => ({ ...prev, imagen_file: undefined }));
     } else {
       setFormValues((prev) => ({ ...prev, imagen_file: null }));
@@ -242,12 +266,74 @@ const DiseniosAdminPage = () => {
     }
   };
 
-  const handleCategorySelectorChange = (selectedSubcategoryIds) => {
-    setFormValues((prev) => ({ ...prev, subcategorias: selectedSubcategoryIds }));
+  const handleCropComplete = async () => {
+    if (imgRef && completedCrop?.width && completedCrop?.height) {
+      try {
+        const croppedImageBlob = await getCroppedImg(imgRef, completedCrop);
+        const croppedFile = new File([croppedImageBlob], originalImageFile.name, {
+          type: "image/jpeg",
+        });
+
+        setFormValues((prev) => ({ ...prev, imagen_file: croppedFile }));
+
+        // Limpiar preview anterior si existe
+        if (imagePreview && imagePreview.startsWith("blob:")) {
+          URL.revokeObjectURL(imagePreview);
+        }
+
+        // Crear nuevo preview de la imagen recortada
+        const croppedPreview = URL.createObjectURL(croppedImageBlob);
+        setImagePreview(croppedPreview);
+
+        setShowCropModal(false);
+
+        // Limpiar imagen original
+        if (originalImagePreview) {
+          URL.revokeObjectURL(originalImagePreview);
+          setOriginalImagePreview(null);
+        }
+      } catch (error) {
+        console.error("Error al recortar la imagen:", error);
+      }
+    }
+  };
+
+  const handleCropCancel = () => {
+    setShowCropModal(false);
+    setOriginalImageFile(null);
+
+    if (originalImagePreview) {
+      URL.revokeObjectURL(originalImagePreview);
+      setOriginalImagePreview(null);
+    }
+
+    // Restablecer el input file
+    const fileInput = document.getElementById("imagen_file");
+    if (fileInput) {
+      fileInput.value = "";
+    }
   };
 
   const handleCategorySelectorError = (errorMsg) => {
     setCategorySelectorError(errorMsg);
+  };
+
+  const onImageLoad = (e) => {
+    const { width, height } = e.currentTarget;
+    const size = Math.min(width, height) * 0.9;
+    const x = (width - size) / 2;
+    const y = (height - size) / 2;
+
+    setCrop({
+      unit: "px",
+      width: size,
+      height: size,
+      x: x,
+      y: y,
+      aspect: 1,
+    });
+
+    setImgRef(e.currentTarget);
   };
 
   const validateForm = () => {
@@ -344,13 +430,50 @@ const DiseniosAdminPage = () => {
       : `edit-fallback-${Date.now()}`;
   }, [modalMode, currentDisenio, formValues.subcategorias]);
 
+  const handleCategorySelectorChange = (selectedSubcategoryIds) => {
+    setFormValues((prev) => ({ ...prev, subcategorias: selectedSubcategoryIds }));
+  };
+
+  const closeFormModal = () => {
+    setIsFormModalOpen(false);
+    setCurrentDisenio(null);
+    setDuracionHoras(0);
+    setDuracionMinutos(15);
+    setFormValues({
+      nombre: "",
+      descripcion: "",
+      imagen_file: null,
+      precio: "",
+      oferta: "",
+      duracion: "",
+      subcategorias: [],
+    });
+
+    // Limpiar estados de crop
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    if (originalImagePreview && originalImagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(originalImagePreview);
+    }
+
+    setImagePreview(null);
+    setOriginalImagePreview(null);
+    setShowCropModal(false);
+    setOriginalImageFile(null);
+    setCategorySelectorError(null);
+  };
+
   useEffect(() => {
     return () => {
       if (imagePreview && imagePreview.startsWith("blob:")) {
         URL.revokeObjectURL(imagePreview);
       }
+      if (originalImagePreview && originalImagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(originalImagePreview);
+      }
     };
-  }, [imagePreview]);
+  }, [imagePreview, originalImagePreview]);
 
   if ((isLoadingDisenios && !apiData) || isLoadingCategorias) {
     return <CRLoader text="Cargando datos..." fullScreen={false} style="circle" size="lg" />;
@@ -611,6 +734,44 @@ const DiseniosAdminPage = () => {
               />
             </div>
           </form>
+        </CRModal>
+      )}
+
+      {showCropModal && originalImagePreview && (
+        <CRModal isOpen={showCropModal} setIsOpen={handleCropCancel} title="Recortar Imagen" width={window.innerWidth < 768 ? 95 : 80}>
+          <div className="space-y-4 p-4">
+            <div className="flex justify-center">
+              <ReactCrop
+                crop={crop}
+                onChange={(newCrop) => setCrop(newCrop)}
+                onComplete={(c) => setCompletedCrop(c)}
+                aspect={1}
+                minWidth={50}
+                minHeight={50}
+                keepSelection={true}
+              >
+                <img src={originalImagePreview} alt="Imagen a recortar" onLoad={onImageLoad} style={{ maxWidth: "100%", maxHeight: "400px" }} />
+              </ReactCrop>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+              Arrastra para seleccionar el área que deseas recortar (formato cuadrado)
+            </p>
+            <div className="flex justify-end space-x-3">
+              <CRButton
+                type="button"
+                title="Cancelar"
+                onClick={handleCropCancel}
+                className="bg-gray-300 dark:bg-gray-600 text-textPrimary dark:text-white"
+              />
+              <CRButton
+                type="button"
+                title="Aplicar Recorte"
+                onClick={handleCropComplete}
+                className="bg-primary text-white"
+                disabled={!completedCrop?.width || !completedCrop?.height}
+              />
+            </div>
+          </div>
         </CRModal>
       )}
 
