@@ -52,10 +52,15 @@ const useStoreNails = create((set, get) => ({
       text: "text-pink-700 dark:text-pink-300",
       hoverBg: "hover:bg-pink-200 dark:hover:bg-pink-500/50",
     },
-    efectos: {
+    "decoraciones-y-efectos": {
       bg: "bg-green-100 dark:bg-green-500/30",
       text: "text-green-700 dark:text-green-300",
       hoverBg: "hover:bg-green-200 dark:hover:bg-green-500/50",
+    },
+    tipos: {
+      bg: "bg-yellow-100 dark:bg-yellow-500/30",
+      text: "text-yellow-700 dark:text-yellow-300",
+      hoverBg: "hover:bg-yellow-200 dark:hover:bg-yellow-500/50",
     },
     default: {
       bg: "bg-gray-200 dark:bg-gray-600",
