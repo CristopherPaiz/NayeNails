@@ -364,7 +364,7 @@ const Header = () => {
             </button>
 
             {isActive && (
-              <div className="mt-1 bg-background rounded-lg shadow-lg py-1 border border-border">
+              <div className="ml-4 pl-2 mt-1 bg-background rounded-xl shadow-md shadow-primary/20 py-1 border border-primary">
                 {value.categorías.map((sub) => {
                   let linkTo;
                   if (isAdminMenu) {
