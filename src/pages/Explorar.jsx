@@ -520,7 +520,7 @@ const Explorar = () => {
                     >
                       <div className="relative aspect-video w-full overflow-hidden">
                         <img
-                          src={una.imagen_url ?? "https://via.placeholder.com/400x300?text=Nail+Art"}
+                          src={una.imagen_url ?? "https://res.cloudinary.com/drdkb6gjx/image/upload/v1748887602/naye_nails/i6btbj3vnaevlbzigaju.svg"}
                           alt={una.nombre}
                           className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105 cursor-pointer"
                           onClick={() => openDetailModal(una)}
