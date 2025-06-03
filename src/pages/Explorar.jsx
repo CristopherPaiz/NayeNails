@@ -430,7 +430,7 @@ const Explorar = () => {
   return (
     <>
       {showTutorial && isMobileForTutorial && displayedNails.length > 0 && <div className="fixed inset-0 bg-black/50 z-50" aria-hidden="true" />}
-      <div className="container mx-auto px-2 sm:px-6 pb-16 sm:pb-0 pt-6 sm:pt-0 bg-backgroundSecondary dark:bg-background">
+      <div className="container mx-auto px-7 sm:px-6 pb-16 sm:pb-0 pt-6 sm:pt-0 bg-backgroundSecondary dark:bg-background">
         <div
           className={`fixed inset-0 bg-black/60 z-30 md:hidden transition-opacity duration-300 ease-in-out ${
             isFilterPanelOpenMobile ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -528,7 +528,7 @@ const Explorar = () => {
               </div>
             ) : displayedNails.length > 0 ? (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 px-2 md:px-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-2 md:px-0">
                   {displayedNails.map((una, index) => {
                     const areTagsExpanded = !!expandedTags[una.id];
                     const allCardTagsWithType = [];

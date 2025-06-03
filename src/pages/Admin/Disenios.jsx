@@ -102,7 +102,8 @@ const DiseniosAdminPage = () => {
         .map((cp) => ({
           label: cp.nombre,
           value: cp.id,
-          subcategorias: cp.subcategorias?.filter((s) => s.activo).map((s) => ({ label: s.nombre, value: s.id })) ?? [],
+          icono: cp.icono,
+          subcategorias: cp.subcategorias?.filter((s) => s.activo).map((s) => ({ label: s.nombre, value: s.id, icono: s.icono })) ?? [],
         })) ?? []
     );
   }, [todasLasCategorias]);
@@ -422,13 +423,13 @@ const DiseniosAdminPage = () => {
   const isMutationLoading =
     addDisenioMutation.isPending || editDisenioMutation.isPending || toggleActivoDisenioMutation.isPending || deleteDisenioMutation.isPending;
 
-  const categorySelectorKey = useMemo(() => {
-    return modalMode === "add"
-      ? `new-${Date.now()}`
-      : currentDisenio?.id
-      ? `edit-${currentDisenio.id}-${formValues.subcategorias.join("-")}`
-      : `edit-fallback-${Date.now()}`;
-  }, [modalMode, currentDisenio, formValues.subcategorias]);
+  // const categorySelectorKey = useMemo(() => {
+  //   return modalMode === "add"
+  //     ? `new-${Date.now()}`
+  //     : currentDisenio?.id
+  //     ? `edit-${currentDisenio.id}-${formValues.subcategorias.join("-")}`
+  //     : `edit-fallback-${Date.now()}`;
+  // }, [modalMode, currentDisenio, formValues.subcategorias]);
 
   const handleCategorySelectorChange = (selectedSubcategoryIds) => {
     setFormValues((prev) => ({ ...prev, subcategorias: selectedSubcategoryIds }));
@@ -490,7 +491,7 @@ const DiseniosAdminPage = () => {
   }
 
   return (
-    <div className="sm:px">
+    <div className="sm:px mx-4 mb-8">
       {isMutationLoading && <CRLoader fullScreen background="bg-black/30 dark:bg-black/50" style="dots" />}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="text-2xl md:text-3xl font-bold text-textPrimary dark:text-white">Gestión de Diseños</h1>
@@ -534,7 +535,7 @@ const DiseniosAdminPage = () => {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {disenios?.map((disenio) => (
               <div
                 key={disenio.id}
@@ -708,7 +709,6 @@ const DiseniosAdminPage = () => {
             <div className="space-y-3 pt-3 border-t border-gray-200 dark:border-slate-700">
               <h4 className="text-base font-semibold text-textPrimary dark:text-gray-200">Selección de Categorías y Subcategorías</h4>
               <CategorySubcategorySelector
-                key={categorySelectorKey}
                 categoriasPadreOptions={categoriasPadreOptionsForSelector}
                 initialSelectedSubcategoryIds={formValues.subcategorias}
                 onChange={handleCategorySelectorChange}

@@ -1,344 +1,270 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import PropTypes from "prop-types";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { ChevronDown, ChevronRight, Check, Search, X } from "lucide-react";
 import { DynamicIcon } from "../../utils/DynamicIcon";
 
-const CategorySubcategorySelector = ({ categoriasPadreOptions = [], initialSelectedSubcategoryIds = [], onChange, onError }) => {
-  const [expandedCategories, setExpandedCategories] = useState({});
-  const [selectedSubcategories, setSelectedSubcategories] = useState([]);
-  const [validationErrors, setValidationErrors] = useState({});
+const normalize = (str = "") =>
+  str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 
-  // Referencia para mantener la posición del scroll
-  const contenedorRef = useRef(null);
-
-  // Función para preservar la posición del scroll durante actualizaciones de estado
-  const preservarScroll = (callback) => {
-    // Guardar posición actual
-    const scrollPos = contenedorRef.current?.scrollTop;
-
-    // Ejecutar la función que actualiza el estado
-    callback();
-
-    // Restaurar la posición después de la actualización
-    requestAnimationFrame(() => {
-      if (contenedorRef.current && scrollPos !== undefined) {
-        contenedorRef.current.scrollTop = scrollPos;
+const CategorySelector = ({ categoriasPadreOptions = [], initialSelectedSubcategoryIds = [], onChange, onError }) => {
+  // state for selections, expanded nodes and search
+  const [selectedSubcategories, setSelectedSubcategories] = useState(() => new Set(initialSelectedSubcategoryIds.map(Number)));
+  const [expandedCategories, setExpandedCategories] = useState(() => {
+    const toExpand = new Set();
+    const initSet = new Set(initialSelectedSubcategoryIds.map(Number));
+    categoriasPadreOptions.forEach((parent) => {
+      if (parent.subcategorias?.some((s) => initSet.has(s.value))) {
+        toExpand.add(parent.value);
       }
     });
-  };
+    return toExpand;
+  });
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // Función para identificar qué categorías padre están seleccionadas
-  const getSelectedParentIds = useCallback(
-    (subcategoryIds) => {
-      return categoriasPadreOptions
-        .filter((parent) => parent.subcategorias?.some((sub) => subcategoryIds.includes(sub.value)))
-        .map((parent) => parent.value);
-    },
-    [categoriasPadreOptions]
-  );
+  // track previous search to detect transitions
+  const prevSearchRef = useRef("");
 
-  // Validar selecciones
-  const validateSelections = useCallback(
-    (subcategoryIds) => {
-      const errors = {};
-      const selectedParentIds = getSelectedParentIds(subcategoryIds);
-
-      selectedParentIds.forEach((parentId) => {
-        const parent = categoriasPadreOptions.find((p) => p.value === parentId);
-        if (parent && !parent.subcategorias?.some((sub) => subcategoryIds.includes(sub.value))) {
-          errors[parentId] = `Selecciona al menos una subcategoría`;
+  // when first typing into search, auto-expand filtered categories;
+  // when clearing search, collapse all
+  const filteredCategories = useMemo(() => {
+    if (!normalize(searchTerm)) {
+      return categoriasPadreOptions;
+    }
+    return categoriasPadreOptions
+      .map((cat) => {
+        const matched = cat.subcategorias?.filter((sub) => normalize(sub.label).includes(normalize(searchTerm)));
+        if (matched && matched.length > 0) {
+          return { ...cat, subcategorias: matched };
         }
-      });
+        return null;
+      })
+      .filter((c) => c);
+  }, [categoriasPadreOptions, searchTerm]);
 
-      setValidationErrors(errors);
-      if (onError) {
-        onError(Object.keys(errors).length > 0 ? `Todas las categorías deben tener al menos una subcategoría seleccionada` : null);
-      }
-      return Object.keys(errors).length === 0;
-    },
-    [categoriasPadreOptions, getSelectedParentIds, onError]
-  );
-
-  // Inicializar estado
   useEffect(() => {
-    if (categoriasPadreOptions.length > 0) {
-      const initialIds = (initialSelectedSubcategoryIds || []).map(Number);
-
-      setSelectedSubcategories((prevSelected) => {
-        if (JSON.stringify([...prevSelected].sort()) === JSON.stringify([...initialIds].sort())) {
-          return prevSelected;
-        }
-        return initialIds;
+    const prev = prevSearchRef.current;
+    const curr = searchTerm;
+    if (!prev && curr) {
+      // first time entering a search term
+      setExpandedCategories((prevSet) => {
+        const next = new Set(prevSet);
+        filteredCategories.forEach((cat) => next.add(cat.value));
+        return next;
       });
-
-      // Auto-expandir categorías con subcategorías seleccionadas
-      const initialExpanded = {};
-      categoriasPadreOptions.forEach((parent) => {
-        if (parent.subcategorias?.some((sub) => initialIds.includes(sub.value))) {
-          initialExpanded[parent.value] = true;
-        }
-      });
-
-      setExpandedCategories((prevExpanded) => {
-        if (JSON.stringify(prevExpanded) === JSON.stringify(initialExpanded)) {
-          return prevExpanded;
-        }
-        return initialExpanded;
-      });
-
-      validateSelections(initialIds);
+    } else if (prev && !curr) {
+      // search cleared
+      setExpandedCategories(new Set());
     }
-  }, [categoriasPadreOptions, initialSelectedSubcategoryIds, validateSelections]);
+    prevSearchRef.current = curr;
+  }, [searchTerm, filteredCategories]);
 
-  // Expandir/contraer una categoría
-  const toggleExpand = useCallback((parentId, e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  // notify parent of changes
+  const notifyChanges = useCallback(
+    (selectedSet) => {
+      const arr = Array.from(selectedSet);
+      onChange?.(arr);
+      onError?.(arr.length === 0 ? "Selecciona al menos una subcategoría" : null);
+    },
+    [onChange, onError]
+  );
 
-    preservarScroll(() => {
-      setExpandedCategories((prev) => ({
-        ...prev,
-        [parentId]: !prev[parentId],
-      }));
+  // toggle one subcategory
+  const handleSubcategoryToggle = useCallback(
+    (subcategoryId) => {
+      setSelectedSubcategories((prev) => {
+        const next = new Set(prev);
+        if (next.has(subcategoryId)) next.delete(subcategoryId);
+        else next.add(subcategoryId);
+        setTimeout(() => notifyChanges(next), 0);
+        return next;
+      });
+    },
+    [notifyChanges]
+  );
+
+  // expand/collapse parent
+  const toggleCategory = useCallback((catId) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(catId)) next.delete(catId);
+      else next.add(catId);
+      return next;
     });
   }, []);
 
-  // Activar/desactivar una categoría
-  const toggleCategory = useCallback(
-    (parentId, e) => {
-      if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-
-      preservarScroll(() => {
-        const isSelected = getSelectedParentIds(selectedSubcategories).includes(parentId);
-        const parent = categoriasPadreOptions.find((p) => p.value === parentId);
-
-        let newSubcategories = [...selectedSubcategories];
-
-        if (isSelected) {
-          // Remover todas las subcategorías de esta categoría
-          newSubcategories = newSubcategories.filter((id) => !parent.subcategorias?.some((sub) => sub.value === id));
-        } else {
-          // Expandir automáticamente al activar
-          setExpandedCategories((prev) => ({ ...prev, [parentId]: true }));
-        }
-
-        setSelectedSubcategories(newSubcategories);
-        validateSelections(newSubcategories);
-        onChange(newSubcategories);
+  // select/deselect all in a parent
+  const selectAllInCategory = useCallback(
+    (category) => {
+      setSelectedSubcategories((prev) => {
+        const next = new Set(prev);
+        category.subcategorias?.forEach((s) => next.add(s.value));
+        setTimeout(() => notifyChanges(next), 0);
+        return next;
       });
     },
-    [selectedSubcategories, getSelectedParentIds, categoriasPadreOptions, validateSelections, onChange]
+    [notifyChanges]
   );
-
-  // Seleccionar/deseleccionar una subcategoría
-  const toggleSubcategory = useCallback(
-    (subcategoryId, e) => {
-      if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-
-      preservarScroll(() => {
-        const newSubcategories = selectedSubcategories.includes(subcategoryId)
-          ? selectedSubcategories.filter((id) => id !== subcategoryId)
-          : [...selectedSubcategories, subcategoryId];
-
-        setSelectedSubcategories(newSubcategories);
-        validateSelections(newSubcategories);
-        onChange(newSubcategories);
+  const deselectAllInCategory = useCallback(
+    (category) => {
+      setSelectedSubcategories((prev) => {
+        const next = new Set(prev);
+        category.subcategorias?.forEach((s) => next.delete(s.value));
+        setTimeout(() => notifyChanges(next), 0);
+        return next;
       });
     },
-    [selectedSubcategories, validateSelections, onChange]
+    [notifyChanges]
   );
 
-  // Seleccionar todas o ninguna subcategoría
-  const toggleAllSubcategories = useCallback(
-    (parentId, selectAll, e) => {
-      if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-
-      preservarScroll(() => {
-        const parent = categoriasPadreOptions.find((p) => p.value === parentId);
-        if (!parent?.subcategorias) return;
-
-        let newSubcategories = [...selectedSubcategories];
-
-        if (selectAll) {
-          // Agregar todas las subcategorías que no están seleccionadas
-          parent.subcategorias.forEach((sub) => {
-            if (!newSubcategories.includes(sub.value)) {
-              newSubcategories.push(sub.value);
-            }
-          });
-        } else {
-          // Quitar todas las subcategorías de esta categoría
-          newSubcategories = newSubcategories.filter((id) => !parent.subcategorias.some((sub) => sub.value === id));
-        }
-
-        setSelectedSubcategories(newSubcategories);
-        validateSelections(newSubcategories);
-        onChange(newSubcategories);
-      });
-    },
-    [selectedSubcategories, categoriasPadreOptions, validateSelections, onChange]
+  const getSelectedCountInCategory = useCallback(
+    (category) => category.subcategorias?.filter((s) => selectedSubcategories.has(s.value)).length || 0,
+    [selectedSubcategories]
   );
 
-  // Calcular IDs de categorías padre seleccionadas
-  const selectedParentIds = useMemo(() => getSelectedParentIds(selectedSubcategories), [getSelectedParentIds, selectedSubcategories]);
-
-  // Componente de subcategoría
-  const SubcategoryItem = React.memo(({ sub, isSubSelected, onToggle }) => (
-    <label
-      className={`
-        flex items-center p-3 rounded-lg border cursor-pointer transition-all hover:shadow-sm
-        ${
-          isSubSelected
-            ? "bg-primary/10 border-primary/30 dark:bg-primary/20 dark:border-primary/40"
-            : "bg-white border-gray-200 hover:border-gray-300 dark:bg-slate-700 dark:border-slate-600 dark:hover:border-slate-500"
-        }
-      `}
-      onClick={(e) => onToggle(sub.value, e)}
-    >
-      <input
-        type="checkbox"
-        checked={isSubSelected}
-        onChange={(e) => e.stopPropagation()}
-        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary mr-3"
-        onClick={(e) => e.stopPropagation()}
-      />
-      <span className="text-sm text-textPrimary dark:text-white">{sub.label}</span>
-    </label>
-  ));
-
-  // Componente de categoría
-  const CategoryItem = React.memo(({ parent }) => {
-    const isSelected = selectedParentIds.includes(parent.value);
-    const isExpanded = expandedCategories[parent.value];
-    const hasSubcategories = parent.subcategorias?.length > 0;
-    const selectedCount = parent.subcategorias?.filter((sub) => selectedSubcategories.includes(sub.value)).length || 0;
-    const hasError = validationErrors[parent.value];
-
-    return (
-      <div className={`${isSelected ? "bg-blue-50 dark:bg-slate-700/50" : ""}`}>
-        {/* Header de categoría */}
-        <div className={`flex items-center ${hasError ? "bg-red-50 dark:bg-red-900/20" : ""}`}>
-          {/* Toggle switch */}
-          <div className="p-4" onClick={(e) => e.stopPropagation()}>
-            <label className="inline-flex items-center cursor-pointer">
-              <input type="checkbox" checked={isSelected} onChange={(e) => toggleCategory(parent.value, e)} className="sr-only peer" />
-              <div className="relative w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
-            </label>
-          </div>
-
-          {/* Área expandible */}
-          <div
-            className={`flex-1 flex items-center justify-between p-4 pl-0 ${
-              hasSubcategories ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/30" : ""
-            } transition-colors`}
-            onClick={(e) => (hasSubcategories ? toggleExpand(parent.value, e) : undefined)}
-          >
-            <div className="flex items-center gap-3">
-              <span className="font-medium text-textPrimary dark:text-white">{parent.label}</span>
-              {isSelected && selectedCount > 0 && (
-                <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-full">
-                  {selectedCount}
-                </span>
-              )}
-            </div>
-
-            {hasSubcategories && (
-              <DynamicIcon name={isExpanded ? "ChevronUp" : "ChevronDown"} className="h-5 w-5 text-gray-500 dark:text-slate-400" />
-            )}
-          </div>
-        </div>
-
-        {/* Error */}
-        {hasError && (
-          <div className="mx-4 mb-3 p-3 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-md">
-            <div className="flex items-center gap-2">
-              <DynamicIcon name="AlertTriangle" className="h-4 w-4 flex-shrink-0" />
-              <span>{hasError}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Subcategorías */}
-        {isExpanded && hasSubcategories && (
-          <div className="bg-gray-50 dark:bg-slate-800/30">
-            {/* Header subcategorías */}
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-slate-700">
-              <span className="text-sm font-medium text-textPrimary dark:text-white">Subcategorías ({parent.subcategorias.length})</span>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={(e) => toggleAllSubcategories(parent.value, true, e)}
-                  className="text-xs text-primary hover:underline font-medium"
-                >
-                  Todas
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => toggleAllSubcategories(parent.value, false, e)}
-                  className="text-xs text-red-500 hover:underline font-medium"
-                >
-                  Ninguna
-                </button>
-              </div>
-            </div>
-
-            {/* Grid subcategorías */}
-            <div className="p-4 pt-0">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {parent.subcategorias.map((sub) => (
-                  <SubcategoryItem key={sub.value} sub={sub} isSubSelected={selectedSubcategories.includes(sub.value)} onToggle={toggleSubcategory} />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  });
+  // clear search and selections
+  const clearSearch = useCallback(() => setSearchTerm(""), []);
+  const clearAllSelections = useCallback(() => {
+    const empty = new Set();
+    setSelectedSubcategories(empty);
+    setTimeout(() => notifyChanges(empty), 0);
+  }, [notifyChanges]);
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-slate-700">
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-medium text-textPrimary dark:text-white">Categorías y Subcategorías</h3>
-          <span className="text-sm text-gray-500 dark:text-slate-400">
-            {selectedParentIds.length} categorías | {selectedSubcategories.length} subcategorías
-          </span>
+    <div className="w-full bg-background dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
+      {/* search bar */}
+      <div className="p-3 border-b border-gray-200 dark:border-slate-700">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-textTertiary dark:text-slate-400" />
+          <input
+            type="text"
+            placeholder="Buscar subcategorías..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-md bg-background dark:bg-slate-700 text-textPrimary dark:text-white placeholder-textTertiary dark:placeholder-slate-400 focus:ring-2 focus:ring-primary focus:border-transparent"
+          />
+          {searchTerm && (
+            <button
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-textTertiary dark:text-slate-400 hover:text-textPrimary dark:hover:text-slate-300"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Contenido */}
-      <div ref={contenedorRef} className="overflow-y-auto max-h-[400px]" style={{ scrollBehavior: "smooth" }}>
-        {categoriasPadreOptions.length === 0 ? (
-          <div className="p-6 text-center text-gray-500 dark:text-slate-400">No hay categorías disponibles</div>
-        ) : (
-          <div className="divide-y divide-gray-200 dark:divide-slate-700">
-            {categoriasPadreOptions.map((parent) => (
-              <CategoryItem key={parent.value} parent={parent} />
-            ))}
+      {/* list */}
+      <div className="h-64 overflow-y-auto">
+        {filteredCategories.length === 0 ? (
+          <div className="p-4 text-center text-textSecondary dark:text-slate-400 text-sm">
+            {searchTerm ? "No se encontraron subcategorías" : "No hay categorías disponibles"}
           </div>
+        ) : (
+          filteredCategories.map((category) => {
+            const totalSub = category.subcategorias?.length || 0;
+            const isExpanded = expandedCategories.has(category.value);
+            const selectedCount = getSelectedCountInCategory(category);
+
+            return (
+              <div key={category.value} className="border-b border-gray-100 dark:border-slate-700 last:border-b-0">
+                {/* parent header */}
+                <div
+                  onClick={() => (totalSub > 0 ? toggleCategory(category.value) : null)}
+                  className={`flex items-center justify-between p-3 ${
+                    totalSub > 0 ? "cursor-pointer hover:bg-accent/50 dark:hover:bg-slate-700/70 transition-colors" : ""
+                  }`}
+                >
+                  <div className="flex items-center min-w-0 flex-1 space-x-2">
+                    {totalSub > 0 ? (
+                      isExpanded ? (
+                        <ChevronDown className="w-4 h-4 text-textTertiary dark:text-slate-500" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-textTertiary dark:text-slate-500" />
+                      )
+                    ) : null}
+                    {category.icono && <DynamicIcon name={category.icono} className="w-4 h-4 text-textTertiary dark:text-slate-500" />}
+                    <span className="font-medium text-textPrimary dark:text-white text-sm truncate">{category.label}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {selectedCount > 0 && (
+                      <span className="bg-primary/20 text-primary dark:bg-primary/30 dark:text-primary-light text-xs px-2 py-1 rounded-full">
+                        {selectedCount}
+                      </span>
+                    )}
+                    {totalSub > 0 && isExpanded && (
+                      <div className="flex gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            selectAllInCategory(category);
+                          }}
+                          className="text-xs text-primary dark:text-primary-light hover:underline px-1"
+                        >
+                          +
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deselectAllInCategory(category);
+                          }}
+                          className="text-xs text-red-600 dark:text-red-400 hover:underline px-1"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* subcategories */}
+                {isExpanded && totalSub > 0 && (
+                  <div className="bg-accent/30 dark:bg-slate-700/30">
+                    {category.subcategorias.map((sub) => {
+                      const isSelected = selectedSubcategories.has(sub.value);
+                      return (
+                        <div
+                          key={sub.value}
+                          onClick={() => handleSubcategoryToggle(sub.value)}
+                          className="flex items-center p-2 pl-6 cursor-pointer hover:bg-accent/60 dark:hover:bg-slate-600/60 transition-colors"
+                        >
+                          <div
+                            className={`w-4 h-4 rounded border-2 mr-3 flex items-center justify-center transition-colors ${
+                              isSelected ? "bg-primary border-primary text-white" : "border-gray-300 dark:border-slate-500"
+                            }`}
+                          >
+                            {isSelected && <Check className="w-2.5 h-2.5" />}
+                          </div>
+                          {sub.icono && <DynamicIcon name={sub.icono} className="w-4 h-4 text-textSecondary dark:text-slate-200 mr-2" />}
+                          <span className="text-textSecondary dark:text-slate-200 text-sm truncate">{sub.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
+      </div>
+
+      {/* footer */}
+      <div className="p-3 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/70">
+        <div className="flex justify-between items-center text-sm text-textSecondary dark:text-slate-400">
+          <span>
+            {selectedSubcategories.size} seleccionada
+            {selectedSubcategories.size !== 1 && "s"}
+          </span>
+          {selectedSubcategories.size > 0 && (
+            <button onClick={clearAllSelections} className="text-red-600 dark:text-red-400 hover:underline text-xs">
+              Limpiar
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
-CategorySubcategorySelector.propTypes = {
-  categoriasPadreOptions: PropTypes.array.isRequired,
-  initialSelectedSubcategoryIds: PropTypes.array,
-  onChange: PropTypes.func.isRequired,
-  onError: PropTypes.func,
-};
-
-export default CategorySubcategorySelector;
+export default CategorySelector;
