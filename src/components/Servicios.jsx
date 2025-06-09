@@ -112,11 +112,21 @@ const Servicios = () => {
       <section className="py-8 px-4 sm:px-8 max-w-6xl mx-auto mb-24">
         <h2 className="text-3xl font-bold text-center text-white dark:text-white drop-shadow mt-10 mb-8">Nuestros Servicios Destacados</h2>
         <div className="block w-full h-[1px] bg-gray-300 dark:bg-white/20 mx-auto mb-14" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 md:gap-8">
+        <div
+          className={`grid gap-10 md:gap-8 ${
+            servicesToRender.length === 1
+              ? "grid-cols-1 justify-items-center"
+              : servicesToRender.length === 2
+              ? "grid-cols-1 md:grid-cols-2 justify-items-center"
+              : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+          }`}
+        >
           {servicesToRender.map((service) => (
             <div
-              key={service.id || service.titulo} // Usar service.id si existe, sino titulo como fallback key
-              className="bg-background dark:bg-gray-800 rounded-xl shadow-lg flex flex-col items-center text-center transition-all duration-300 ease-in-out hover:shadow-2xl hover:-translate-y-1"
+              key={service.id || service.titulo}
+              className={`bg-background dark:bg-gray-800 rounded-xl shadow-lg flex flex-col items-center text-center transition-all duration-300 ease-in-out hover:shadow-2xl hover:-translate-y-1 ${
+                servicesToRender.length <= 2 ? "max-w-sm w-full" : ""
+              }`}
             >
               <div className="relative w-full px-6 pt-12 pb-8 flex flex-col items-center flex-grow">
                 <div className="absolute -top-7 left-1/2 transform -translate-x-1/2 bg-primary dark:bg-accent rounded-full p-3 shadow-md border-2 border-background dark:border-gray-800">
