@@ -1,0 +1,51 @@
+[[redirects]]
+  from = "/api/*"
+  to = "https://nayenailsbackend.onrender.com/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "https://nayenailsbackend.onrender.com/:splat"
+  status = 200
+  conditions = { User-Agent = "facebookexternalhit" }
+
+[[redirects]]
+  from = "/*"
+  to = "https://nayenailsbackend.onrender.com/:splat"
+  status = 200
+  conditions = { User-Agent = "Twitterbot" }
+
+[[redirects]]
+  from = "/*"
+  to = "https://nayenailsbackend.onrender.com/:splat"
+  status = 200
+  conditions = { User-Agent = "WhatsApp" }
+
+[[redirects]]
+  from = "/*"
+  to = "https://nayenailsbackend.onrender.com/:splat"
+  status = 200
+  conditions = { User-Agent = "TelegramBot" }
+
+[[redirects]]
+  from = "/*"
+  to = "https://nayenailsbackend.onrender.com/:splat"
+  status = 200
+  conditions = { User-Agent = "Pinterest" }
+
+[[redirects]]
+  from = "/*"
+  to = "https://nayenailsbackend.onrender.com/:splat"
+  status = 200
+  conditions = { User-Agent = "LinkedInBot" }
+
+[[redirects]]
+  from = "/*"
+  to = "https://nayenailsbackend.onrender.com/:splat"
+  status = 200
+  conditions = { User-Agent = "Discordbot" }
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
