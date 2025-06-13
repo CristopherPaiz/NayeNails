@@ -1,21 +1,19 @@
-# Regla 1: Redirigir todas las llamadas a la API hacia tu backend en Render.
-# Esta regla se procesa antes que la Edge Function para las rutas /api.
+# Regla para la API. Debe ir primero para tener prioridad sobre la ruta "/*".
 [[redirects]]
   from = "/api/*"
   to = "https://nayenailsbackend.onrender.com/api/:splat"
   status = 200
 
-# Regla 2: Para cualquier otra petición de un usuario normal (no bot),
-# servir el archivo principal de tu aplicación React.
-# La Edge Function se ejecuta primero; si no reescribe la URL (porque no es un bot),
-# esta regla se aplicará.
+# Declaración de la Edge Function.
+# Se ejecutará en todas las rutas que no coincidan con la regla de la API.
+[[edge_functions]]
+  path = "/*"
+  function = "preview-proxy"
+
+# Regla de fallback para la SPA.
+# Si la Edge Function no reescribe la URL (porque no es un bot),
+# esta regla se asegura de que el usuario vea la aplicación de React.
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-# Declaración de la Edge Function.
-# Le dice a Netlify que ejecute la función 'preview-proxy' para todas las rutas.
-[[edge_functions]]
-  path = "/*"
-  function = "preview-proxy"
