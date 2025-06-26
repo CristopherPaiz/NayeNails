@@ -8,6 +8,7 @@ import useApiRequest from "../hooks/useApiRequest";
 import CRInput from "../components/UI/CRInput";
 import CRButton from "../components/UI/CRButton";
 import CRModal from "../components/UI/CRModal";
+import CRAlert from "../components/UI/CRAlert";
 
 import { capitalizeWords } from "../utils/textUtils";
 import {
@@ -139,9 +140,12 @@ const Explorar = () => {
       const nailToOpen = displayedNails.find((n) => n.id.toString() === urlId);
       if (nailToOpen) {
         openDetailModal(nailToOpen);
+      } else {
+        CRAlert.alert({ title: "No Encontrado", message: "El diseño que buscas no existe o no está disponible.", type: "warning" });
+        navigate(`/explorar-unas${location.search}`, { replace: true });
       }
     }
-  }, [urlId, isLoadingApiDisenios, displayedNails, isDetailModalOpen, openDetailModal]);
+  }, [urlId, isLoadingApiDisenios, displayedNails, isDetailModalOpen, openDetailModal, navigate, location.search]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -738,6 +742,7 @@ const Explorar = () => {
           <CRModal
             isOpen={isDetailModalOpen}
             setIsOpen={closeDetailModal}
+            managesHistory={false}
             title={
               <span className="flex items-center">
                 <DynamicIcon name="Sparkles" className="w-5 h-5 mr-2 text-primary" />

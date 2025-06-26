@@ -16,19 +16,22 @@ const CRModal = ({
   fullScreen = false,
   className,
   children,
+  managesHistory = true,
 }) => {
   useEffect(() => {
     if (isOpen) {
       onOpen?.();
       document.body.style.overflow = "hidden";
-      window.history.pushState(null, "", window.location.href);
+      if (managesHistory) {
+        window.history.pushState(null, "", window.location.href);
+      }
     } else {
       document.body.style.overflow = "";
     }
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isOpen, onOpen]);
+  }, [isOpen, onOpen, managesHistory]);
 
   const handleClose = useCallback(() => {
     if (closable) {
@@ -38,6 +41,8 @@ const CRModal = ({
   }, [closable, setIsOpen, onClose]);
 
   useEffect(() => {
+    if (!managesHistory) return;
+
     const handlePopState = (event) => {
       event.preventDefault();
       if (isOpen) {
@@ -47,7 +52,7 @@ const CRModal = ({
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [isOpen, handleClose]);
+  }, [isOpen, handleClose, managesHistory]);
 
   useEffect(() => {
     const handleEscapeKey = (event) => {
@@ -123,6 +128,7 @@ CRModal.propTypes = {
   fullScreen: PropTypes.bool,
   className: PropTypes.string,
   children: PropTypes.node,
+  managesHistory: PropTypes.bool,
 };
 
 export default CRModal;
