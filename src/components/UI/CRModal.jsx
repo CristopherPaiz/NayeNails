@@ -1,6 +1,5 @@
 import { useEffect, useCallback } from "react";
 import PropTypes from "prop-types";
-import { useNavigate } from "react-router-dom";
 
 const CRModal = ({
   title,
@@ -17,58 +16,29 @@ const CRModal = ({
   fullScreen = false,
   className,
   children,
-  historyPath,
-  historyBaseUrl,
 }) => {
-  const navigate = useNavigate();
-
   const handleClose = useCallback(() => {
-    if (!closable) return;
-
-    if (historyPath) {
-      if (window.history.length > 2) {
-        window.history.back();
-      } else {
-        navigate(historyBaseUrl || "/", { replace: true });
-        setIsOpen(false);
-        onClose?.();
-      }
-    } else {
-      if (window.history.state?.modalId === "generic") {
-        window.history.back();
-      } else {
-        setIsOpen(false);
-        onClose?.();
+    if (closable) {
+      setIsOpen(false);
+      if (onClose) {
+        onClose();
       }
     }
-  }, [closable, historyPath, historyBaseUrl, navigate, setIsOpen, onClose]);
+  }, [closable, setIsOpen, onClose]);
 
   useEffect(() => {
     if (isOpen) {
-      onOpen?.();
+      if (onOpen) {
+        onOpen();
+      }
       document.body.style.overflow = "hidden";
-      const state = historyPath ? { modalPath: historyPath } : { modalId: "generic" };
-      const path = historyPath || window.location.href;
-      window.history.pushState(state, "", path);
     } else {
       document.body.style.overflow = "";
     }
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isOpen, onOpen, historyPath]);
-
-  useEffect(() => {
-    const handlePopState = () => {
-      if (isOpen) {
-        setIsOpen(false);
-        onClose?.();
-      }
-    };
-
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, [isOpen, onClose, setIsOpen]);
+  }, [isOpen, onOpen]);
 
   useEffect(() => {
     const handleEscapeKey = (event) => {
@@ -144,8 +114,6 @@ CRModal.propTypes = {
   fullScreen: PropTypes.bool,
   className: PropTypes.string,
   children: PropTypes.node,
-  historyPath: PropTypes.string,
-  historyBaseUrl: PropTypes.string,
 };
 
 export default CRModal;

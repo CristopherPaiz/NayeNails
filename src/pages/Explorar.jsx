@@ -119,26 +119,40 @@ const Explorar = () => {
   const totalPagesApi = apiData?.totalPages ?? 1;
   const displayedNails = diseniosFromApi;
 
-  const openDetailModal = (nailDesign) => {
-    setSelectedNailForModal(nailDesign);
-    setIsDetailModalOpen(true);
-  };
+  const openDetailModal = useCallback(
+    (nailDesign) => {
+      if (!nailDesign) return;
+      console.log(`[openDetailModal] Abriendo modal para ID: ${nailDesign.id}. Navegando a... /explorar-unas/${nailDesign.id}${location.search}`);
+      setSelectedNailForModal(nailDesign);
+      setIsDetailModalOpen(true);
+      navigate(`/explorar-unas/${nailDesign.id}${location.search}`, { replace: true });
+    },
+    [navigate, location.search]
+  );
 
-  const closeDetailModal = () => {
+  const closeDetailModal = useCallback(() => {
+    console.log(`[closeDetailModal] Cerrando modal. Navegando a... /explorar-unas${location.search}`);
+    setIsDetailModalOpen(false);
     setSelectedNailForModal(null);
-  };
+    navigate(`/explorar-unas${location.search}`, { replace: true });
+  }, [navigate, location.search]);
 
   useEffect(() => {
-    if (urlId && !isLoadingApiDisenios && displayedNails.length > 0 && !isDetailModalOpen) {
+    if (urlId && !isLoadingApiDisenios && displayedNails.length > 0) {
+      if (selectedNailForModal?.id?.toString() === urlId) {
+        return;
+      }
       const nailToOpen = displayedNails.find((n) => n.id.toString() === urlId);
       if (nailToOpen) {
+        console.log(`[Effect] ID en URL (${urlId}) detectado. Abriendo modal.`);
         openDetailModal(nailToOpen);
       } else {
-        CRAlert.alert({ title: "No Encontrado", message: "El diseño que buscas no existe o no está disponible.", type: "warning" });
+        console.warn(`[Effect] ID en URL (${urlId}) no encontrado en la página actual. Navegando a la base.`);
+        CRAlert.alert({ title: "No Encontrado", message: "El diseño que buscas no está en esta página o no existe.", type: "warning" });
         navigate(`/explorar-unas${location.search}`, { replace: true });
       }
     }
-  }, [urlId, isLoadingApiDisenios, displayedNails, isDetailModalOpen, navigate, location.search]);
+  }, [urlId, isLoadingApiDisenios, displayedNails, selectedNailForModal, openDetailModal, navigate, location.search]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -736,8 +750,6 @@ const Explorar = () => {
             isOpen={isDetailModalOpen}
             setIsOpen={setIsDetailModalOpen}
             onClose={closeDetailModal}
-            historyPath={`/explorar-unas/${selectedNailForModal.id}${location.search}`}
-            historyBaseUrl={`/explorar-unas${location.search}`}
             title={
               <span className="flex items-center">
                 <DynamicIcon name="Sparkles" className="w-5 h-5 mr-2 text-primary" />
