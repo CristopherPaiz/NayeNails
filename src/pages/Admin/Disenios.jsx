@@ -600,6 +600,7 @@ const DiseniosAdminPage = () => {
           title={modalMode === "add" ? "Añadir Nuevo Diseño" : "Editar Diseño"}
           width={window.innerWidth < 768 ? 95 : 70}
           height={window.innerWidth < 768 ? 90 : "auto"}
+          modifiesURL={false}
         >
           <form onSubmit={handleSubmit} className="space-y-4 p-1">
             <CRInput
@@ -738,7 +739,13 @@ const DiseniosAdminPage = () => {
       )}
 
       {showCropModal && originalImagePreview && (
-        <CRModal isOpen={showCropModal} setIsOpen={handleCropCancel} title="Recortar Imagen" width={window.innerWidth < 768 ? 95 : 80}>
+        <CRModal
+          isOpen={showCropModal}
+          setIsOpen={handleCropCancel}
+          title="Recortar Imagen"
+          width={window.innerWidth < 768 ? 95 : 80}
+          modifiesURL={false}
+        >
           <div className="space-y-4 p-4">
             <div className="flex justify-center">
               <ReactCrop

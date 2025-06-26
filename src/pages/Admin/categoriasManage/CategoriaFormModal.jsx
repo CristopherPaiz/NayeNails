@@ -78,6 +78,7 @@ const CategoriaFormModal = ({ isOpen, onClose, onSubmit, mode, categoriaToEdit, 
       title={modalTitleText}
       width={window.innerWidth < 640 ? 90 : 30}
       height={window.innerWidth < 640 ? (openIconSelector ? 65 : 55) : openIconSelector ? 75 : 60}
+      modifiesURL={false}
     >
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 p-2">
         <CRInput

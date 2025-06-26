@@ -297,6 +297,7 @@ const AdminCitasPage = () => {
         setIsOpen={setIsReagendarModalOpen}
         title={`Reagendar Cita de ${citaParaReagendar?.nombre_cliente || ""}`}
         width={window.innerWidth < 768 ? 90 : 40}
+        modifiesURL={false}
       >
         {citaParaReagendar && (
           <div className="space-y-4 p-2">
