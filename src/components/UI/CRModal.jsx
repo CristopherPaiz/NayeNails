@@ -41,18 +41,6 @@ const CRModal = ({
   }, [isOpen, onOpen]);
 
   useEffect(() => {
-    const handlePopState = (event) => {
-      if (isOpen) {
-        event.preventDefault();
-        handleClose();
-      }
-    };
-
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, [isOpen, handleClose]);
-
-  useEffect(() => {
     const handleEscapeKey = (event) => {
       if (event.key === "Escape" && !disableEscapeKeyDown) {
         handleClose();

@@ -119,31 +119,26 @@ const Explorar = () => {
   const totalPagesApi = apiData?.totalPages ?? 1;
   const displayedNails = diseniosFromApi;
 
-  const openDetailModal = useCallback(
-    (nailDesign) => {
-      if (!nailDesign) return;
-      setSelectedNailForModal(nailDesign);
-      setIsDetailModalOpen(true);
-      navigate(`/explorar-unas/${nailDesign.id}${location.search}`, { replace: true });
-    },
-    [navigate, location.search]
-  );
+  const openDetailModal = (nailDesign) => {
+    if (!nailDesign) return;
+    setSelectedNailForModal(nailDesign);
+    setIsDetailModalOpen(true);
+    navigate(`/explorar-unas/${nailDesign.id}${location.search}`, { replace: true });
+  };
 
-  const closeDetailModal = useCallback(() => {
-    setIsDetailModalOpen(false);
+  const closeDetailModal = () => {
     setSelectedNailForModal(null);
+    setIsDetailModalOpen(false);
     navigate(`/explorar-unas${location.search}`, { replace: true });
-  }, [navigate, location.search]);
+  };
 
   useEffect(() => {
     if (urlId) {
-      if (isDetailModalOpen && selectedNailForModal?.id.toString() === urlId) {
-        return;
-      }
-      if (!isLoadingApiDisenios && displayedNails.length > 0) {
+      if (!isDetailModalOpen) {
         const nailToOpen = displayedNails.find((n) => n.id.toString() === urlId);
         if (nailToOpen) {
-          openDetailModal(nailToOpen);
+          setSelectedNailForModal(nailToOpen);
+          setIsDetailModalOpen(true);
         }
       }
     } else {
@@ -152,7 +147,7 @@ const Explorar = () => {
         setSelectedNailForModal(null);
       }
     }
-  }, [urlId, displayedNails, isLoadingApiDisenios, isDetailModalOpen, openDetailModal, selectedNailForModal]);
+  }, [urlId, displayedNails, isDetailModalOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
