@@ -16,13 +16,14 @@ import Perfil from "../pages/Admin/Perfil";
 import Disenios from "../pages/Admin/Disenios";
 import Categorias from "../pages/Admin/Categorias";
 import TextosColoresPage from "../pages/Admin/TextosColoresPage";
-import AdminCitasPage from "../pages/Admin/AdminCitasPage"; // NUEVA PÁGINA DE CITAS ADMIN
+import AdminCitasPage from "../pages/Admin/AdminCitasPage";
 
 const AppRouter = () => {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path={`${CATALOGO_BASE_PATH}/:id`} element={<Explorar />} />
       <Route path={CATALOGO_BASE_PATH} element={<Explorar />} />
       <Route path="/agendar-cita" element={<AgendaPage />} />
       <Route path="/ubicacion" element={<UbicacionPage />} />
@@ -36,7 +37,7 @@ const AppRouter = () => {
           <Route path="disenios" element={<Disenios />} />
           <Route path="config" element={<Configuraciones />} />
           <Route path="textos-colores" element={<TextosColoresPage />} />
-          <Route path="citas" element={<AdminCitasPage />} /> {/* NUEVA RUTA ADMIN CITAS */}
+          <Route path="citas" element={<AdminCitasPage />} />
           <Route path="perfil" element={<Perfil />} />
         </Route>
       </Route>

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { DynamicIcon } from "../utils/DynamicIcon";
 import useStoreNails from "../store/store";
 import CRLoader from "../components/UI/CRLoader";
@@ -51,6 +51,7 @@ const Explorar = () => {
   useScrollToTop();
   const location = useLocation();
   const navigate = useNavigate();
+  const { id: urlId } = useParams();
   const { TAG_COLORS, dynamicNavItems, isLoadingDynamicNav: isLoadingNavItemsStore, errorDynamicNav, fetchDynamicNavItems } = useStoreNails();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -64,8 +65,8 @@ const Explorar = () => {
 
   const [showTutorial, setShowTutorial] = useState(false);
   const [isMobileForTutorial, setIsMobileForTutorial] = useState(false);
-  const tutorialTimerRef = useRef(null); // Ref para el temporizador principal del tutorial
-  const tutorialVisibilityTimerRef = useRef(null); // Ref para el temporizador de visibilidad
+  const tutorialTimerRef = useRef(null);
+  const tutorialVisibilityTimerRef = useRef(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -117,10 +118,34 @@ const Explorar = () => {
   const totalPagesApi = apiData?.totalPages ?? 1;
   const displayedNails = diseniosFromApi;
 
+  const openDetailModal = useCallback(
+    (nailDesign) => {
+      if (!nailDesign) return;
+      setSelectedNailForModal(nailDesign);
+      setIsDetailModalOpen(true);
+      navigate(`/explorar-unas/${nailDesign.id}${location.search}`, { replace: true });
+    },
+    [navigate, location.search]
+  );
+
+  const closeDetailModal = useCallback(() => {
+    setIsDetailModalOpen(false);
+    setSelectedNailForModal(null);
+    navigate(`/explorar-unas${location.search}`, { replace: true });
+  }, [navigate, location.search]);
+
+  useEffect(() => {
+    if (urlId && !isLoadingApiDisenios && displayedNails.length > 0 && !isDetailModalOpen) {
+      const nailToOpen = displayedNails.find((n) => n.id.toString() === urlId);
+      if (nailToOpen) {
+        openDetailModal(nailToOpen);
+      }
+    }
+  }, [urlId, isLoadingApiDisenios, displayedNails, isDetailModalOpen, openDetailModal]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Limpiar temporizadores existentes si las dependencias cambian antes de que se completen
     if (tutorialTimerRef.current) clearTimeout(tutorialTimerRef.current);
     if (tutorialVisibilityTimerRef.current) clearTimeout(tutorialVisibilityTimerRef.current);
 
@@ -144,7 +169,6 @@ const Explorar = () => {
     }
 
     return () => {
-      // Función de limpieza para cuando el componente se desmonte o las dependencias cambien
       if (tutorialTimerRef.current) clearTimeout(tutorialTimerRef.current);
       if (tutorialVisibilityTimerRef.current) clearTimeout(tutorialVisibilityTimerRef.current);
     };
@@ -154,11 +178,6 @@ const Explorar = () => {
   const [globalSearchTermFilters, setGlobalSearchTermFilters] = useState("");
   const [visibleCountsPerCategory, setVisibleCountsPerCategory] = useState(initialVisibleCountsCalculated);
   const [expandedTags, setExpandedTags] = useState({});
-
-  const openDetailModal = (nailDesign) => {
-    setSelectedNailForModal(nailDesign);
-    setIsDetailModalOpen(true);
-  };
 
   useEffect(() => {
     setVisibleCountsPerCategory(initialVisibleCountsCalculated);
@@ -205,13 +224,15 @@ const Explorar = () => {
 
       currentParams.delete(filterTypeKey);
       newValuesForType.forEach((val) => currentParams.append(filterTypeKey, val));
-      navigate(`${location.pathname}?${currentParams.toString()}`, { replace: true });
+      const newSearch = currentParams.toString();
+      const newPath = urlId ? `/explorar-unas/${urlId}` : "/explorar-unas";
+      navigate(`${newPath}?${newSearch}`, { replace: true });
     },
-    [navigate, location.pathname, location.search]
+    [navigate, location.search, urlId]
   );
 
   const clearAllFilters = useCallback(() => {
-    navigate(location.pathname, { replace: true });
+    navigate("/explorar-unas", { replace: true });
     setSearchTerm("");
     setDebouncedSearchTerm("");
     setGlobalSearchTermFilters("");
@@ -219,7 +240,7 @@ const Explorar = () => {
     setExpandedTags({});
     setCurrentPage(1);
     setIsFilterPanelOpenMobile(false);
-  }, [navigate, location.pathname, initialVisibleCountsCalculated]);
+  }, [navigate, initialVisibleCountsCalculated]);
 
   const getNombreFiltro = useCallback((tipoKey, slug) => getNombreFiltroFromSlug(availableFilterOptions, tipoKey, slug), [availableFilterOptions]);
   const totalFiltrosActivosGeneral = useMemo(() => calculateTotalFiltrosActivos(parsedFiltersFromUrl), [parsedFiltersFromUrl]);
@@ -247,18 +268,17 @@ const Explorar = () => {
     (filterTypeKey, filterValueSlug) => {
       const newParams = new URLSearchParams();
       newParams.append(filterTypeKey, filterValueSlug);
-      navigate(`${location.pathname}?${newParams.toString()}`, { replace: true });
+      navigate(`/explorar-unas?${newParams.toString()}`, { replace: true });
       setIsFilterPanelOpenMobile(false);
       window.scrollTo(0, 0);
     },
-    [navigate, location.pathname]
+    [navigate]
   );
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
   const renderFilterPanelContent = useCallback(() => {
-    // ... (contenido del panel de filtros sin cambios)
     if (isLoadingNavItemsStore && availableFilterOptions.length === 0) {
       return <CRLoader text="Cargando filtros..." style="nailPaint" size="md" />;
     }
@@ -560,14 +580,14 @@ const Explorar = () => {
                             }
                             alt={una.nombre}
                             className={`h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105 cursor-pointer ${
-                              isTutorialTarget ? "relative z-[51]" : "" // Imagen sobre el overlay oscuro
+                              isTutorialTarget ? "relative z-[51]" : ""
                             }`}
-                            onClick={() => openDetailModal(una)} // Este onClick se prevendrá si el div del tutorial lo captura
+                            onClick={() => openDetailModal(una)}
                           />
                           {hasOffer && (
                             <div
                               className={`absolute top-2 right-2 bg-primary text-white text-lg sm:text-sm font-bold px-2.5 py-1 rounded-full shadow-md flex items-center animate-pulse ${
-                                isTutorialTarget ? "z-[51]" : "" // Badge de oferta sobre el overlay oscuro
+                                isTutorialTarget ? "z-[51]" : ""
                               }`}
                             >
                               <DynamicIcon name="Percent" className="inline-block w-3.5 h-3.5 mr-1" />
@@ -577,10 +597,10 @@ const Explorar = () => {
 
                           {isTutorialTarget && (
                             <div
-                              className="absolute inset-0 z-[52] cursor-pointer" // Cubre la imagen, captura el clic para el tutorial
+                              className="absolute inset-0 z-[52] cursor-pointer"
                               onClick={(e) => {
-                                e.stopPropagation(); // Previene que el clic llegue al onClick de la imagen (que abriría el modal)
-                                setShowTutorial(false); // Oculta el tutorial
+                                e.stopPropagation();
+                                setShowTutorial(false);
                                 if (tutorialTimerRef.current) clearTimeout(tutorialTimerRef.current);
                                 if (tutorialVisibilityTimerRef.current) clearTimeout(tutorialVisibilityTimerRef.current);
                               }}
@@ -597,7 +617,6 @@ const Explorar = () => {
                             </div>
                           )}
 
-                          {/* Botón de overlay "Ver detalles", solo visible si no es el tutorial y al hacer hover */}
                           {!isTutorialTarget && (
                             <button
                               type="button"
@@ -611,11 +630,9 @@ const Explorar = () => {
                         </div>
 
                         <div className="p-4 flex flex-col flex-grow">
-                          {/* ... (resto del contenido de la card sin cambios) ... */}
                           <h3
                             className="text-lg font-bold leading-tight text-textPrimary dark:text-white group-hover:text-primary transition-colors cursor-pointer mb-1 truncate"
                             onClick={() => {
-                              // Solo abre modal si el tutorial no está activo o no es el target
                               if (!(isTutorialTarget && showTutorial)) {
                                 openDetailModal(una);
                               }
@@ -698,7 +715,6 @@ const Explorar = () => {
               </>
             ) : (
               <div className="text-center py-12 px-2 md:px-0">
-                {/* ... (mensaje de no diseños encontrados sin cambios) ... */}
                 <DynamicIcon name="SearchX" size={48} className="mx-auto text-gray-400 dark:text-gray-500 mb-4" />
                 <p className="text-xl text-gray-500 dark:text-gray-400">No se encontraron diseños.</p>
                 <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
@@ -721,7 +737,7 @@ const Explorar = () => {
         {selectedNailForModal && (
           <CRModal
             isOpen={isDetailModalOpen}
-            setIsOpen={setIsDetailModalOpen}
+            setIsOpen={closeDetailModal}
             title={
               <span className="flex items-center">
                 <DynamicIcon name="Sparkles" className="w-5 h-5 mr-2 text-primary" />
@@ -730,7 +746,6 @@ const Explorar = () => {
             }
             width={typeof window !== "undefined" && window.innerWidth < 768 ? 95 : 60}
           >
-            {/* ... (contenido del modal sin cambios) ... */}
             <div className="p-1 sm:p-2">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 <img
