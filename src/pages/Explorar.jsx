@@ -743,6 +743,7 @@ const Explorar = () => {
               </span>
             }
             width={typeof window !== "undefined" && window.innerWidth < 768 ? 95 : 60}
+            manageHistory={false}
           >
             <div className="p-1 sm:p-2">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
