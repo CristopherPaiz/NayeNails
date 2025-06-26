@@ -754,6 +754,7 @@ const Explorar = () => {
                 {capitalizeWords(selectedNailForModal.nombre)}
               </span>
             }
+            modifiesURL={true}
             width={typeof window !== "undefined" && window.innerWidth < 768 ? 95 : 60}
           >
             <div className="p-1 sm:p-2">

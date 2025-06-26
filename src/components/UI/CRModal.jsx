@@ -16,6 +16,8 @@ const CRModal = ({
   fullScreen = false,
   className,
   children,
+  // Nueva prop para controlar el comportamiento del historial
+  modifiesURL = false,
 }) => {
   const handleClose = useCallback(() => {
     if (closable) {
@@ -33,10 +35,10 @@ const CRModal = ({
       }
       document.body.style.overflow = "hidden";
 
-      // Añadimos un estado al historial actual para indicar que hay un modal abierto
-      // Esto NO crea una nueva entrada en el historial
-      const currentState = window.history.state || {};
-      window.history.replaceState({ ...currentState, modalOpen: true }, "");
+      // Solo añadimos una entrada al historial si no se modifica la URL
+      if (!modifiesURL) {
+        window.history.pushState({ modalOpen: true }, "");
+      }
     } else {
       document.body.style.overflow = "";
     }
@@ -44,11 +46,10 @@ const CRModal = ({
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isOpen, onOpen]);
+  }, [isOpen, onOpen, modifiesURL]);
 
   useEffect(() => {
     const handlePopState = () => {
-      // Si el modal está abierto y se presiona atrás, cerramos el modal
       if (isOpen) {
         handleClose();
       }
@@ -132,6 +133,8 @@ CRModal.propTypes = {
   fullScreen: PropTypes.bool,
   className: PropTypes.string,
   children: PropTypes.node,
+  // Nueva prop para indicar si el modal modifica la URL
+  modifiesURL: PropTypes.bool,
 };
 
 export default CRModal;
