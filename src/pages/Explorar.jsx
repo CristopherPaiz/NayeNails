@@ -121,33 +121,25 @@ const Explorar = () => {
 
   const openDetailModal = (nailDesign) => {
     if (!nailDesign) return;
-    setSelectedNailForModal(nailDesign);
-    setIsDetailModalOpen(true);
-    navigate(`/explorar-unas/${nailDesign.id}${location.search}`, { replace: true });
+    navigate(`/explorar-unas/${nailDesign.id}${location.search}`);
   };
 
   const closeDetailModal = () => {
-    setSelectedNailForModal(null);
-    setIsDetailModalOpen(false);
-    navigate(`/explorar-unas${location.search}`, { replace: true });
+    navigate(`/explorar-unas${location.search}`);
   };
 
   useEffect(() => {
     if (urlId) {
-      if (!isDetailModalOpen) {
-        const nailToOpen = displayedNails.find((n) => n.id.toString() === urlId);
-        if (nailToOpen) {
-          setSelectedNailForModal(nailToOpen);
-          setIsDetailModalOpen(true);
-        }
+      const nailToOpen = displayedNails.find((n) => n.id.toString() === urlId);
+      if (nailToOpen) {
+        setSelectedNailForModal(nailToOpen);
+        setIsDetailModalOpen(true);
       }
     } else {
-      if (isDetailModalOpen) {
-        setIsDetailModalOpen(false);
-        setSelectedNailForModal(null);
-      }
+      setIsDetailModalOpen(false);
+      setSelectedNailForModal(null);
     }
-  }, [urlId, displayedNails, isDetailModalOpen]);
+  }, [urlId, displayedNails]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

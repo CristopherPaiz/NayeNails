@@ -32,13 +32,28 @@ const CRModal = ({
         onOpen();
       }
       document.body.style.overflow = "hidden";
+      window.history.pushState({ modalOpen: true }, "");
     } else {
+      if (window.history.state?.modalOpen) {
+        window.history.back();
+      }
       document.body.style.overflow = "";
     }
     return () => {
       document.body.style.overflow = "";
     };
   }, [isOpen, onOpen]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (isOpen) {
+        handleClose();
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [isOpen, handleClose]);
 
   useEffect(() => {
     const handleEscapeKey = (event) => {
