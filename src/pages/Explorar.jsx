@@ -137,7 +137,6 @@ const Explorar = () => {
       }
     } else {
       setIsDetailModalOpen(false);
-      setSelectedNailForModal(null);
     }
   }, [urlId, displayedNails]);
 
