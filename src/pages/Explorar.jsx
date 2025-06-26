@@ -121,15 +121,16 @@ const Explorar = () => {
 
   const openDetailModal = (nailDesign) => {
     if (!nailDesign) return;
-    // Update URL without adding a history entry (replace state instead of push state)
-    navigate(`/explorar-unas/${nailDesign.id}${location.search}`, { replace: false });
+    // Aquí sí queremos cambiar la URL con un nuevo punto en el historial
+    navigate(`/explorar-unas/${nailDesign.id}${location.search}`);
     setSelectedNailForModal(nailDesign);
     setIsDetailModalOpen(true);
   };
 
   const closeDetailModal = () => {
-    // Update URL back to the base URL
+    // Al cerrar, volvemos a la URL base sin el ID
     const baseUrl = `/explorar-unas${location.search}`;
+    // Reemplazamos la entrada actual en el historial en lugar de añadir una nueva
     navigate(baseUrl, { replace: true });
     setIsDetailModalOpen(false);
     setSelectedNailForModal(null);

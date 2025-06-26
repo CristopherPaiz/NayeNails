@@ -33,6 +33,10 @@ const CRModal = ({
       }
       document.body.style.overflow = "hidden";
 
+      // Añadimos un estado al historial actual para indicar que hay un modal abierto
+      // Esto NO crea una nueva entrada en el historial
+      const currentState = window.history.state || {};
+      window.history.replaceState({ ...currentState, modalOpen: true }, "");
     } else {
       document.body.style.overflow = "";
     }
@@ -44,6 +48,7 @@ const CRModal = ({
 
   useEffect(() => {
     const handlePopState = () => {
+      // Si el modal está abierto y se presiona atrás, cerramos el modal
       if (isOpen) {
         handleClose();
       }
