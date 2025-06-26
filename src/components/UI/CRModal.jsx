@@ -16,14 +16,27 @@ const CRModal = ({
   fullScreen = false,
   className,
   children,
-  managesHistory = true,
+  historyPath,
 }) => {
+  const handleClose = useCallback(() => {
+    if (closable) {
+      if (historyPath && window.history.state?.modalPath === historyPath) {
+        window.history.back();
+      } else {
+        setIsOpen(false);
+        onClose?.();
+      }
+    }
+  }, [closable, setIsOpen, onClose, historyPath]);
+
   useEffect(() => {
     if (isOpen) {
       onOpen?.();
       document.body.style.overflow = "hidden";
-      if (managesHistory) {
-        window.history.pushState(null, "", window.location.href);
+      if (historyPath) {
+        window.history.pushState({ modalPath: historyPath }, "", historyPath);
+      } else {
+        window.history.pushState({ modalId: "generic" }, "", window.location.href);
       }
     } else {
       document.body.style.overflow = "";
@@ -31,28 +44,19 @@ const CRModal = ({
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isOpen, onOpen, managesHistory]);
-
-  const handleClose = useCallback(() => {
-    if (closable) {
-      setIsOpen(false);
-      onClose?.();
-    }
-  }, [closable, setIsOpen, onClose]);
+  }, [isOpen, onOpen, historyPath]);
 
   useEffect(() => {
-    if (!managesHistory) return;
-
-    const handlePopState = (event) => {
-      event.preventDefault();
+    const handlePopState = () => {
       if (isOpen) {
-        handleClose();
+        setIsOpen(false);
+        onClose?.();
       }
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [isOpen, handleClose, managesHistory]);
+  }, [isOpen, onClose, setIsOpen]);
 
   useEffect(() => {
     const handleEscapeKey = (event) => {
@@ -128,7 +132,7 @@ CRModal.propTypes = {
   fullScreen: PropTypes.bool,
   className: PropTypes.string,
   children: PropTypes.node,
-  managesHistory: PropTypes.bool,
+  historyPath: PropTypes.string,
 };
 
 export default CRModal;

@@ -119,21 +119,14 @@ const Explorar = () => {
   const totalPagesApi = apiData?.totalPages ?? 1;
   const displayedNails = diseniosFromApi;
 
-  const openDetailModal = useCallback(
-    (nailDesign) => {
-      if (!nailDesign) return;
-      setSelectedNailForModal(nailDesign);
-      setIsDetailModalOpen(true);
-      navigate(`/explorar-unas/${nailDesign.id}${location.search}`, { replace: true });
-    },
-    [navigate, location.search]
-  );
+  const openDetailModal = (nailDesign) => {
+    setSelectedNailForModal(nailDesign);
+    setIsDetailModalOpen(true);
+  };
 
-  const closeDetailModal = useCallback(() => {
-    setIsDetailModalOpen(false);
+  const closeDetailModal = () => {
     setSelectedNailForModal(null);
-    navigate(`/explorar-unas${location.search}`, { replace: true });
-  }, [navigate, location.search]);
+  };
 
   useEffect(() => {
     if (urlId && !isLoadingApiDisenios && displayedNails.length > 0 && !isDetailModalOpen) {
@@ -145,7 +138,7 @@ const Explorar = () => {
         navigate(`/explorar-unas${location.search}`, { replace: true });
       }
     }
-  }, [urlId, isLoadingApiDisenios, displayedNails, isDetailModalOpen, openDetailModal, navigate, location.search]);
+  }, [urlId, isLoadingApiDisenios, displayedNails, isDetailModalOpen, navigate, location.search]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -741,8 +734,9 @@ const Explorar = () => {
         {selectedNailForModal && (
           <CRModal
             isOpen={isDetailModalOpen}
-            setIsOpen={closeDetailModal}
-            managesHistory={false}
+            setIsOpen={setIsDetailModalOpen}
+            onClose={closeDetailModal}
+            historyPath={selectedNailForModal ? `/explorar-unas/${selectedNailForModal.id}${location.search}` : undefined}
             title={
               <span className="flex items-center">
                 <DynamicIcon name="Sparkles" className="w-5 h-5 mr-2 text-primary" />
