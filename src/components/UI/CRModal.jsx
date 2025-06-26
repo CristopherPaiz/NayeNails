@@ -18,51 +18,50 @@ const CRModal = ({
   children,
   modifiesURL = false,
 }) => {
-  // Para rastrear si cerramos por back o por clic
-  const closedByBackButton = useRef(false);
-  // Para rastrear si añadimos una entrada al historial
-  const addedHistoryEntry = useRef(false);
+  // Guardamos la URL actual cuando el modal se abre
+  const originalUrl = useRef(null);
+  // Flag para evitar doble cierre
+  const isClosing = useRef(false);
 
   const handleClose = useCallback(() => {
-    if (closable) {
-      console.log("Cierre manual del modal (no por back button)");
-      closedByBackButton.current = false;
+    if (closable && !isClosing.current) {
+      isClosing.current = true;
+
       setIsOpen(false);
-
-      // Si añadimos una entrada al historial y cerramos manualmente,
-      // necesitamos quitar esa entrada para no dejar basura en el historial
-      if (!modifiesURL && addedHistoryEntry.current) {
-        console.log("Retrocediendo en el historial para limpiar la entrada que añadimos");
-        window.history.back();
-      }
-
       if (onClose) {
         onClose();
       }
+
+      // Si este modal no modifica la URL, pero estamos añadiendo entrada al historial,
+      // necesitamos asegurarnos de no dejar basura en el historial
+      if (!modifiesURL) {
+        // No hacemos nada más, el manejador del popstate se encarga
+      }
+
+      setTimeout(() => {
+        isClosing.current = false;
+      }, 100);
     }
   }, [closable, setIsOpen, onClose, modifiesURL]);
 
-  // Efecto para cuando el modal se abre o cierra
+  // Cuando el modal se abre o cierra
   useEffect(() => {
     if (isOpen) {
+      // Capturamos la URL actual cuando se abre el modal
+      originalUrl.current = window.location.href;
+
       if (onOpen) {
         onOpen();
       }
       document.body.style.overflow = "hidden";
 
-      // Solo añadimos historia para modales que NO modifican la URL
+      // Solo añadimos estado al historial para modales que NO modifican la URL
       if (!modifiesURL) {
-        console.log("Añadiendo entrada al historial para modal sin cambio de URL");
-        window.history.pushState({ modalOpen: true }, "");
-        addedHistoryEntry.current = true;
+        window.history.pushState({ modalOpen: true }, "", window.location.href);
       }
     } else {
       document.body.style.overflow = "";
-
-      if (closedByBackButton.current) {
-        console.log("Modal cerrado por botón back, no hacemos nada más");
-        closedByBackButton.current = false;
-      }
+      originalUrl.current = null;
     }
 
     return () => {
@@ -70,30 +69,32 @@ const CRModal = ({
     };
   }, [isOpen, onOpen, modifiesURL]);
 
-  // Efecto para detectar botón atrás
+  // Manejador del botón atrás
   useEffect(() => {
-    const handlePopState = () => {
-      if (isOpen) {
-        console.log("Botón back detectado mientras el modal estaba abierto");
-        closedByBackButton.current = true;
-
-        // Si el modal modifica URL, dejamos que el componente padre maneje el cierre
-        // Si no modifica URL, lo cerramos nosotros
+    const handlePopState = (e) => {
+      // Si el modal está abierto y ocurre un popstate, cerramos el modal
+      if (isOpen && !isClosing.current) {
         if (!modifiesURL) {
-          console.log("Modal sin cambio de URL cerrado por back button");
-          setIsOpen(false);
-          if (onClose) {
-            onClose();
-          }
+          // Para modales que no modifican URL, simplemente cerramos
+          handleClose();
+        } else if (originalUrl.current) {
+          // Para modales que modifican URL, verificamos si estamos volviendo a la URL original
+          // Esto es solo un respaldo, normalmente el componente padre maneja este caso
+          handleClose();
+        }
+
+        // CRÍTICO: Evitar que el navegador navegue a la URL anterior
+        if (e.preventDefault) {
+          e.preventDefault();
         }
       }
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [isOpen, setIsOpen, onClose, modifiesURL]);
+  }, [isOpen, handleClose, modifiesURL]);
 
-  // Efecto para tecla Escape
+  // Manejador de tecla Escape
   useEffect(() => {
     const handleEscapeKey = (event) => {
       if (event.key === "Escape" && !disableEscapeKeyDown) {

@@ -119,28 +119,37 @@ const Explorar = () => {
   const totalPagesApi = apiData?.totalPages ?? 1;
   const displayedNails = diseniosFromApi;
 
+  const isDirectURL = () => {
+    try {
+      return window.history.length <= 2 || document.referrer === "";
+    } catch (e) {
+      return false;
+    }
+  };
+
   const openDetailModal = (nailDesign) => {
     if (!nailDesign) return;
+    // Guardamos la URL actual antes de cambiarla
     navigate(`/explorar-unas/${nailDesign.id}${location.search}`);
     setSelectedNailForModal(nailDesign);
     setIsDetailModalOpen(true);
   };
 
   const closeDetailModal = () => {
-    // Si es una URL directa (window.history.length <= 2), reemplazamos la URL
-    // en lugar de retroceder
-    if (window.history.length <= 2) {
-      console.log("URL directa detectada, reemplazando URL sin salir del sitio");
-      navigate(`/explorar-unas${location.search}`, { replace: true });
+    const baseUrl = `/explorar-unas${location.search}`;
+
+    // Si es una URL directa, usamos replace para evitar salir del sitio
+    if (isDirectURL()) {
+      navigate(baseUrl, { replace: true });
     } else {
-      console.log("Navegación normal, volviendo a URL base");
-      navigate(`/explorar-unas${location.search}`, { replace: true });
+      // Si venimos de navegación normal, también usamos replace para no añadir entradas innecesarias
+      navigate(baseUrl, { replace: true });
     }
 
     setIsDetailModalOpen(false);
     setSelectedNailForModal(null);
   };
-  
+
   // Y en el efecto que observa cambios en urlId
   useEffect(() => {
     console.log("urlId cambió:", urlId);
