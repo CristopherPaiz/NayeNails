@@ -17,17 +17,26 @@ const CRModal = ({
   className,
   children,
   historyPath,
+  historyBaseUrl,
 }) => {
   const handleClose = useCallback(() => {
-    if (closable) {
-      if (historyPath && window.history.state?.modalPath === historyPath) {
+    if (!closable) return;
+
+    if (historyPath) {
+      if (window.history.length > 2) {
+        window.history.back();
+      } else {
+        window.location.replace(historyBaseUrl || "/");
+      }
+    } else {
+      if (window.history.state?.modalId === "generic") {
         window.history.back();
       } else {
         setIsOpen(false);
         onClose?.();
       }
     }
-  }, [closable, setIsOpen, onClose, historyPath]);
+  }, [closable, historyPath, historyBaseUrl, setIsOpen, onClose]);
 
   useEffect(() => {
     if (isOpen) {
@@ -133,6 +142,7 @@ CRModal.propTypes = {
   className: PropTypes.string,
   children: PropTypes.node,
   historyPath: PropTypes.string,
+  historyBaseUrl: PropTypes.string,
 };
 
 export default CRModal;

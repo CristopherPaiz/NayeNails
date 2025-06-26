@@ -737,6 +737,7 @@ const Explorar = () => {
             setIsOpen={setIsDetailModalOpen}
             onClose={closeDetailModal}
             historyPath={selectedNailForModal ? `/explorar-unas/${selectedNailForModal.id}${location.search}` : undefined}
+            historyBaseUrl={`/explorar-unas${location.search}`}
             title={
               <span className="flex items-center">
                 <DynamicIcon name="Sparkles" className="w-5 h-5 mr-2 text-primary" />
