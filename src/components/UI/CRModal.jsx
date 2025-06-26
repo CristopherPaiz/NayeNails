@@ -28,7 +28,9 @@ const CRModal = ({
 
   useEffect(() => {
     if (isOpen) {
-      onOpen?.();
+      if (onOpen) {
+        onOpen();
+      }
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -37,17 +39,6 @@ const CRModal = ({
       document.body.style.overflow = "";
     };
   }, [isOpen, onOpen]);
-
-  useEffect(() => {
-    const handlePopState = () => {
-      if (isOpen) {
-        handleClose();
-      }
-    };
-
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, [isOpen, handleClose]);
 
   useEffect(() => {
     const handleEscapeKey = (event) => {

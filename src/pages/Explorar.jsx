@@ -121,7 +121,7 @@ const Explorar = () => {
 
   const openDetailModal = (nailDesign) => {
     if (!nailDesign) return;
-    navigate(`/explorar-unas/${nailDesign.id}${location.search}`, { replace: true });
+    navigate(`/explorar-unas/${nailDesign.id}${location.search}`);
   };
 
   const closeDetailModal = () => {
