@@ -121,24 +121,35 @@ const Explorar = () => {
 
   const openDetailModal = (nailDesign) => {
     if (!nailDesign) return;
-    navigate(`/explorar-unas/${nailDesign.id}${location.search}`);
+    // Update URL without adding a history entry (replace state instead of push state)
+    navigate(`/explorar-unas/${nailDesign.id}${location.search}`, { replace: false });
+    setSelectedNailForModal(nailDesign);
+    setIsDetailModalOpen(true);
   };
 
   const closeDetailModal = () => {
-    navigate(`/explorar-unas${location.search}`);
+    // Update URL back to the base URL
+    const baseUrl = `/explorar-unas${location.search}`;
+    navigate(baseUrl, { replace: true });
+    setIsDetailModalOpen(false);
+    setSelectedNailForModal(null);
   };
 
+  // Modify the useEffect that watches for URL changes:
   useEffect(() => {
     if (urlId) {
       const nailToOpen = displayedNails.find((n) => n.id.toString() === urlId);
       if (nailToOpen) {
         setSelectedNailForModal(nailToOpen);
         setIsDetailModalOpen(true);
+      } else if (displayedNails.length > 0) {
+        // If we have data but couldn't find the specified ID, redirect to the base URL
+        navigate(`/explorar-unas${location.search}`, { replace: true });
       }
     } else {
       setIsDetailModalOpen(false);
     }
-  }, [urlId, displayedNails]);
+  }, [urlId, displayedNails, navigate, location.search]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -743,7 +754,6 @@ const Explorar = () => {
               </span>
             }
             width={typeof window !== "undefined" && window.innerWidth < 768 ? 95 : 60}
-            manageHistory={false}
           >
             <div className="p-1 sm:p-2">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">

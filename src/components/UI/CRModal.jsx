@@ -16,8 +16,6 @@ const CRModal = ({
   fullScreen = false,
   className,
   children,
-  // Nueva prop para controlar si el modal maneja history
-  manageHistory = false,
 }) => {
   const handleClose = useCallback(() => {
     if (closable) {
@@ -35,26 +33,16 @@ const CRModal = ({
       }
       document.body.style.overflow = "hidden";
 
-      // Solo pushear al history si manageHistory está habilitado
-      if (manageHistory) {
-        window.history.pushState({ modalOpen: true }, "");
-      }
     } else {
-      // Solo hacer back si manageHistory está habilitado y hay un estado de modal
-      if (manageHistory && window.history.state?.modalOpen) {
-        window.history.back();
-      }
       document.body.style.overflow = "";
     }
+
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isOpen, onOpen, manageHistory]);
+  }, [isOpen, onOpen]);
 
   useEffect(() => {
-    // Solo manejar popstate si manageHistory está habilitado
-    if (!manageHistory) return;
-
     const handlePopState = () => {
       if (isOpen) {
         handleClose();
@@ -63,7 +51,7 @@ const CRModal = ({
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [isOpen, handleClose, manageHistory]);
+  }, [isOpen, handleClose]);
 
   useEffect(() => {
     const handleEscapeKey = (event) => {
@@ -139,7 +127,6 @@ CRModal.propTypes = {
   fullScreen: PropTypes.bool,
   className: PropTypes.string,
   children: PropTypes.node,
-  manageHistory: PropTypes.bool,
 };
 
 export default CRModal;
