@@ -121,33 +121,49 @@ const Explorar = () => {
 
   const openDetailModal = (nailDesign) => {
     if (!nailDesign) return;
-    // Aquí sí queremos cambiar la URL con un nuevo punto en el historial
+    console.log("Abriendo modal de detalle, navegando a URL con ID");
     navigate(`/explorar-unas/${nailDesign.id}${location.search}`);
     setSelectedNailForModal(nailDesign);
     setIsDetailModalOpen(true);
   };
 
   const closeDetailModal = () => {
-    // Al cerrar, volvemos a la URL base sin el ID
-    const baseUrl = `/explorar-unas${location.search}`;
-    // Reemplazamos la entrada actual en el historial en lugar de añadir una nueva
-    navigate(baseUrl, { replace: true });
+    console.log("Cerrando modal de detalle");
+    // Detectamos si venimos de una URL directa o si hay historial
+    const hasHistory = window.history.length > 1;
+    console.log("¿Hay historial anterior?", hasHistory);
+
+    if (hasHistory) {
+      const baseUrl = `/explorar-unas${location.search}`;
+      console.log("Navegando a URL base:", baseUrl);
+      navigate(baseUrl, { replace: true });
+    } else {
+      // Si es una URL directa sin historial, usamos replace para evitar salir
+      console.log("URL directa sin historial, reemplazando URL");
+      navigate("/explorar-unas", { replace: true });
+    }
+
     setIsDetailModalOpen(false);
     setSelectedNailForModal(null);
   };
 
-  // Modify the useEffect that watches for URL changes:
+  // Y en el efecto que observa cambios en urlId
   useEffect(() => {
+    console.log("urlId cambió:", urlId);
+    console.log("Longitud del historial:", window.history.length);
+
     if (urlId) {
       const nailToOpen = displayedNails.find((n) => n.id.toString() === urlId);
       if (nailToOpen) {
+        console.log("Encontrado diseño para ID en URL, abriendo modal");
         setSelectedNailForModal(nailToOpen);
         setIsDetailModalOpen(true);
       } else if (displayedNails.length > 0) {
-        // If we have data but couldn't find the specified ID, redirect to the base URL
+        console.log("ID en URL no encontrado, redirigiendo a URL base");
         navigate(`/explorar-unas${location.search}`, { replace: true });
       }
     } else {
+      console.log("No hay ID en URL, cerrando modal si estaba abierto");
       setIsDetailModalOpen(false);
     }
   }, [urlId, displayedNails, navigate, location.search]);

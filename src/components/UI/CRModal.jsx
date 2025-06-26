@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import PropTypes from "prop-types";
 
 const CRModal = ({
@@ -16,11 +16,18 @@ const CRModal = ({
   fullScreen = false,
   className,
   children,
-  // Nueva prop para controlar el comportamiento del historial
   modifiesURL = false,
 }) => {
+  // Referencia para rastrear si este modal agregó una entrada al historial
+  const addedHistoryEntry = useRef(false);
+  // Referencia para detectar si es una carga directa de URL
+  const isInitialMount = useRef(true);
+  // Referencia para guardar la longitud del historial al montar el componente
+  const initialHistoryLength = useRef(typeof window !== "undefined" ? window.history.length : 0);
+
   const handleClose = useCallback(() => {
     if (closable) {
+      console.log("Modal cerrándose mediante handleClose");
       setIsOpen(false);
       if (onClose) {
         onClose();
@@ -29,7 +36,20 @@ const CRModal = ({
   }, [closable, setIsOpen, onClose]);
 
   useEffect(() => {
+    // Al montar, guardar la longitud inicial del historial
+    initialHistoryLength.current = typeof window !== "undefined" ? window.history.length : 0;
+    console.log("Longitud inicial del historial:", initialHistoryLength.current);
+
+    return () => {
+      console.log("Modal desmontado");
+    };
+  }, []);
+
+  useEffect(() => {
     if (isOpen) {
+      console.log("Modal abierto, modifiesURL:", modifiesURL);
+      console.log("Longitud actual del historial:", window.history.length);
+
       if (onOpen) {
         onOpen();
       }
@@ -37,10 +57,27 @@ const CRModal = ({
 
       // Solo añadimos una entrada al historial si no se modifica la URL
       if (!modifiesURL) {
-        window.history.pushState({ modalOpen: true }, "");
+        // Verificamos si estamos en el montaje inicial (URL directa)
+        if (isInitialMount.current) {
+          console.log("Es montaje inicial (posible URL directa), no añadimos entrada");
+          isInitialMount.current = false;
+        } else {
+          console.log("Añadiendo entrada al historial para modal sin cambio de URL");
+          window.history.pushState({ modalOpen: true }, "");
+          addedHistoryEntry.current = true;
+        }
+      } else {
+        console.log("No añadimos entrada al historial porque este modal modifica la URL");
+        isInitialMount.current = false;
       }
     } else {
       document.body.style.overflow = "";
+      // Si cerramos el modal y habíamos añadido una entrada, podríamos necesitar ajustar
+      if (addedHistoryEntry.current) {
+        console.log("Modal cerrado, se había añadido una entrada al historial");
+      } else {
+        console.log("Modal cerrado, no se había añadido entrada al historial");
+      }
     }
 
     return () => {
@@ -49,8 +86,15 @@ const CRModal = ({
   }, [isOpen, onOpen, modifiesURL]);
 
   useEffect(() => {
-    const handlePopState = () => {
+    const handlePopState = (event) => {
+      console.log("Evento popstate detectado", event);
+      console.log("Estado del modal:", isOpen);
+      console.log("¿Añadimos entrada al historial?", addedHistoryEntry.current);
+      console.log("Historia actual length:", window.history.length);
+
       if (isOpen) {
+        console.log("Modal abierto y popstate detectado, cerrando modal");
+        // Cerramos el modal sin importar su tipo
         handleClose();
       }
     };
@@ -62,6 +106,7 @@ const CRModal = ({
   useEffect(() => {
     const handleEscapeKey = (event) => {
       if (event.key === "Escape" && !disableEscapeKeyDown) {
+        console.log("Tecla Escape presionada, cerrando modal");
         handleClose();
       }
     };
@@ -133,7 +178,6 @@ CRModal.propTypes = {
   fullScreen: PropTypes.bool,
   className: PropTypes.string,
   children: PropTypes.node,
-  // Nueva prop para indicar si el modal modifica la URL
   modifiesURL: PropTypes.bool,
 };
 
