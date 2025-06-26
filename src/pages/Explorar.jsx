@@ -736,7 +736,7 @@ const Explorar = () => {
             isOpen={isDetailModalOpen}
             setIsOpen={setIsDetailModalOpen}
             onClose={closeDetailModal}
-            historyPath={selectedNailForModal ? `/explorar-unas/${selectedNailForModal.id}${location.search}` : undefined}
+            historyPath={`/explorar-unas/${selectedNailForModal.id}${location.search}`}
             historyBaseUrl={`/explorar-unas${location.search}`}
             title={
               <span className="flex items-center">

@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from "react";
 import PropTypes from "prop-types";
+import { useNavigate } from "react-router-dom";
 
 const CRModal = ({
   title,
@@ -19,6 +20,8 @@ const CRModal = ({
   historyPath,
   historyBaseUrl,
 }) => {
+  const navigate = useNavigate();
+
   const handleClose = useCallback(() => {
     if (!closable) return;
 
@@ -26,7 +29,9 @@ const CRModal = ({
       if (window.history.length > 2) {
         window.history.back();
       } else {
-        window.location.replace(historyBaseUrl || "/");
+        navigate(historyBaseUrl || "/", { replace: true });
+        setIsOpen(false);
+        onClose?.();
       }
     } else {
       if (window.history.state?.modalId === "generic") {
@@ -36,17 +41,15 @@ const CRModal = ({
         onClose?.();
       }
     }
-  }, [closable, historyPath, historyBaseUrl, setIsOpen, onClose]);
+  }, [closable, historyPath, historyBaseUrl, navigate, setIsOpen, onClose]);
 
   useEffect(() => {
     if (isOpen) {
       onOpen?.();
       document.body.style.overflow = "hidden";
-      if (historyPath) {
-        window.history.pushState({ modalPath: historyPath }, "", historyPath);
-      } else {
-        window.history.pushState({ modalId: "generic" }, "", window.location.href);
-      }
+      const state = historyPath ? { modalPath: historyPath } : { modalId: "generic" };
+      const path = historyPath || window.location.href;
+      window.history.pushState(state, "", path);
     } else {
       document.body.style.overflow = "";
     }
