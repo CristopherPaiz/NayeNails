@@ -121,32 +121,26 @@ const Explorar = () => {
 
   const openDetailModal = (nailDesign) => {
     if (!nailDesign) return;
-    console.log("Abriendo modal de detalle, navegando a URL con ID");
     navigate(`/explorar-unas/${nailDesign.id}${location.search}`);
     setSelectedNailForModal(nailDesign);
     setIsDetailModalOpen(true);
   };
 
   const closeDetailModal = () => {
-    console.log("Cerrando modal de detalle");
-    // Detectamos si venimos de una URL directa o si hay historial
-    const hasHistory = window.history.length > 1;
-    console.log("¿Hay historial anterior?", hasHistory);
-
-    if (hasHistory) {
-      const baseUrl = `/explorar-unas${location.search}`;
-      console.log("Navegando a URL base:", baseUrl);
-      navigate(baseUrl, { replace: true });
+    // Si es una URL directa (window.history.length <= 2), reemplazamos la URL
+    // en lugar de retroceder
+    if (window.history.length <= 2) {
+      console.log("URL directa detectada, reemplazando URL sin salir del sitio");
+      navigate(`/explorar-unas${location.search}`, { replace: true });
     } else {
-      // Si es una URL directa sin historial, usamos replace para evitar salir
-      console.log("URL directa sin historial, reemplazando URL");
-      navigate("/explorar-unas", { replace: true });
+      console.log("Navegación normal, volviendo a URL base");
+      navigate(`/explorar-unas${location.search}`, { replace: true });
     }
 
     setIsDetailModalOpen(false);
     setSelectedNailForModal(null);
   };
-
+  
   // Y en el efecto que observa cambios en urlId
   useEffect(() => {
     console.log("urlId cambió:", urlId);

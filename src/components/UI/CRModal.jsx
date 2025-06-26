@@ -18,65 +18,50 @@ const CRModal = ({
   children,
   modifiesURL = false,
 }) => {
-  // Referencia para rastrear si este modal agregó una entrada al historial
+  // Para rastrear si cerramos por back o por clic
+  const closedByBackButton = useRef(false);
+  // Para rastrear si añadimos una entrada al historial
   const addedHistoryEntry = useRef(false);
-  // Referencia para detectar si es una carga directa de URL
-  const isInitialMount = useRef(true);
-  // Referencia para guardar la longitud del historial al montar el componente
-  const initialHistoryLength = useRef(typeof window !== "undefined" ? window.history.length : 0);
 
   const handleClose = useCallback(() => {
     if (closable) {
-      console.log("Modal cerrándose mediante handleClose");
+      console.log("Cierre manual del modal (no por back button)");
+      closedByBackButton.current = false;
       setIsOpen(false);
+
+      // Si añadimos una entrada al historial y cerramos manualmente,
+      // necesitamos quitar esa entrada para no dejar basura en el historial
+      if (!modifiesURL && addedHistoryEntry.current) {
+        console.log("Retrocediendo en el historial para limpiar la entrada que añadimos");
+        window.history.back();
+      }
+
       if (onClose) {
         onClose();
       }
     }
-  }, [closable, setIsOpen, onClose]);
+  }, [closable, setIsOpen, onClose, modifiesURL]);
 
-  useEffect(() => {
-    // Al montar, guardar la longitud inicial del historial
-    initialHistoryLength.current = typeof window !== "undefined" ? window.history.length : 0;
-    console.log("Longitud inicial del historial:", initialHistoryLength.current);
-
-    return () => {
-      console.log("Modal desmontado");
-    };
-  }, []);
-
+  // Efecto para cuando el modal se abre o cierra
   useEffect(() => {
     if (isOpen) {
-      console.log("Modal abierto, modifiesURL:", modifiesURL);
-      console.log("Longitud actual del historial:", window.history.length);
-
       if (onOpen) {
         onOpen();
       }
       document.body.style.overflow = "hidden";
 
-      // Solo añadimos una entrada al historial si no se modifica la URL
+      // Solo añadimos historia para modales que NO modifican la URL
       if (!modifiesURL) {
-        // Verificamos si estamos en el montaje inicial (URL directa)
-        if (isInitialMount.current) {
-          console.log("Es montaje inicial (posible URL directa), no añadimos entrada");
-          isInitialMount.current = false;
-        } else {
-          console.log("Añadiendo entrada al historial para modal sin cambio de URL");
-          window.history.pushState({ modalOpen: true }, "");
-          addedHistoryEntry.current = true;
-        }
-      } else {
-        console.log("No añadimos entrada al historial porque este modal modifica la URL");
-        isInitialMount.current = false;
+        console.log("Añadiendo entrada al historial para modal sin cambio de URL");
+        window.history.pushState({ modalOpen: true }, "");
+        addedHistoryEntry.current = true;
       }
     } else {
       document.body.style.overflow = "";
-      // Si cerramos el modal y habíamos añadido una entrada, podríamos necesitar ajustar
-      if (addedHistoryEntry.current) {
-        console.log("Modal cerrado, se había añadido una entrada al historial");
-      } else {
-        console.log("Modal cerrado, no se había añadido entrada al historial");
+
+      if (closedByBackButton.current) {
+        console.log("Modal cerrado por botón back, no hacemos nada más");
+        closedByBackButton.current = false;
       }
     }
 
@@ -85,28 +70,33 @@ const CRModal = ({
     };
   }, [isOpen, onOpen, modifiesURL]);
 
+  // Efecto para detectar botón atrás
   useEffect(() => {
-    const handlePopState = (event) => {
-      console.log("Evento popstate detectado", event);
-      console.log("Estado del modal:", isOpen);
-      console.log("¿Añadimos entrada al historial?", addedHistoryEntry.current);
-      console.log("Historia actual length:", window.history.length);
-
+    const handlePopState = () => {
       if (isOpen) {
-        console.log("Modal abierto y popstate detectado, cerrando modal");
-        // Cerramos el modal sin importar su tipo
-        handleClose();
+        console.log("Botón back detectado mientras el modal estaba abierto");
+        closedByBackButton.current = true;
+
+        // Si el modal modifica URL, dejamos que el componente padre maneje el cierre
+        // Si no modifica URL, lo cerramos nosotros
+        if (!modifiesURL) {
+          console.log("Modal sin cambio de URL cerrado por back button");
+          setIsOpen(false);
+          if (onClose) {
+            onClose();
+          }
+        }
       }
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [isOpen, handleClose]);
+  }, [isOpen, setIsOpen, onClose, modifiesURL]);
 
+  // Efecto para tecla Escape
   useEffect(() => {
     const handleEscapeKey = (event) => {
       if (event.key === "Escape" && !disableEscapeKeyDown) {
-        console.log("Tecla Escape presionada, cerrando modal");
         handleClose();
       }
     };
