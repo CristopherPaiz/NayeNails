@@ -28,15 +28,9 @@ const CRModal = ({
 
   useEffect(() => {
     if (isOpen) {
-      if (onOpen) {
-        onOpen();
-      }
+      onOpen?.();
       document.body.style.overflow = "hidden";
-      window.history.pushState({ modalOpen: true }, "");
     } else {
-      if (window.history.state?.modalOpen) {
-        window.history.back();
-      }
       document.body.style.overflow = "";
     }
     return () => {
