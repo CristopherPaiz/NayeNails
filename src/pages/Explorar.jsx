@@ -122,7 +122,6 @@ const Explorar = () => {
   const openDetailModal = useCallback(
     (nailDesign) => {
       if (!nailDesign) return;
-      console.log(`[openDetailModal] Abriendo modal para ID: ${nailDesign.id}. Navegando a... /explorar-unas/${nailDesign.id}${location.search}`);
       setSelectedNailForModal(nailDesign);
       setIsDetailModalOpen(true);
       navigate(`/explorar-unas/${nailDesign.id}${location.search}`, { replace: true });
@@ -131,28 +130,29 @@ const Explorar = () => {
   );
 
   const closeDetailModal = useCallback(() => {
-    console.log(`[closeDetailModal] Cerrando modal. Navegando a... /explorar-unas${location.search}`);
     setIsDetailModalOpen(false);
     setSelectedNailForModal(null);
     navigate(`/explorar-unas${location.search}`, { replace: true });
   }, [navigate, location.search]);
 
   useEffect(() => {
-    if (urlId && !isLoadingApiDisenios && displayedNails.length > 0) {
-      if (selectedNailForModal?.id?.toString() === urlId) {
+    if (urlId) {
+      if (isDetailModalOpen && selectedNailForModal?.id.toString() === urlId) {
         return;
       }
-      const nailToOpen = displayedNails.find((n) => n.id.toString() === urlId);
-      if (nailToOpen) {
-        console.log(`[Effect] ID en URL (${urlId}) detectado. Abriendo modal.`);
-        openDetailModal(nailToOpen);
-      } else {
-        console.warn(`[Effect] ID en URL (${urlId}) no encontrado en la página actual. Navegando a la base.`);
-        CRAlert.alert({ title: "No Encontrado", message: "El diseño que buscas no está en esta página o no existe.", type: "warning" });
-        navigate(`/explorar-unas${location.search}`, { replace: true });
+      if (!isLoadingApiDisenios && displayedNails.length > 0) {
+        const nailToOpen = displayedNails.find((n) => n.id.toString() === urlId);
+        if (nailToOpen) {
+          openDetailModal(nailToOpen);
+        }
+      }
+    } else {
+      if (isDetailModalOpen) {
+        setIsDetailModalOpen(false);
+        setSelectedNailForModal(null);
       }
     }
-  }, [urlId, isLoadingApiDisenios, displayedNails, selectedNailForModal, openDetailModal, navigate, location.search]);
+  }, [urlId, displayedNails, isLoadingApiDisenios, isDetailModalOpen, openDetailModal, selectedNailForModal]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
