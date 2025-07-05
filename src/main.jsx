@@ -8,6 +8,7 @@ import useStoreNails from "./store/store.js";
 import apiClient from "./api/axios.js";
 import "./index.css";
 import App from "./App.jsx";
+import "react-big-calendar/lib/css/react-big-calendar.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {

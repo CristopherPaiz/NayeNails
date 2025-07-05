@@ -21,6 +21,7 @@
     "masonry-layout": "^4.2.2",
     "prop-types": "^15.8.1",
     "react": "^19.0.0",
+    "react-big-calendar": "^1.19.4",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^19.0.0",
     "react-image-crop": "^11.0.10",
