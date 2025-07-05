@@ -429,6 +429,33 @@ const AdminCitasPage = () => {
     handleOpenReagendarModal(citaSeleccionada);
   };
 
+  ////////////////////////////////////////////////////////
+  // SCROLL
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [touchStartY, setTouchStartY] = useState(0);
+
+  // Agregar estas funciones antes del return del componente
+  const handleTouchStart = (e) => {
+    setTouchStartY(e.touches[0].clientY);
+    setIsScrolling(false);
+  };
+
+  const handleTouchMove = (e) => {
+    const touchY = e.touches[0].clientY;
+    const deltaY = Math.abs(touchY - touchStartY);
+
+    // Si el movimiento es mayor a 10px, consideramos que es scroll
+    if (deltaY > 10) {
+      setIsScrolling(true);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTimeout(() => setIsScrolling(false), 100);
+  };
+
+  ////////////////////////////////////////////////////////
+
   return (
     <div>
       {(isLoading || isUpdatingCita || isCreatingCita) && <CRLoader fullScreen background="bg-black/30 dark:bg-black/50" style="nailPaint" />}
@@ -463,7 +490,12 @@ const AdminCitasPage = () => {
       </div>
 
       {viewMode === "calendar" ? (
-        <div className="p-1 sm:p-4 bg-white dark:bg-slate-800 rounded-lg shadow-lg h-[80vh]">
+        <div
+          className="p-1 sm:p-4 bg-white dark:bg-slate-800 rounded-lg shadow-lg h-[80vh]"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           <Calendar
             localizer={localizer}
             events={calendarEvents}
@@ -477,13 +509,24 @@ const AdminCitasPage = () => {
             date={currentDate}
             onNavigate={(date) => setCurrentDate(date)}
             onSelectEvent={(event) => handleOpenDetallesModal(event.resource)}
-            onSelectSlot={(slotInfo) => openAddModal(slotInfo)}
-            selectable
+            onSelectSlot={(slotInfo) => {
+              if (!isScrolling) {
+                openAddModal(slotInfo);
+              }
+            }}
+            selectable={!isScrolling}
             longPressThreshold={10}
-            onDrillDown={(date) => openAddModal({ start: date, end: date })}
+            onDrillDown={(date) => {
+              if (!isScrolling) {
+                openAddModal({ start: date, end: date });
+              }
+            }}
             drilldownView={null}
             popup
             popupOffset={{ x: 10, y: 10 }}
+            onSelecting={() => {
+              return !isScrolling;
+            }}
             formats={{
               monthHeaderFormat: (date) => format(date, "MMMM yyyy", { locale: es }),
               dayHeaderFormat: (date) => format(date, "EEEE dd/MM", { locale: es }),
