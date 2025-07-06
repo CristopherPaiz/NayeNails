@@ -16,6 +16,7 @@ import { DynamicIcon } from "../../utils/DynamicIcon";
 import CRAlert from "../../components/UI/CRAlert";
 import useStoreNails from "../../store/store";
 import useScrollToTop from "../../hooks/useScrollToTop";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 function formatTimeToAMPM(time24) {
   if (!time24) return "";
@@ -26,10 +27,8 @@ function formatTimeToAMPM(time24) {
   return `${h12}:${minutes} ${suffix}`;
 }
 
-// Función más robusta para ajustar la zona horaria
 const ajustarZonaHoraria = (fechaServidor, horasDiferencia = 6) => {
   if (!fechaServidor) return null;
-
   try {
     let fecha;
     if (fechaServidor.includes("T")) {
@@ -37,14 +36,11 @@ const ajustarZonaHoraria = (fechaServidor, horasDiferencia = 6) => {
     } else {
       fecha = new Date(fechaServidor.replace(" ", "T"));
     }
-
     if (isNaN(fecha.getTime())) {
       console.error("Fecha inválida:", fechaServidor);
       return new Date();
     }
-
     const fechaAjustada = new Date(fecha.getTime() - horasDiferencia * 60 * 60 * 1000);
-
     return fechaAjustada;
   } catch (error) {
     console.error("Error al ajustar zona horaria:", error);
@@ -63,7 +59,8 @@ const localizer = dateFnsLocalizer({
 
 const CitasLista = ({
   citas,
-  onReagendar,
+  onEditar,
+  onEliminar,
   onToggleAceptada,
   onGenerarLinkWhatsApp,
   isUpdating,
@@ -182,10 +179,17 @@ const CitasLista = ({
                   </p>
                   <div className="mt-3 flex w-full gap-2">
                     <CRButton
-                      title="Reagendar"
-                      onClick={() => onReagendar(cita)}
+                      title="Editar"
+                      onClick={() => onEditar(cita)}
                       className="!bg-orange-500 hover:!bg-orange-600 text-white"
-                      externalIcon={<DynamicIcon name="CalendarClock" className="w-4 h-4" />}
+                      externalIcon={<DynamicIcon name="Edit" className="w-4 h-4" />}
+                      disabled={isUpdating}
+                    />
+                    <CRButton
+                      title="Eliminar"
+                      onClick={() => onEliminar(cita)}
+                      className="!bg-red-600 hover:!bg-red-700 text-white"
+                      externalIcon={<DynamicIcon name="Trash2" className="w-4 h-4" />}
                       disabled={isUpdating}
                     />
                     <CRButton
@@ -212,10 +216,19 @@ const AdminCitasPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [calendarEvents, setCalendarEvents] = useState([]);
-  const [isReagendarModalOpen, setIsReagendarModalOpen] = useState(false);
-  const [citaParaReagendar, setCitaParaReagendar] = useState(null);
-  const [nuevaFechaReagenda, setNuevaFechaReagenda] = useState("");
-  const [nuevaHoraReagenda, setNuevaHoraReagenda] = useState("");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [citaParaEditar, setCitaParaEditar] = useState(null);
+  const [editForm, setEditForm] = useState({
+    nombre_cliente: "",
+    telefono_cliente: "",
+    fecha_cita: "",
+    hora_cita: "",
+    id_subcategoria_servicio: null,
+    notas: "",
+    aceptada: false,
+  });
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [citaParaEliminar, setCitaParaEliminar] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [currentView, setCurrentView] = useState("month");
   const [isDetallesModalOpen, setIsDetallesModalOpen] = useState(false);
@@ -230,7 +243,7 @@ const AdminCitasPage = () => {
   });
   const [resetServicioSelect, setResetServicioSelect] = useState(false);
 
-  const [filtroDia, setFiltroDia] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [filtroDia, setFiltroDia] = useState("");
   const [filtroMes, setFiltroMes] = useState(format(new Date(), "yyyy-MM"));
 
   useEffect(() => {
@@ -239,7 +252,27 @@ const AdminCitasPage = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const defaultTimes = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00"];
+  const defaultTimes = [
+    "08:30",
+    "09:00",
+    "09:30",
+    "10:00",
+    "10:30",
+    "11:00",
+    "11:30",
+    "12:00",
+    "12:30",
+    "14:00",
+    "14:30",
+    "15:00",
+    "15:30",
+    "16:00",
+    "16:30",
+    "17:00",
+    "17:30",
+    "18:00",
+    "18:30",
+  ];
   const horaOptions = defaultTimes.map((time) => ({ label: formatTimeToAMPM(time), value: time }));
 
   const queryParams = useMemo(() => {
@@ -296,16 +329,28 @@ const AdminCitasPage = () => {
     );
   }, [categoriasData]);
 
-  const { mutate: actualizarCitaMutate, isLoading: isUpdatingCita } = useApiRequest({
+  const { mutate: updateCitaMutate, isLoading: isUpdatingCita } = useApiRequest({
     method: "PATCH",
     options: {
       onSuccess: () => {
         refetch();
-        setIsReagendarModalOpen(false);
-        setCitaParaReagendar(null);
+        setIsEditModalOpen(false);
+        setCitaParaEditar(null);
       },
     },
     successMessage: "Cita actualizada correctamente.",
+  });
+
+  const { mutate: deleteCitaMutate, isLoading: isDeletingCita } = useApiRequest({
+    method: "DELETE",
+    options: {
+      onSuccess: () => {
+        refetch();
+        setIsDeleteConfirmOpen(false);
+        setCitaParaEliminar(null);
+      },
+    },
+    successMessage: "Cita eliminada correctamente.",
   });
 
   const { mutate: crearCitaAdminMutate, isLoading: isCreatingCita } = useApiRequest({
@@ -321,28 +366,59 @@ const AdminCitasPage = () => {
   });
 
   const handleToggleAceptada = (cita) => {
-    actualizarCitaMutate({
-      url: `/citas/admin/${cita.id}/estado`,
-      data: { aceptada: !cita.aceptada, estado: !cita.aceptada ? "confirmada" : "pendiente" },
+    updateCitaMutate({
+      url: `/citas/admin/${cita.id}`,
+      data: { aceptada: !cita.aceptada },
     });
   };
 
-  const handleOpenReagendarModal = (cita) => {
-    setCitaParaReagendar(cita);
-    setNuevaFechaReagenda(cita.fecha_cita ? format(parseISO(cita.fecha_cita), "yyyy-MM-dd") : "");
-    setNuevaHoraReagenda(cita.hora_cita || "");
-    setIsReagendarModalOpen(true);
+  const handleOpenEditModal = (cita) => {
+    setCitaParaEditar(cita);
+    setEditForm({
+      nombre_cliente: cita.nombre_cliente || "",
+      telefono_cliente: cita.telefono_cliente || "",
+      fecha_cita: cita.fecha_cita ? format(parseISO(cita.fecha_cita), "yyyy-MM-dd") : "",
+      hora_cita: cita.hora_cita || "",
+      id_subcategoria_servicio: cita.id_subcategoria_servicio || null,
+      notas: cita.notas || "",
+      aceptada: !!cita.aceptada,
+    });
+    setIsEditModalOpen(true);
   };
 
-  const handleReagendarCita = () => {
-    if (!citaParaReagendar || !nuevaFechaReagenda || !nuevaHoraReagenda) {
-      CRAlert.alert({ title: "Atención", message: "Debe seleccionar una nueva fecha y hora.", type: "warning" });
+  const handleEditFormChange = (field, value) => {
+    setEditForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // <-- CORRECCIÓN: Handler específico para el switch
+  // const handleAceptadaSwitchChange = (newCheckedState) => {
+  //   console.log("Nuevo estado aceptada:", newCheckedState);
+  //   setEditForm((prev) => ({
+  //     ...prev,
+  //     aceptada: newCheckedState,
+  //   }));
+  // };
+
+  const handleUpdateCita = () => {
+    if (!citaParaEditar) return;
+    if (!editForm.fecha_cita || !editForm.hora_cita || !editForm.nombre_cliente || !editForm.telefono_cliente || !editForm.id_subcategoria_servicio) {
+      CRAlert.alert({ title: "Atención", message: "Todos los campos (excepto notas) son obligatorios.", type: "warning" });
       return;
     }
-    actualizarCitaMutate({
-      url: `/citas/admin/${citaParaReagendar.id}/estado`,
-      data: { fecha_cita: nuevaFechaReagenda, hora_cita: nuevaHoraReagenda, estado: "pendiente", aceptada: 0 },
+    updateCitaMutate({
+      url: `/citas/admin/${citaParaEditar.id}`,
+      data: { ...editForm },
     });
+  };
+
+  const handleOpenDeleteModal = (cita) => {
+    setCitaParaEliminar(cita);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!citaParaEliminar) return;
+    deleteCitaMutate({ url: `/citas/admin/${citaParaEliminar.id}` });
   };
 
   const generarLinkWhatsApp = (cita, tipoMensaje = "confirmacion") => {
@@ -357,9 +433,9 @@ const AdminCitasPage = () => {
     const notas = cita.notas ? `\n📝 Nota: '${cita.notas}'.` : "";
     const nombreNegocio = useStoreNails.getState().textosColoresConfig?.nombre_negocio || "Naye Nails";
     let mensaje;
-    if (tipoMensaje === "reagenda" && citaParaReagendar) {
-      const nuevaFechaFormateada = format(parseISO(nuevaFechaReagenda), "EEEE dd 'de' MMMM 'de' yyyy", { locale: es });
-      const nuevaHoraFormateada = formatTimeToAMPM(nuevaHoraReagenda);
+    if (tipoMensaje === "reagenda" && citaParaEditar) {
+      const nuevaFechaFormateada = format(parseISO(editForm.fecha_cita), "EEEE dd 'de' MMMM 'de' yyyy", { locale: es });
+      const nuevaHoraFormateada = formatTimeToAMPM(editForm.hora_cita);
       mensaje = `💬 ¡Hola ${nombreCliente}! 💖\nTu cita en *${nombreNegocio}* ha sido reagendada ✨\nPara ${servicio} 💅\n📅 *${nuevaFechaFormateada}* a las *${nuevaHoraFormateada}* 🕒\nSi tienes alguna duda, no dudes en responder este mensaje 💕`;
     } else {
       mensaje = `💬 ¡Hola ${nombreCliente}! 💖\nTe confirmamos tu cita en *${nombreNegocio}* ✨\n*Solicitaste:*\n${servicio} 💅${notas}\n📅 *${fechaFormateada}* a las *${horaFormateada}* 🕒\n\n¡Te esperamos! 🌸💅💕`;
@@ -374,7 +450,6 @@ const AdminCitasPage = () => {
 
     if (slotInfo) {
       fecha = format(slotInfo.start, "yyyy-MM-dd");
-
       if (currentView !== "month") {
         hora = format(slotInfo.start, "HH:mm");
       }
@@ -424,17 +499,14 @@ const AdminCitasPage = () => {
     setTimeout(() => setCitaSeleccionada(null), 300);
   };
 
-  const handleReagendarDesdeDetalles = () => {
+  const handleEditarDesdeDetalles = () => {
     handleCloseDetallesModal();
-    handleOpenReagendarModal(citaSeleccionada);
+    handleOpenEditModal(citaSeleccionada);
   };
 
-  ////////////////////////////////////////////////////////
-  // SCROLL
   const [isScrolling, setIsScrolling] = useState(false);
   const [touchStartY, setTouchStartY] = useState(0);
 
-  // Agregar estas funciones antes del return del componente
   const handleTouchStart = (e) => {
     setTouchStartY(e.touches[0].clientY);
     setIsScrolling(false);
@@ -443,8 +515,6 @@ const AdminCitasPage = () => {
   const handleTouchMove = (e) => {
     const touchY = e.touches[0].clientY;
     const deltaY = Math.abs(touchY - touchStartY);
-
-    // Si el movimiento es mayor a 10px, consideramos que es scroll
     if (deltaY > 10) {
       setIsScrolling(true);
     }
@@ -454,11 +524,11 @@ const AdminCitasPage = () => {
     setTimeout(() => setIsScrolling(false), 100);
   };
 
-  ////////////////////////////////////////////////////////
+  const isAnyLoading = isLoading || isUpdatingCita || isCreatingCita || isDeletingCita;
 
   return (
     <div>
-      {(isLoading || isUpdatingCita || isCreatingCita) && <CRLoader fullScreen background="bg-black/30 dark:bg-black/50" style="nailPaint" />}
+      {isAnyLoading && <CRLoader fullScreen background="bg-black/30 dark:bg-black/50" style="nailPaint" />}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="text-2xl md:text-3xl font-bold text-textPrimary dark:text-white">Gestión de Citas</h1>
         <div className="flex gap-2">
@@ -524,9 +594,7 @@ const AdminCitasPage = () => {
             drilldownView={null}
             popup
             popupOffset={{ x: 10, y: 10 }}
-            onSelecting={() => {
-              return !isScrolling;
-            }}
+            onSelecting={() => !isScrolling}
             formats={{
               monthHeaderFormat: (date) => format(date, "MMMM yyyy", { locale: es }),
               dayHeaderFormat: (date) => format(date, "EEEE dd/MM", { locale: es }),
@@ -558,16 +626,8 @@ const AdminCitasPage = () => {
             .rbc-toolbar button { background-color: transparent !important; color: var(--color-primary) !important; border: 1px solid var(--color-primary) !important; padding: 5px 10px !important; transition: all 0.2s; }
             .rbc-toolbar button:hover, .rbc-toolbar button:active, .rbc-toolbar button.rbc-active { background-color: var(--color-primary) !important; color: white !important; box-shadow: none !important; }
             .rbc-today { background-color: var(--color-accent) !important; }
-
-            /* AGREGAR ESTAS LÍNEAS PARA MEJORAR LA SELECCIÓN: */
-            .rbc-date-cell {
-              cursor: pointer;
-            }
-            .rbc-date-cell:hover {
-              background-color: rgba(var(--color-primary-rgb), 0.1) !important;
-            }
-            /* FIN DE LÍNEAS A AGREGAR */
-
+            .rbc-date-cell { cursor: pointer; }
+            .rbc-date-cell:hover { background-color: rgba(var(--color-primary-rgb), 0.1) !important; }
             @media (max-width: 768px) {
               .rbc-toolbar { flex-direction: column; gap: 8px; }
               .rbc-toolbar .rbc-btn-group:first-child { display: flex; justify-content: space-between; width: 100%; }
@@ -580,10 +640,11 @@ const AdminCitasPage = () => {
       ) : (
         <CitasLista
           citas={citasData}
-          onReagendar={handleOpenReagendarModal}
+          onEditar={handleOpenEditModal}
+          onEliminar={handleOpenDeleteModal}
           onToggleAceptada={handleToggleAceptada}
           onGenerarLinkWhatsApp={generarLinkWhatsApp}
-          isUpdating={isUpdatingCita}
+          isUpdating={isUpdatingCita || isDeletingCita}
           isLoading={isLoading}
           filtroDia={filtroDia}
           setFiltroDia={setFiltroDia}
@@ -650,58 +711,119 @@ const AdminCitasPage = () => {
             </div>
             <div className="pt-4 flex flex-col sm:flex-row gap-3">
               <CRButton
-                title="Reagendar Cita"
-                onClick={handleReagendarDesdeDetalles}
+                title="Editar Cita"
+                onClick={handleEditarDesdeDetalles}
                 className="w-full !bg-orange-500 hover:!bg-orange-600 text-white"
-                externalIcon={<DynamicIcon name="CalendarClock" className="w-4 h-4" />}
+                externalIcon={<DynamicIcon name="Edit" className="w-4 h-4" />}
+              />
+              <CRButton
+                title="Eliminar Cita"
+                onClick={() => {
+                  handleCloseDetallesModal();
+                  handleOpenDeleteModal(citaSeleccionada);
+                }}
+                className="w-full !bg-red-600 hover:!bg-red-700 text-white"
+                externalIcon={<DynamicIcon name="Trash2" className="w-4 h-4" />}
               />
               <CRButton title="Cerrar" onClick={handleCloseDetallesModal} className="w-full !bg-gray-400 dark:!bg-slate-600" />
             </div>
           </div>
         )}
       </CRModal>
+
       <CRModal
-        isOpen={isReagendarModalOpen}
-        setIsOpen={setIsReagendarModalOpen}
-        title={`Reagendar Cita de ${citaParaReagendar?.nombre_cliente || ""}`}
-        width={window.innerWidth < 768 ? 90 : 40}
+        isOpen={isEditModalOpen}
+        setIsOpen={setIsEditModalOpen}
+        title={`Editar Cita de ${citaParaEditar?.nombre_cliente || ""}`}
+        width={window.innerWidth < 768 ? 90 : 50}
       >
-        {citaParaReagendar && (
-          <div className="space-y-4 p-2">
-            <div>
-              <label htmlFor="nuevaFechaReagenda" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Nueva Fecha para la Cita:
-              </label>
-              <input
-                type="date"
-                id="nuevaFechaReagenda"
-                value={nuevaFechaReagenda}
-                onChange={(e) => setNuevaFechaReagenda(e.target.value)}
-                min={new Date().toISOString().split("T")[0]}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-white dark:bg-slate-700 text-textPrimary dark:text-white"
-              />
-            </div>
+        {citaParaEditar && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleUpdateCita();
+            }}
+            className="space-y-4 p-4"
+          >
+            <CRInput title="Nombre Cliente" value={editForm.nombre_cliente} setValue={(val) => handleEditFormChange("nombre_cliente", val)} require />
+            <CRInput
+              title="Teléfono Cliente"
+              type="number"
+              value={editForm.telefono_cliente}
+              setValue={(val) => handleEditFormChange("telefono_cliente", val)}
+              require
+            />
+            <CRInput
+              title="Nueva Fecha"
+              type="date"
+              value={editForm.fecha_cita}
+              setValue={(val) => handleEditFormChange("fecha_cita", val)}
+              min={new Date().toISOString().split("T")[0]}
+              require
+            />
             <CRSelect
-              title="Nueva Hora para la Cita"
+              title="Nueva Hora"
               data={horaOptions}
-              value={horaOptions.find((h) => h.value === nuevaHoraReagenda)}
-              setValue={(val) => setNuevaHoraReagenda(val?.value || "")}
-              placeholder="Selecciona nueva hora"
-              clearable={false}
+              value={horaOptions.find((h) => h.value === editForm.hora_cita)}
+              setValue={(val) => handleEditFormChange("hora_cita", val?.value || "")}
+              require
             />
-            <CRButton
-              title="Notificar Reagenda por WhatsApp"
-              onClick={() => generarLinkWhatsApp(citaParaReagendar, "reagenda")}
-              className="w-full !bg-green-500 hover:!bg-green-600 mt-2"
-              externalIcon={<DynamicIcon name="MessageCircle" className="w-4 h-4" />}
-              disabled={!nuevaFechaReagenda || !nuevaHoraReagenda || isUpdatingCita}
+            <CRSelect
+              title="Servicio"
+              data={serviciosOptions}
+              value={serviciosOptions.find((s) => s.value === editForm.id_subcategoria_servicio)}
+              setValue={(val) => handleEditFormChange("id_subcategoria_servicio", val?.value || null)}
+              loading={isLoadingCategorias}
+              require
             />
-            <div className="flex">
-              <CRButton title="Confirmar Reagenda" onClick={handleReagendarCita} className="bg-primary" loading={isUpdatingCita} />
+            <CRInput title="Notas" type="textarea" value={editForm.notas} setValue={(val) => handleEditFormChange("notas", val)} />
+            <div>
+              <label className="flex items-center cursor-pointer select-none">
+                <span className="mr-2 text-sm text-textPrimary dark:text-slate-300">Cita Confirmada</span>
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={editForm.aceptada}
+                    onChange={(e) => handleEditFormChange("aceptada", e.target.checked)}
+                  />
+                  <div
+                    className={`block w-10 h-6 rounded-full transition-colors duration-200 ease-in-out ${
+                      editForm.aceptada ? "bg-green-500" : "bg-red-500"
+                    }`}
+                  ></div>
+                  <div
+                    className={`dot absolute left-1 top-1 bg-white dark:bg-gray-200 w-4 h-4 rounded-full shadow-md transition-transform duration-200 ease-in-out ${
+                      editForm.aceptada ? "transform translate-x-full" : ""
+                    }`}
+                  ></div>
+                </div>
+              </label>
             </div>
-          </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <CRButton type="button" title="Cancelar" onClick={() => setIsEditModalOpen(false)} className="!bg-gray-400 dark:!bg-slate-600" />
+              <CRButton type="submit" title="Guardar Cambios" className="!bg-primary" loading={isUpdatingCita} />
+            </div>
+          </form>
         )}
       </CRModal>
+
+      <ConfirmationModal isOpen={isDeleteConfirmOpen} onClose={() => setIsDeleteConfirmOpen(false)} title="Confirmar Eliminación" type="warning">
+        <p>
+          ¿Estás seguro de que deseas eliminar la cita de <strong>{citaParaEliminar?.nombre_cliente}</strong>?
+        </p>
+        <p className="text-xs text-gray-500 mt-2">Esta acción no se puede deshacer.</p>
+        <div className="mt-6 flex justify-end space-x-3">
+          <CRButton
+            title="Cancelar"
+            onClick={() => setIsDeleteConfirmOpen(false)}
+            className="bg-gray-300 hover:bg-gray-400 dark:bg-slate-600 dark:hover:bg-slate-500 text-textPrimary dark:text-white"
+            disabled={isDeletingCita}
+          />
+          <CRButton title="Sí, Eliminar" onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700 text-white" loading={isDeletingCita} />
+        </div>
+      </ConfirmationModal>
+
       <CRModal isOpen={isAddModalOpen} setIsOpen={closeAddModal} title="Añadir Nueva Cita" width={window.innerWidth < 768 ? 90 : 50}>
         <form onSubmit={handleAddCitaSubmit} className="space-y-4 p-4">
           <CRInput title="Nombre del Cliente" value={addForm.nombre_cliente} setValue={(val) => handleAddFormChange("nombre_cliente", val)} require />
