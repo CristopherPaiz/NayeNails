@@ -42,6 +42,7 @@ const OtpInput = ({ value, onChange, onComplete }) => {
           type="tel"
           maxLength="1"
           value={digit}
+          autoComplete="off"
           onChange={(e) => handleChange(e, index)}
           onKeyDown={(e) => handleKeyDown(e, index)}
           className="w-8 h-10 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-primary dark:focus:border-primary-light rounded-lg outline-none transition-all duration-200"
