@@ -63,7 +63,14 @@ const FidelidadPage = () => {
 
   useEffect(() => {
     const fetchTarjetaPorCodigo = async () => {
-      if (!codigo) return;
+      if (!codigo) {
+        // SOLUCIÓN: Resetear el estado cuando no hay código
+        setTarjeta(null);
+        setError("");
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       try {
         const response = await apiClient.get(`/fidelidad/public/${codigo}`);
@@ -117,7 +124,6 @@ const FidelidadPage = () => {
             />
             <div className="mt-8 text-sm text-gray-500 dark:text-gray-400 space-y-1">
               <p>✨ Toca la tarjeta para girarla.</p>
-              {/* <p>📱 Inclina tu dispositivo para ver los efectos.</p> */}
             </div>
           </>
         ) : (
