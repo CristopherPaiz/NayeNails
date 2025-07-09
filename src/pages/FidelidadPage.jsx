@@ -117,7 +117,7 @@ const FidelidadPage = () => {
             />
             <div className="mt-8 text-sm text-gray-500 dark:text-gray-400 space-y-1">
               <p>✨ Toca la tarjeta para girarla.</p>
-              <p>📱 Inclina tu dispositivo para ver los efectos.</p>
+              {/* <p>📱 Inclina tu dispositivo para ver los efectos.</p> */}
             </div>
           </>
         ) : (

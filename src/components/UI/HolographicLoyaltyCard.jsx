@@ -112,7 +112,7 @@ const HolographicLoyaltyCard = ({
             scale={isInteractive ? 1.05 : 1}
             perspective={900}
             transitionSpeed={1000}
-            gyroscope={isInteractive}
+            gyroscope={false}
             style={{ transformStyle: "preserve-3d", width: "100%", height: "100%" }}
           >
             <div className="card-flipper" style={{ transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)" }}>
