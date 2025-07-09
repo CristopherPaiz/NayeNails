@@ -17,6 +17,8 @@ import Disenios from "../pages/Admin/Disenios";
 import Categorias from "../pages/Admin/Categorias";
 import TextosColoresPage from "../pages/Admin/TextosColoresPage";
 import AdminCitasPage from "../pages/Admin/AdminCitasPage";
+import FidelidadPage from "../pages/FidelidadPage";
+import AdminFidelidadPage from "../pages/Admin/AdminFidelidadPage";
 
 const AppRouter = () => {
   return (
@@ -28,6 +30,8 @@ const AppRouter = () => {
       <Route path="/agendar-cita" element={<AgendaPage />} />
       <Route path="/ubicacion" element={<UbicacionPage />} />
       <Route path="/contacto" element={<ContactoPage />} />
+      <Route path="/fidelidad" element={<FidelidadPage />} />
+      <Route path="/fidelidad/:codigo" element={<FidelidadPage />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/admin" element={<AdminLayout />}>
@@ -38,10 +42,10 @@ const AppRouter = () => {
           <Route path="config" element={<Configuraciones />} />
           <Route path="textos-colores" element={<TextosColoresPage />} />
           <Route path="citas" element={<AdminCitasPage />} />
+          <Route path="fidelidad" element={<AdminFidelidadPage />} />
           <Route path="perfil" element={<Perfil />} />
         </Route>
       </Route>
-
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
