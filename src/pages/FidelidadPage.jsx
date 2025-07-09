@@ -40,6 +40,7 @@ const OtpInput = ({ value, onChange, onComplete }) => {
           key={index}
           ref={(el) => (inputsRef.current[index] = el)}
           type="tel"
+          pattern="\d*"
           maxLength="1"
           value={digit}
           autoComplete="off"
@@ -65,7 +66,6 @@ const FidelidadPage = () => {
   useEffect(() => {
     const fetchTarjetaPorCodigo = async () => {
       if (!codigo) {
-        // SOLUCIÓN: Resetear el estado cuando no hay código
         setTarjeta(null);
         setError("");
         setIsLoading(false);
@@ -73,10 +73,10 @@ const FidelidadPage = () => {
       }
 
       setIsLoading(true);
+      setError("");
       try {
         const response = await apiClient.get(`/fidelidad/public/${codigo}`);
         setTarjeta(response.data);
-        setError("");
       } catch (err) {
         setError(err.response?.data?.message || "No se pudo cargar la tarjeta.");
         navigate("/fidelidad", { replace: true });
@@ -88,7 +88,7 @@ const FidelidadPage = () => {
   }, [codigo, navigate]);
 
   const handleSearch = async (fullPhone) => {
-    if (fullPhone.length !== 8) {
+    if (!fullPhone || fullPhone.length !== 8) {
       setError("Por favor, ingresa los 8 dígitos de tu teléfono.");
       return;
     }
@@ -97,6 +97,7 @@ const FidelidadPage = () => {
     try {
       const response = await apiClient.get(`/fidelidad/public/buscar?telefono=${fullPhone}`);
       navigate(`/fidelidad/${response.data.codigo}`, { replace: true });
+      setOtp(new Array(8).fill(""));
     } catch (err) {
       setError(err.response?.data?.message || "Error al buscar la tarjeta.");
     } finally {
@@ -105,19 +106,24 @@ const FidelidadPage = () => {
   };
 
   return (
-    <div className="min-h-dvh pt-16 sm:pt-0 -mt-24 px-4 bg-backgroundSecondary dark:bg-background flex flex-col items-center justify-center">
-      <div className="w-full max-w-md flex flex-col items-center justify-center text-center">
+    <div className="min-h-dvh pt-24 sm:pt-0 -mt-24 px-4 bg-[#f8f5f2] dark:bg-slate-900 flex flex-col items-center justify-center">
+      <div className="w-full max-w-lg flex flex-col items-center justify-center text-center">
         {isLoading ? (
           <CRLoader style="nailPaint" size="lg" text="Buscando tu tarjeta..." />
         ) : tarjeta ? (
           <>
             <div className="mb-6">
-              <h1 className="text-3xl font-bold text-primary dark:text-primary-light">¡Hola de nuevo!</h1>
-              <p className="text-textSecondary dark:text-gray-400 mt-1">Este es el progreso de tu tarjeta de fidelidad.</p>
+              <h1 className="text-3xl font-bold text-primary dark:text-primary-light">¡Hola de nuevo, {tarjeta.nombre_cliente}!</h1>
+              <p className="text-textSecondary dark:text-gray-400 mt-1">
+                {tarjeta.canje_disponible === 1
+                  ? "¡Felicidades! Ya puedes reclamar tu descuento."
+                  : `Te faltan ${4 - tarjeta.visitas_acumuladas} visitas para tu premio.`}
+              </p>
             </div>
             <HolographicLoyaltyCard
               nombreCliente={tarjeta.nombre_cliente}
               visitas={tarjeta.visitas_acumuladas}
+              ciclosCompletados={Math.floor(tarjeta.visitas_acumuladas / 4)}
               canjeDisponible={tarjeta.canje_disponible === 1}
               logoUrl={IMAGELOCAL}
               isInteractive={true}
@@ -125,6 +131,7 @@ const FidelidadPage = () => {
             />
             <div className="mt-8 text-sm text-gray-500 dark:text-gray-400 space-y-1">
               <p>✨ Toca la tarjeta para girarla.</p>
+              {tarjeta.canje_disponible === 1 && <p className="font-bold text-green-600">¡Agenda tu cita para usar tu 50% de descuento!</p>}
             </div>
           </>
         ) : (

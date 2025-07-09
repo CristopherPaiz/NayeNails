@@ -41,7 +41,7 @@ const EditVisitasModal = ({ isOpen, onClose, tarjeta, onSave, isLoading }) => {
   };
 
   return (
-    <CRModal isOpen={isOpen} setIsOpen={onClose} title={`Editar Visitas de ${tarjeta.nombre_cliente}`} width={window.innerWidth < 768 ? 90 : 35}>
+    <CRModal isOpen={isOpen} setIsOpen={onClose} title={`Editar Visitas de ${tarjeta.nombre_cliente}`} width={window.innerWidth < 768 ? 90 : 45}>
       <div className="p-4 flex flex-col items-center">
         <HolographicLoyaltyCard
           nombreCliente={tarjeta.nombre_cliente}
@@ -177,6 +177,7 @@ const AdminFidelidadPage = () => {
 
   const handleVerHistorial = async (tarjetaId) => {
     setIsHistoryLoading(true);
+    setTarjetaParaEditar({ id: tarjetaId }); // Asigna el ID para identificar el loader
     setIsHistoryModalOpen(true);
     try {
       const response = await apiClient.get(`/fidelidad/${tarjetaId}/historial`);
@@ -202,13 +203,14 @@ const AdminFidelidadPage = () => {
     const cardUrl = `${baseUrl}/fidelidad/${codigo}`;
     let mensaje = "";
 
+    // CAMBIO: Mensajes de WhatsApp actualizados para la nueva promoción
     if (canje_disponible) {
-      mensaje = `¡Felicidades ${nombre_cliente}! 🥳 Has completado tu tarjeta de fidelidad en Naye Nails. ¡Tu próximo servicio es GRATIS! Agenda tu cita para reclamarlo. 💅\n\nPuedes ver tu tarjeta aquí: ${cardUrl}`;
+      mensaje = `¡Felicidades ${nombre_cliente}! 🥳 Has completado tu tarjeta de fidelidad en Naye Nails. ¡Obtén un 50% de DESCUENTO en tu próxima cita! Agenda para reclamarlo. 💅\n\nPuedes ver tu tarjeta aquí: ${cardUrl}`;
     } else {
-      const faltan = 5 - visitas_acumuladas;
+      const faltan = 4 - visitas_acumuladas; // CAMBIO: de 5 a 4
       mensaje = `¡Hola ${nombre_cliente}! 💖 Tienes ${visitas_acumuladas} visita(s) en tu tarjeta de fidelidad Naye Nails. ¡Te falta${
         faltan === 1 ? "" : "n"
-      } solo ${faltan} para tu servicio gratis! 💅\n\nPuedes ver tu tarjeta aquí: ${cardUrl}`;
+      } solo ${faltan} para tu premio! 💅\n\nPuedes ver tu tarjeta aquí: ${cardUrl}`;
     }
 
     const url = `https://wa.me/502${numero}?text=${encodeURIComponent(mensaje)}`;
@@ -258,7 +260,8 @@ const AdminFidelidadPage = () => {
                     <EstadoBadge canjeDisponible={tarjeta.canje_disponible === 1} visitas={tarjeta.visitas_acumuladas} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-bold text-gray-900 dark:text-white">
-                    {tarjeta.visitas_acumuladas} / 5
+                    {/* CAMBIO: El total de visitas ahora es 4 */}
+                    {tarjeta.visitas_acumuladas} / 4
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-bold text-gray-900 dark:text-white">
                     {tarjeta.ciclos_completados}
