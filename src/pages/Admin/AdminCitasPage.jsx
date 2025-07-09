@@ -135,11 +135,10 @@ const CitasLista = ({
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     <DynamicIcon name="Clock" className="inline w-4 h-4 mr-1" /> {formatTimeToAMPM(cita.hora_cita)}
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    <DynamicIcon name="Wrench" className="inline w-4 h-4 mr-1" />
-                    {cita.nombre_categoria_padre ? `${cita.nombre_categoria_padre}: ` : ""}
-                    {cita.nombre_subcategoria || "Servicio no especificado"}
-                  </p>
+                  <div className="text-sm text-gray-600 dark:text-gray-300 flex items-start">
+                    <DynamicIcon name="Wrench" className="inline w-4 h-4 mr-1 mt-0.5 flex-shrink-0" />
+                    <span>{cita.servicios?.map((s) => s.nombre).join(", ") || "Servicio no especificado"}</span>
+                  </div>
                 </div>
                 <div className="flex flex-col items-end space-y-2">
                   <CRSwitch
@@ -223,7 +222,7 @@ const AdminCitasPage = () => {
     telefono_cliente: "",
     fecha_cita: "",
     hora_cita: "",
-    id_subcategoria_servicio: null,
+    servicios_ids: [],
     notas: "",
     aceptada: false,
   });
@@ -238,7 +237,7 @@ const AdminCitasPage = () => {
     telefono_cliente: "",
     fecha_cita: "",
     hora_cita: "",
-    id_subcategoria_servicio: null,
+    servicios_ids: [],
     notas: "",
   });
   const [resetServicioSelect, setResetServicioSelect] = useState(false);
@@ -379,7 +378,7 @@ const AdminCitasPage = () => {
       telefono_cliente: cita.telefono_cliente || "",
       fecha_cita: cita.fecha_cita ? format(parseISO(cita.fecha_cita), "yyyy-MM-dd") : "",
       hora_cita: cita.hora_cita || "",
-      id_subcategoria_servicio: cita.id_subcategoria_servicio || null,
+      servicios_ids: cita.servicios?.map((s) => s.id) || [],
       notas: cita.notas || "",
       aceptada: !!cita.aceptada,
     });
@@ -390,18 +389,15 @@ const AdminCitasPage = () => {
     setEditForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  // <-- CORRECCIÓN: Handler específico para el switch
-  // const handleAceptadaSwitchChange = (newCheckedState) => {
-  //   console.log("Nuevo estado aceptada:", newCheckedState);
-  //   setEditForm((prev) => ({
-  //     ...prev,
-  //     aceptada: newCheckedState,
-  //   }));
-  // };
-
   const handleUpdateCita = () => {
     if (!citaParaEditar) return;
-    if (!editForm.fecha_cita || !editForm.hora_cita || !editForm.nombre_cliente || !editForm.telefono_cliente || !editForm.id_subcategoria_servicio) {
+    if (
+      !editForm.fecha_cita ||
+      !editForm.hora_cita ||
+      !editForm.nombre_cliente ||
+      !editForm.telefono_cliente ||
+      editForm.servicios_ids.length === 0
+    ) {
       CRAlert.alert({ title: "Atención", message: "Todos los campos (excepto notas) son obligatorios.", type: "warning" });
       return;
     }
@@ -421,25 +417,27 @@ const AdminCitasPage = () => {
     deleteCitaMutate({ url: `/citas/admin/${citaParaEliminar.id}` });
   };
 
-  const generarLinkWhatsApp = (cita, tipoMensaje = "confirmacion") => {
+  const generarLinkWhatsApp = (cita) => {
     const nombreCliente = cita.nombre_cliente;
     const telefonoCliente = cita.telefono_cliente.replace(/\D/g, "");
     const fechaFormateada = format(parseISO(cita.fecha_cita), "EEEE dd 'de' MMMM 'de' yyyy", { locale: es });
     const horaFormateada = formatTimeToAMPM(cita.hora_cita);
-    const servicio =
-      cita.nombre_categoria_padre && cita.nombre_subcategoria
-        ? `${cita.nombre_categoria_padre}: ${cita.nombre_subcategoria}`
-        : cita.nombre_subcategoria || "el servicio solicitado";
+    const servicios = cita.servicios?.map((s) => s.nombre).join(", ") || "el servicio solicitado";
     const notas = cita.notas ? `\n📝 Nota: '${cita.notas}'.` : "";
     const nombreNegocio = useStoreNails.getState().textosColoresConfig?.nombre_negocio || "Naye Nails";
-    let mensaje;
-    if (tipoMensaje === "reagenda" && citaParaEditar) {
-      const nuevaFechaFormateada = format(parseISO(editForm.fecha_cita), "EEEE dd 'de' MMMM 'de' yyyy", { locale: es });
-      const nuevaHoraFormateada = formatTimeToAMPM(editForm.hora_cita);
-      mensaje = `💬 ¡Hola ${nombreCliente}! 💖\nTu cita en *${nombreNegocio}* ha sido reagendada ✨\nPara ${servicio} 💅\n📅 *${nuevaFechaFormateada}* a las *${nuevaHoraFormateada}* 🕒\nSi tienes alguna duda, no dudes en responder este mensaje 💕`;
-    } else {
-      mensaje = `💬 ¡Hola ${nombreCliente}! 💖\nTe confirmamos tu cita en *${nombreNegocio}* ✨\n*Solicitaste:*\n${servicio} 💅${notas}\n📅 *${fechaFormateada}* a las *${horaFormateada}* 🕒\n\n¡Te esperamos! 🌸💅💕`;
-    }
+    const mensaje = `💬 ¡Hola ${nombreCliente}! 💖\nTe confirmamos tu cita en *${nombreNegocio}* ✨\n*Solicitaste:*\n${servicios} 💅${notas}\n📅 *${fechaFormateada}* a las *${horaFormateada}* 🕒\n\n¡Te esperamos! 🌸💅💕`;
+    const url = `https://api.whatsapp.com/send?phone=${telefonoCliente}&text=${encodeURIComponent(mensaje)}`;
+    window.open(url, "_blank");
+  };
+
+  const generarLinkRecordatorio = (cita) => {
+    const nombreCliente = cita.nombre_cliente;
+    const telefonoCliente = cita.telefono_cliente.replace(/\D/g, "");
+    const fechaFormateada = format(parseISO(cita.fecha_cita), "EEEE dd 'de' MMMM", { locale: es });
+    const horaFormateada = formatTimeToAMPM(cita.hora_cita);
+    const servicios = cita.servicios?.map((s) => s.nombre).join(", ") || "manicura";
+    const nombreNegocio = useStoreNails.getState().textosColoresConfig?.nombre_negocio || "Naye Nails";
+    const mensaje = `Hola ${nombreCliente}🌸\n📌 Te recordamos tu cita para *${servicios}* el *${fechaFormateada}* a las *${horaFormateada}* en ${nombreNegocio}.\nSi necesitas reprogramar, por favor avísanos con al menos 24 horas de anticipación. 🗓️\n\n¡Gracias por confiar en nosotros! 💕`;
     const url = `https://api.whatsapp.com/send?phone=${telefonoCliente}&text=${encodeURIComponent(mensaje)}`;
     window.open(url, "_blank");
   };
@@ -460,7 +458,7 @@ const AdminCitasPage = () => {
       telefono_cliente: "",
       fecha_cita: fecha,
       hora_cita: hora,
-      id_subcategoria_servicio: null,
+      servicios_ids: [],
       notas: "",
     });
     setIsAddModalOpen(true);
@@ -468,15 +466,15 @@ const AdminCitasPage = () => {
 
   const closeAddModal = () => {
     setIsAddModalOpen(false);
-    setAddForm({ nombre_cliente: "", telefono_cliente: "", fecha_cita: "", hora_cita: "", id_subcategoria_servicio: null, notas: "" });
+    setAddForm({ nombre_cliente: "", telefono_cliente: "", fecha_cita: "", hora_cita: "", servicios_ids: [], notas: "" });
     setResetServicioSelect((prev) => !prev);
   };
 
   const handleAddFormChange = (field, value) => setAddForm((prev) => ({ ...prev, [field]: value }));
   const handleAddCitaSubmit = (e) => {
     e.preventDefault();
-    const { nombre_cliente, telefono_cliente, fecha_cita, hora_cita, id_subcategoria_servicio } = addForm;
-    if (!nombre_cliente || !telefono_cliente || !fecha_cita || !hora_cita || !id_subcategoria_servicio) {
+    const { nombre_cliente, telefono_cliente, fecha_cita, hora_cita, servicios_ids } = addForm;
+    if (!nombre_cliente || !telefono_cliente || !fecha_cita || !hora_cita || servicios_ids.length === 0) {
       CRAlert.alert({ title: "Campos Incompletos", message: "Por favor, rellena todos los campos obligatorios.", type: "warning" });
       return;
     }
@@ -685,12 +683,14 @@ const AdminCitasPage = () => {
                 <strong>Hora:</strong> {formatTimeToAMPM(citaSeleccionada.hora_cita)}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <DynamicIcon name="Wrench" className="w-5 h-5 text-primary" />
-              <p>
-                <strong>Servicio:</strong>
-                {` ${citaSeleccionada.nombre_categoria_padre || ""}: ${citaSeleccionada.nombre_subcategoria || "No especificado"}`}
-              </p>
+            <div className="flex items-start gap-2">
+              <DynamicIcon name="Wrench" className="w-5 h-5 text-primary mt-1" />
+              <div>
+                <strong>Servicios:</strong>
+                <p className="pl-1 italic text-gray-600 dark:text-gray-400">
+                  {citaSeleccionada.servicios?.map((s) => s.nombre).join(", ") || "No especificado"}
+                </p>
+              </div>
             </div>
             <div className="flex items-start gap-2">
               <DynamicIcon name="FileText" className="w-5 h-5 text-primary mt-1" />
@@ -709,21 +709,27 @@ const AdminCitasPage = () => {
                 <strong>Estado:</strong> {citaSeleccionada.estado}
               </p>
             </div>
-            <div className="pt-4 flex flex-col sm:flex-row gap-3">
+            <div className="pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
               <CRButton
-                title="Editar Cita"
+                title="Editar"
                 onClick={handleEditarDesdeDetalles}
                 className="w-full !bg-orange-500 hover:!bg-orange-600 text-white"
                 externalIcon={<DynamicIcon name="Edit" className="w-4 h-4" />}
               />
               <CRButton
-                title="Eliminar Cita"
+                title="Eliminar"
                 onClick={() => {
                   handleCloseDetallesModal();
                   handleOpenDeleteModal(citaSeleccionada);
                 }}
                 className="w-full !bg-red-600 hover:!bg-red-700 text-white"
                 externalIcon={<DynamicIcon name="Trash2" className="w-4 h-4" />}
+              />
+              <CRButton
+                title="Recordatorio"
+                onClick={() => generarLinkRecordatorio(citaSeleccionada)}
+                className="w-full !bg-blue-500 hover:!bg-blue-600 text-white"
+                externalIcon={<DynamicIcon name="BellRing" className="w-4 h-4" />}
               />
               <CRButton title="Cerrar" onClick={handleCloseDetallesModal} className="w-full !bg-gray-400 dark:!bg-slate-600" />
             </div>
@@ -769,12 +775,18 @@ const AdminCitasPage = () => {
               require
             />
             <CRSelect
-              title="Servicio"
+              title="Servicio(s)"
               data={serviciosOptions}
-              value={serviciosOptions.find((s) => s.value === editForm.id_subcategoria_servicio)}
-              setValue={(val) => handleEditFormChange("id_subcategoria_servicio", val?.value || null)}
+              value={serviciosOptions.filter((s) => editForm.servicios_ids.includes(s.value))}
+              setValue={(val) =>
+                handleEditFormChange(
+                  "servicios_ids",
+                  val.map((v) => v.value)
+                )
+              }
               loading={isLoadingCategorias}
               require
+              multi={true}
             />
             <CRInput title="Notas" type="textarea" value={editForm.notas} setValue={(val) => handleEditFormChange("notas", val)} />
             <div>
@@ -851,14 +863,20 @@ const AdminCitasPage = () => {
             require
           />
           <CRSelect
-            title="Servicio Solicitado"
+            title="Servicio(s) Solicitado(s)"
             data={serviciosOptions}
-            value={serviciosOptions.find((s) => s.value === addForm.id_subcategoria_servicio)}
-            setValue={(val) => handleAddFormChange("id_subcategoria_servicio", val?.value || null)}
-            placeholder="Selecciona un servicio"
+            value={serviciosOptions.filter((s) => addForm.servicios_ids.includes(s.value))}
+            setValue={(val) =>
+              handleAddFormChange(
+                "servicios_ids",
+                val.map((v) => v.value)
+              )
+            }
+            placeholder="Selecciona uno o más servicios"
             loading={isLoadingCategorias}
             reset={resetServicioSelect}
             require
+            multi={true}
           />
           <CRInput title="Notas (Opcional)" type="textarea" value={addForm.notas} setValue={(val) => handleAddFormChange("notas", val)} />
           <div className="flex justify-end gap-3 pt-4">

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { User, Phone, CalendarDays, Clock, Send, MessageSquareText, Palette, Loader2 } from "lucide-react";
+import { User, Phone, CalendarDays, Clock, Send, MessageSquareText, Loader2 } from "lucide-react";
 import ConfirmationModal from "../components/ConfirmationModal";
 import { format, getDay, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -7,7 +7,6 @@ import useScrollToTop from "../hooks/useScrollToTop";
 import CRInput from "../components/UI/CRInput";
 import CRSelect from "../components/UI/CRSelect";
 import useApiRequest from "../hooks/useApiRequest";
-// CRLoader no se usará globalmente aquí si el botón maneja su propio estado de carga
 import CRAlert from "../components/UI/CRAlert";
 
 const AgendaPage = () => {
@@ -16,7 +15,7 @@ const AgendaPage = () => {
   const [phone, setPhone] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
-  const [selectedServiceObject, setSelectedServiceObject] = useState(null);
+  const [selectedServicios, setSelectedServicios] = useState([]);
   const [notes, setNotes] = useState("");
 
   const [availableTimes, setAvailableTimes] = useState([]);
@@ -28,7 +27,25 @@ const AgendaPage = () => {
   const dateInputRef = useRef(null);
   const [resetServicioSelect, setResetServicioSelect] = useState(false);
 
-  const defaultTimes = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00"];
+  const defaultTimes = [
+    "08:00",
+    "08:30",
+    "09:00",
+    "09:30",
+    "10:00",
+    "10:30",
+    "11:00",
+    "11:30",
+    "14:00",
+    "14:30",
+    "15:00",
+    "15:30",
+    "16:00",
+    "16:30",
+    "17:00",
+    "17:30",
+    "18:00",
+  ];
   const today = new Date().toISOString().split("T")[0];
 
   const { data: categoriasData, isLoading: isLoadingCategorias } = useApiRequest({
@@ -45,6 +62,7 @@ const AgendaPage = () => {
       onSuccess: () => {
         const dateForDisplay = format(parseISO(selectedDate + "T00:00:00"), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: es });
         const timeForDisplay = formatTimeToAMPM(selectedTime);
+        const serviciosNombres = selectedServicios.map((s) => s.label.split(" - ")[1]).join(", ");
         setModalContent({
           title: "¡Cita Agendada!",
           message: (
@@ -53,21 +71,21 @@ const AgendaPage = () => {
                 ¡Gracias <strong className="text-primary">{name || "Cliente"}</strong>!
               </p>
               <p>
-                Tu cita para <strong className="text-primary">{selectedServiceObject?.label || "el servicio seleccionado"}</strong> fue agendada para
-                el día <strong className="text-primary">{dateForDisplay}</strong> a las <strong className="text-primary">{timeForDisplay}</strong>.
+                Tu cita para <strong className="text-primary">{serviciosNombres}</strong> fue agendada para el día{" "}
+                <strong className="text-primary">{dateForDisplay}</strong> a las <strong className="text-primary">{timeForDisplay}</strong>.
               </p>
               <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">Te confirmaremos por WhatsApp que hemos recibido tu cita.</p>
             </>
           ),
           type: "success",
         });
-        setIsModalOpen(true); // Mostrar modal DESPUÉS de que la carga termine
+        setIsModalOpen(true);
       },
       onError: (error) => {
         CRAlert.alert({ title: "Error al Agendar", message: error.response?.data?.message || "No se pudo crear la cita.", type: "error" });
       },
     },
-    notificationEnabled: false, // Las notificaciones de éxito/error se manejan en onSuccess/onError
+    notificationEnabled: false,
   });
 
   const serviciosOptions = useMemo(() => {
@@ -121,7 +139,7 @@ const AgendaPage = () => {
     e.preventDefault();
     if (isCreatingCita) return;
 
-    if (!selectedDate || !selectedTime || isWeekend || !selectedServiceObject || !name.trim() || !phone.trim()) {
+    if (!selectedDate || !selectedTime || isWeekend || selectedServicios.length === 0 || !name.trim() || !phone.trim()) {
       setModalContent({
         title: "¡Atención!",
         message: "Por favor, completa todos los campos obligatorios (*), y selecciona una fecha y hora válidas (no fin de semana).",
@@ -136,7 +154,7 @@ const AgendaPage = () => {
       telefono_cliente: phone,
       fecha_cita: selectedDate,
       hora_cita: selectedTime,
-      id_subcategoria_servicio: selectedServiceObject.value,
+      servicios_ids: selectedServicios.map((s) => s.value),
       notas: notes,
     });
   };
@@ -146,7 +164,7 @@ const AgendaPage = () => {
     setPhone("");
     setSelectedDate("");
     setSelectedTime("");
-    setSelectedServiceObject(null);
+    setSelectedServicios([]);
     setNotes("");
     setResetServicioSelect((prev) => !prev);
   };
@@ -173,9 +191,15 @@ const AgendaPage = () => {
     "block w-full pl-10 pr-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500";
   const iconTwClasses = "absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 dark:text-gray-500";
 
-  // Condición explícita para deshabilitar el botón
   const isSubmitButtonDisabled =
-    isCreatingCita || isLoadingCategorias || !name.trim() || !phone.trim() || !selectedDate || !selectedTime || isWeekend || !selectedServiceObject;
+    isCreatingCita ||
+    isLoadingCategorias ||
+    !name.trim() ||
+    !phone.trim() ||
+    !selectedDate ||
+    !selectedTime ||
+    isWeekend ||
+    selectedServicios.length === 0;
 
   return (
     <div className="container mx-auto px-4 py-8 pt-20 sm:pt-24 min-h-[calc(100vh-80px)] flex flex-col items-center">
@@ -283,11 +307,11 @@ const AgendaPage = () => {
         )}
 
         <CRSelect
-          title="Servicio a Solicitar *"
+          title="Servicio(s) a Solicitar *"
           data={serviciosOptions}
-          setValue={setSelectedServiceObject}
-          value={selectedServiceObject}
-          placeholder="Selecciona un servicio..."
+          setValue={setSelectedServicios}
+          value={selectedServicios}
+          placeholder="Selecciona uno o más servicios..."
           labelField="label"
           valueField="value"
           disabled={isLoadingCategorias || isCreatingCita}
@@ -297,6 +321,8 @@ const AgendaPage = () => {
           searchable={true}
           reset={resetServicioSelect}
           require
+          multi={true}
+          onlySelectValues={false}
         />
 
         <CRInput
