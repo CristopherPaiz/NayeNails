@@ -252,6 +252,7 @@ const AdminCitasPage = () => {
   }, []);
 
   const defaultTimes = [
+    "08:00",
     "08:30",
     "09:00",
     "09:30",
