@@ -73,7 +73,7 @@ const HolographicLoyaltyCard = ({
         .holographic-overlay {
           position: absolute;
           inset: -100%;
-          background-image: conic-gradient(from 90deg at 40% -25%,rgb(255, 157, 206), #c972f4, #61dafb, #c972f4,rgb(255, 179, 217));
+          background-image: conic-gradient(from 90deg at 40% -25%,rgb(255, 157, 206), #c972f4, #61dafb, #c972f4, #ff65b2);
           animation: spin 5s linear infinite;
           opacity: 0;
           transition: opacity 0.5s;
@@ -110,7 +110,7 @@ const HolographicLoyaltyCard = ({
             glarePosition="all"
             glareBorderRadius="1rem"
             scale={isInteractive ? 1.05 : 1}
-            perspective={600}
+            perspective={900}
             transitionSpeed={1000}
             gyroscope={isInteractive}
             style={{ transformStyle: "preserve-3d", width: "100%", height: "100%" }}
