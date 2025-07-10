@@ -7,22 +7,30 @@ import HolographicLoyaltyCard from "../components/UI/HolographicLoyaltyCard";
 import IMAGELOCAL from "/nayeNails.webp";
 import { DynamicIcon } from "../utils/DynamicIcon";
 
-const OtpInput = ({ value, onChange, onComplete }) => {
+const OtpInput = ({ value, onChange, onComplete, length, inputType }) => {
   const inputsRef = useRef([]);
 
+  useEffect(() => {
+    inputsRef.current = inputsRef.current.slice(0, length);
+  }, [length]);
+
   const handleChange = (e, index) => {
-    const { value: inputValue } = e.target;
-    if (!/^\d*$/.test(inputValue)) return;
+    let inputValue = e.target.value;
+
+    if (inputType === "phone" && !/^\d*$/.test(inputValue)) return;
+    if (inputType === "code") {
+      inputValue = inputValue.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    }
 
     const newOtp = [...value];
     newOtp[index] = inputValue.slice(-1);
     onChange(newOtp);
 
-    if (inputValue && index < 7) {
+    if (inputValue && index < length - 1) {
       inputsRef.current[index + 1].focus();
     }
 
-    if (newOtp.join("").length === 8) {
+    if (newOtp.join("").length === length) {
       onComplete(newOtp.join(""));
     }
   };
@@ -33,16 +41,34 @@ const OtpInput = ({ value, onChange, onComplete }) => {
     }
   };
 
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text").trim();
+    let processedData = pastedData;
+
+    if (inputType === "phone") {
+      processedData = pastedData.replace(/\D/g, "");
+    } else if (inputType === "code") {
+      processedData = pastedData.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    }
+
+    if (processedData.length === length) {
+      const newOtp = processedData.split("");
+      onChange(newOtp);
+      onComplete(processedData);
+    }
+  };
+
   return (
-    <div className="flex justify-center gap-2 sm:gap-3">
-      {value.map((digit, index) => (
+    <div className="flex justify-center gap-2 sm:gap-3" onPaste={handlePaste}>
+      {Array.from({ length }).map((_, index) => (
         <input
           key={index}
           ref={(el) => (inputsRef.current[index] = el)}
-          type="tel"
-          pattern="\d*"
+          type={inputType === "phone" ? "tel" : "text"}
+          pattern={inputType === "phone" ? "\\d*" : "[A-Z0-9]*"}
           maxLength="1"
-          value={digit}
+          value={value[index] || ""}
           autoComplete="off"
           onChange={(e) => handleChange(e, index)}
           onKeyDown={(e) => handleKeyDown(e, index)}
@@ -58,10 +84,16 @@ const FidelidadPage = () => {
   const { codigo } = useParams();
   const navigate = useNavigate();
 
+  const [searchMode, setSearchMode] = useState("phone");
   const [otp, setOtp] = useState(new Array(8).fill(""));
   const [tarjeta, setTarjeta] = useState(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(!!codigo);
+
+  useEffect(() => {
+    setOtp(new Array(searchMode === "phone" ? 8 : 4).fill(""));
+    setError("");
+  }, [searchMode]);
 
   useEffect(() => {
     const fetchTarjetaPorCodigo = async () => {
@@ -69,6 +101,7 @@ const FidelidadPage = () => {
         setTarjeta(null);
         setError("");
         setIsLoading(false);
+        setOtp(new Array(searchMode === "phone" ? 8 : 4).fill(""));
         return;
       }
 
@@ -78,31 +111,44 @@ const FidelidadPage = () => {
         const response = await apiClient.get(`/fidelidad/public/${codigo}`);
         setTarjeta(response.data);
       } catch (err) {
-        setError(err.response?.data?.message || "No se pudo cargar la tarjeta.");
-        navigate("/fidelidad", { replace: true });
+        setError(err.response?.data?.message + " Verifica bien el código." || "No se pudo cargar la tarjeta.");
+        setTarjeta(null);
       } finally {
         setIsLoading(false);
       }
     };
     fetchTarjetaPorCodigo();
-  }, [codigo, navigate]);
+  }, [codigo, navigate, searchMode]);
 
-  const handleSearch = async (fullPhone) => {
-    if (!fullPhone || fullPhone.length !== 8) {
-      setError("Por favor, ingresa los 8 dígitos de tu teléfono.");
-      return;
-    }
+  const handleComplete = async (value) => {
     setError("");
     setIsLoading(true);
-    try {
-      const response = await apiClient.get(`/fidelidad/public/buscar?telefono=${fullPhone}`);
-      navigate(`/fidelidad/${response.data.codigo}`, { replace: true });
-      setOtp(new Array(8).fill(""));
-    } catch (err) {
-      setError(err.response?.data?.message || "Error al buscar la tarjeta.");
-    } finally {
-      setIsLoading(false);
+    if (searchMode === "phone") {
+      if (!value || value.length !== 8) {
+        setError("Por favor, ingresa los 8 dígitos de tu teléfono.");
+        setIsLoading(false);
+        return;
+      }
+      try {
+        const response = await apiClient.get(`/fidelidad/public/buscar?telefono=${value}`);
+        navigate(`/fidelidad/${response.data.codigo}`, { replace: true });
+      } catch (err) {
+        setError(err.response?.data?.message || "Error al buscar la tarjeta.");
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      if (!value || value.length !== 4) {
+        setError("Por favor, ingresa el código de 4 caracteres.");
+        setIsLoading(false);
+        return;
+      }
+      navigate(`/fidelidad/${value.toUpperCase()}`, { replace: true });
     }
+  };
+
+  const toggleSearchMode = () => {
+    setSearchMode((prev) => (prev === "phone" ? "code" : "phone"));
   };
 
   return (
@@ -139,11 +185,22 @@ const FidelidadPage = () => {
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 w-full">
               <DynamicIcon name="Sparkles" className="mx-auto h-12 w-12 text-primary dark:text-primary-light mb-4" />
               <h1 className="text-2xl font-bold text-primary dark:text-primary-light mb-2">Consulta tu Tarjeta de Fidelidad</h1>
-              <p className="text-textSecondary dark:text-gray-400 mb-6">Ingresa tu número de teléfono para ver tus visitas.</p>
+              <p className="text-textSecondary dark:text-gray-400 mb-6">
+                {searchMode === "phone" ? "Ingresa tu número de teléfono para ver tus visitas." : "Ingresa tu código de 4 caracteres."}
+              </p>
               <form onSubmit={(e) => e.preventDefault()}>
-                <OtpInput value={otp} onChange={setOtp} onComplete={handleSearch} />
+                <OtpInput value={otp} onChange={setOtp} onComplete={handleComplete} length={searchMode === "phone" ? 8 : 4} inputType={searchMode} />
                 {error && <p className="text-red-500 text-sm mt-4 text-center">{error}</p>}
               </form>
+              <div className="mt-6 text-center">
+                <button
+                  onClick={toggleSearchMode}
+                  className="text-sm text-primary dark:text-primary-light hover:underline flex items-center gap-1 mx-auto"
+                >
+                  <DynamicIcon name="Repeat" className="w-4 h-4" />
+                  {searchMode === "phone" ? "Buscar por Código" : "Buscar por Teléfono"}
+                </button>
+              </div>
             </div>
             <div className="mt-6 text-sm text-textSecondary dark:text-gray-400">
               <p>¿Aún no tienes tu tarjeta?</p>
