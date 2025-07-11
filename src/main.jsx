@@ -5,7 +5,6 @@ import { ThemeProvider } from "./context/ThemeProvider.jsx";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import useAuthStore from "./store/authStore.js";
 import useStoreNails from "./store/store.js";
-import apiClient from "./api/axios.js";
 import "./index.css";
 import App from "./App.jsx";
 import "react-big-calendar/lib/css/react-big-calendar.css";
@@ -13,7 +12,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutos
+      staleTime: 1000 * 60 * 5,
       refetchOnWindowFocus: false,
       retry: 1,
     },
@@ -25,16 +24,7 @@ const initializeApp = async () => {
   useStoreNails.getState().fetchDynamicNavItems();
   useStoreNails.getState().fetchTodasLasUnas();
   useStoreNails.getState().fetchConfiguracionesSitio();
-  useStoreNails.getState().fetchTextosColoresConfig(); // NUEVA CARGA
-
-  const { isAuthenticated, isLoading } = useAuthStore.getState();
-  if (!isLoading && !isAuthenticated) {
-    try {
-      apiClient.post("/visitas/registrar").catch((err) => console.warn("Fallo al registrar visita (segundo plano):", err.message));
-    } catch (error) {
-      console.warn("Fallo al registrar visita (segundo plano):", error.message);
-    }
-  }
+  useStoreNails.getState().fetchTextosColoresConfig();
 
   createRoot(document.getElementById("root")).render(
     <StrictMode>

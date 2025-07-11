@@ -6,15 +6,17 @@ import useStoreNails from "./store/store";
 import useAuthStore from "./store/authStore";
 import { useLocation } from "react-router-dom";
 import React, { useEffect, useState } from "react";
-import CRLoader from "./components/UI/CRLoader"; // Importar CRLoader
-import { useTheme } from "./context/ThemeProvider"; // Importar useTheme
+import CRLoader from "./components/UI/CRLoader";
+import { useTheme } from "./context/ThemeProvider";
+import { useAnalytics } from "./hooks/useAnalytics";
 
 const AppContent = () => {
+  useAnalytics();
   const { adminSidebarOpen, toggleAdminSidebar, textosColoresConfig, isLoadingTextosColores } = useStoreNails();
   const { isAuthenticated, isLoading: authIsLoading } = useAuthStore();
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const { theme } = useTheme(); // Obtener el tema actual
+  const { theme } = useTheme();
 
   useEffect(() => {
     const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
@@ -32,7 +34,6 @@ const AppContent = () => {
       if (colorsToApply) {
         for (const [key, value] of Object.entries(colorsToApply)) {
           if (value) {
-            // Solo aplicar si hay un valor de color
             root.style.setProperty(`--color-${key}`, value);
           }
         }
@@ -42,7 +43,6 @@ const AppContent = () => {
 
   const isAdminRoute = location.pathname.startsWith("/admin");
 
-  // Loader global
   if (authIsLoading || isLoadingTextosColores) {
     return (
       <div className="fixed inset-0 bg-backgroundSecondary dark:bg-background flex flex-col justify-center items-center z-[9999]">

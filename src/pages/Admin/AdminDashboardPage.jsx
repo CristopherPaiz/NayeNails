@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,7 +13,7 @@ import {
   Filler,
 } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
-import { format, subDays, startOfMonth, endOfMonth, eachMonthOfInterval, eachDayOfInterval } from "date-fns";
+import { format, subDays, eachDayOfInterval, parseISO, formatDistanceStrict } from "date-fns";
 import { es } from "date-fns/locale";
 
 import DashboardCard from "../../components/admin/DashboardCard";
@@ -26,14 +26,178 @@ import CRButton from "../../components/UI/CRButton";
 import { useTheme } from "../../context/ThemeProvider";
 import useStoreNails from "../../store/store";
 import useScrollToTop from "../../hooks/useScrollToTop";
+import apiClient from "../../api/axios";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement, Filler);
+
+const formatSeconds = (seconds) => {
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.round(seconds % 60);
+  return `${minutes}m ${remainingSeconds}s`;
+};
+
+const TabButton = ({ label, icon, isActive, onClick }) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors duration-200 ${
+      isActive
+        ? "border-primary text-primary dark:text-primary-light"
+        : "border-transparent text-gray-500 dark:text-gray-400 hover:text-primary hover:border-primary/50"
+    }`}
+  >
+    <DynamicIcon name={icon} className="w-5 h-5" />
+    <span className="hidden sm:inline">{label}</span>
+  </button>
+);
+
+const CopyButton = ({ textToCopy }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(textToCopy);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button onClick={handleCopy} className="text-gray-400 hover:text-primary dark:hover:text-primary-light" title="Copiar IP">
+      <DynamicIcon name={copied ? "Check" : "Copy"} className="w-3.5 h-3.5" />
+    </button>
+  );
+};
+
+const SessionItem = ({ session }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [details, setDetails] = useState(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+
+  const iconMap = {
+    device: {
+      mobile: { icon: "Smartphone", label: "Móvil" },
+      desktop: { icon: "Monitor", label: "Escritorio" },
+      tablet: { icon: "Tablet", label: "Tablet" },
+      Desconocido: { icon: "HelpCircle", label: "Desconocido" },
+    },
+    browser: {
+      Chrome: { icon: "Chrome", label: "Chrome" },
+      Firefox: { icon: "Firefox", label: "Firefox" },
+      Safari: { icon: "Compass", label: "Safari" },
+      Edge: { icon: "Globe", label: "Edge" },
+      Desconocido: { icon: "HelpCircle", label: "Desconocido" },
+    },
+    os: {
+      Windows: { icon: "Windows", label: "Windows" },
+      macOS: { icon: "Apple", label: "macOS" },
+      Android: { icon: "Android", label: "Android" },
+      iOS: { icon: "Apple", label: "iOS" },
+      Linux: { icon: "Linux", label: "Linux" },
+      Desconocido: { icon: "HelpCircle", label: "Desconocido" },
+    },
+  };
+
+  const fetchDetails = useCallback(async () => {
+    if (details) {
+      setIsExpanded(!isExpanded);
+      return;
+    }
+    setIsLoadingDetails(true);
+    try {
+      const response = await apiClient.get(`/analytics/session/${session.session_id}`);
+      setDetails(response.data);
+    } catch (error) {
+      console.error("Error fetching session details", error);
+    } finally {
+      setIsLoadingDetails(false);
+      setIsExpanded(true);
+    }
+  }, [details, isExpanded, session.session_id]);
+
+  const duration = formatDistanceStrict(parseISO(session.last_visit), parseISO(session.first_visit), { locale: es });
+
+  const deviceIcon = iconMap.device[session.device_type] || iconMap.device.Desconocido;
+  const browserIcon = iconMap.browser[session.browser_name] || iconMap.browser.Desconocido;
+  const osIcon = iconMap.os[session.os_name] || iconMap.os.Desconocido;
+
+  return (
+    <li className="p-3 rounded-lg bg-gray-50 dark:bg-slate-700/50">
+      <div className="flex justify-between items-start">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-sm text-textPrimary dark:text-slate-200">{session.ip_address}</span>
+            <CopyButton textToCopy={session.ip_address} />
+          </div>
+          <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 mt-1 text-gray-500 dark:text-slate-400 text-xs">
+            <span className="flex items-center gap-1" title={deviceIcon.label}>
+              <DynamicIcon name={deviceIcon.icon} className="w-4 h-4" />
+              {deviceIcon.label}
+            </span>
+            <span className="flex items-center gap-1" title={browserIcon.label}>
+              <DynamicIcon name={browserIcon.icon} className="w-4 h-4" />
+              {browserIcon.label}
+            </span>
+            <span className="flex items-center gap-1" title={osIcon.label}>
+              <DynamicIcon name={osIcon.icon} className="w-4 h-4" />
+              {osIcon.label}
+            </span>
+          </div>
+        </div>
+        <div className="text-right flex-shrink-0 ml-2">
+          <span className="font-bold text-primary dark:text-primary-light bg-primary/10 dark:bg-primary/20 px-2 py-1 rounded-full text-xs">
+            {session.views} vistas
+          </span>
+          <p className="text-xs text-gray-500 dark:text-slate-400 mt-1" title={`Duración: ${duration}`}>
+            {duration}
+          </p>
+        </div>
+      </div>
+      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-slate-600">
+        <button onClick={fetchDetails} disabled={isLoadingDetails} className="text-xs text-blue-500 hover:underline flex items-center gap-1">
+          {isLoadingDetails ? (
+            <CRLoader style="circle" size="sm" onlyIcon />
+          ) : (
+            <DynamicIcon name={isExpanded ? "ChevronUp" : "ChevronDown"} className="w-3 h-3" />
+          )}
+          {isExpanded ? "Ocultar Rutas" : "Ver Rutas"}
+        </button>
+        {isExpanded && details && (
+          <ol className="mt-2 space-y-1 pl-4 list-decimal list-inside">
+            {details.map((visit, idx) => (
+              <li key={idx} className="text-xs text-gray-600 dark:text-gray-300">
+                {visit.page_path} {visit.views > 1 && <span className="font-semibold text-primary/80">(x{visit.views})</span>}
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    </li>
+  );
+};
+
+const TopSessionsTable = ({ data }) => {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex flex-col justify-center items-center h-full text-textSecondary dark:text-slate-400">
+        <DynamicIcon name="Hourglass" className="w-12 h-12 mb-2 opacity-50" />
+        <p>No hay sesiones activas hoy aún.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="overflow-y-auto h-full pr-2">
+      <ul className="space-y-3">
+        {data.map((session, index) => (
+          <SessionItem key={index} session={session} />
+        ))}
+      </ul>
+    </div>
+  );
+};
 
 const AdminDashboardPage = () => {
   useScrollToTop();
   const { user } = useAuthStore();
   const { theme } = useTheme();
   const { textosColoresConfig } = useStoreNails();
+  const [activeTab, setActiveTab] = useState("general");
 
   const {
     data: dashboardData,
@@ -67,25 +231,34 @@ const AdminDashboardPage = () => {
   const cardItems = useMemo(
     () => [
       {
-        title: "Diseños Activos",
-        value: dashboardData?.totalDisenios?.toLocaleString() ?? "0",
-        iconName: "Archive",
-        iconBgClass: "bg-primary/10 dark:bg-primary/20",
-        iconColorClass: "text-primary dark:text-primary-light",
+        title: "Visitantes Únicos (Mes)",
+        value: dashboardData?.visitantesUnicosMes?.toLocaleString() ?? "0",
+        iconName: "Users",
       },
       {
-        title: "Visitas este Mes",
-        value: dashboardData?.visitasEsteMes?.toLocaleString() ?? "0",
-        iconName: "Users",
-        iconBgClass: "bg-tertiary/10 dark:bg-tertiary/20",
-        iconColorClass: "text-tertiary dark:text-tertiary",
+        title: "Vistas de Página (Mes)",
+        value: dashboardData?.totalPageViewsMes?.toLocaleString() ?? "0",
+        iconName: "Eye",
+      },
+      {
+        title: "Tasa de Rebote (Mes)",
+        value: `${dashboardData?.bounceRate?.toFixed(1) ?? "0.0"}%`,
+        iconName: "ZapOff",
+      },
+      {
+        title: "Duración Media Sesión (Mes)",
+        value: formatSeconds(dashboardData?.avgSessionDuration ?? 0),
+        iconName: "Timer",
       },
       {
         title: "Citas Próximas",
         value: dashboardData?.citasProximas?.toLocaleString() ?? "0",
         iconName: "CalendarCheck2",
-        iconBgClass: "bg-secondary/20 dark:bg-secondary/30",
-        iconColorClass: "text-secondary-dark dark:text-secondary",
+      },
+      {
+        title: "Diseños Activos",
+        value: dashboardData?.totalDisenios?.toLocaleString() ?? "0",
+        iconName: "Archive",
       },
     ],
     [dashboardData]
@@ -115,24 +288,6 @@ const AdminDashboardPage = () => {
           bodyColor: themeColors.textSecondary,
           borderColor: themeColors.accent,
           borderWidth: 1,
-          callbacks: {
-            label: function (context) {
-              const label = context.dataset.label || "";
-              let value;
-
-              if (typeof context.parsed === "number") {
-                value = context.parsed;
-              } else if (context.parsed && typeof context.parsed.y === "number") {
-                value = context.parsed.y;
-              } else if (context.parsed && typeof context.parsed.x === "number") {
-                value = context.parsed.x;
-              } else {
-                value = context.raw;
-              }
-
-              return `${label}: ${value}`;
-            },
-          },
         },
       },
       scales: {
@@ -150,207 +305,159 @@ const AdminDashboardPage = () => {
     [themeColors, theme]
   );
 
-  const visitasDiariasData = useMemo(() => {
+  const visitantesDiariosData = useMemo(() => {
     const labels = [];
-    const dataPoints = [];
+    const visitantesData = [];
+    const vistasData = [];
     const today = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const date = subDays(today, i);
+    const dateRange = eachDayOfInterval({
+      start: subDays(today, 6),
+      end: today,
+    });
+    dateRange.forEach((date) => {
       labels.push(format(date, "dd MMM", { locale: es }));
-      const visitData = dashboardData?.visitasDiarias?.find((v) => v.dia === format(date, "yyyy-MM-dd"));
-      dataPoints.push(visitData?.total ?? 0);
-    }
+      const dailyData = dashboardData?.visitantesDiarios?.find((v) => v.dia === format(date, "yyyy-MM-dd"));
+      visitantesData.push(dailyData?.total_visitantes ?? 0);
+      vistasData.push(dailyData?.total_vistas ?? 0);
+    });
     return {
       labels,
       datasets: [
         {
-          label: "Visitas",
-          data: dataPoints,
+          label: "Visitantes Únicos",
+          data: visitantesData,
           borderColor: themeColors.primary,
           backgroundColor: `${themeColors.primary}33`,
-          tension: 0.3,
-          fill: true,
-          pointBackgroundColor: themeColors.primary,
-          pointBorderColor: themeColors.background,
-          pointHoverBackgroundColor: themeColors.background,
-          pointHoverBorderColor: themeColors.primary,
+          yAxisID: "y",
         },
-      ],
-    };
-  }, [dashboardData?.visitasDiarias, themeColors]);
-
-  const lineChartOptionsVisitas = useMemo(
-    () => ({
-      ...chartOptionsBase,
-      plugins: {
-        ...chartOptionsBase.plugins,
-        title: { ...chartOptionsBase.plugins.title, text: "Visitas Diarias (Últimos 7 Días)" },
-        tooltip: {
-          ...chartOptionsBase.plugins.tooltip,
-          callbacks: {
-            label: function (context) {
-              return `Visitas: ${context.parsed.y}`;
-            },
-          },
-        },
-      },
-    }),
-    [chartOptionsBase]
-  );
-
-  const citasPorEstadoData = useMemo(() => {
-    const labels = dashboardData?.citasPorEstado?.map((c) => capitalizeWords(c.estado)) ?? [];
-    const dataPoints = dashboardData?.citasPorEstado?.map((c) => c.total) ?? [];
-    const backgroundColors = [themeColors.primary, themeColors.secondary, themeColors.tertiary, "#FFCA28", "#EF5350", "#4CAF50", "#2196F3"];
-    return {
-      labels,
-      datasets: [
         {
-          label: "Citas",
-          data: dataPoints,
-          backgroundColor: labels.map((_, i) => backgroundColors[i % backgroundColors.length]),
-          borderColor: themeColors.background,
-          borderWidth: 2,
-          hoverOffset: 4,
-        },
-      ],
-    };
-  }, [dashboardData?.citasPorEstado, themeColors]);
-
-  const doughnutChartOptions = useMemo(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: "right", labels: { ...chartOptionsBase.plugins.legend.labels, boxWidth: 15 } },
-        title: { ...chartOptionsBase.plugins.title, text: "Citas por Estado (Últimos 30 Días)" },
-        tooltip: {
-          ...chartOptionsBase.plugins.tooltip,
-          callbacks: {
-            label: function (context) {
-              return `${context.label}: ${context.parsed} citas`;
-            },
-          },
-        },
-      },
-    }),
-    [chartOptionsBase]
-  );
-
-  const diseniosPorCategoriaData = useMemo(() => {
-    const labels = dashboardData?.diseniosPorCategoria?.map((d) => d.categoria_padre) ?? [];
-    const dataPoints = dashboardData?.diseniosPorCategoria?.map((d) => d.total_disenios) ?? [];
-    return {
-      labels,
-      datasets: [
-        {
-          label: "Nº de Diseños",
-          data: dataPoints,
-          backgroundColor: labels.map(
-            (_, i) => [themeColors.primary, themeColors.secondary, themeColors.tertiary, themeColors.accent, "#4CAF50"][i % 5] + "B3"
-          ),
-          borderColor: labels.map((_, i) => [themeColors.primary, themeColors.secondary, themeColors.tertiary, themeColors.accent, "#4CAF50"][i % 5]),
-          borderWidth: 1,
-        },
-      ],
-    };
-  }, [dashboardData?.diseniosPorCategoria, themeColors]);
-
-  const barChartDiseniosOptions = useMemo(
-    () => ({
-      ...chartOptionsBase,
-      indexAxis: "y",
-      elements: { bar: { borderWidth: 2 } },
-      plugins: {
-        ...chartOptionsBase.plugins,
-        title: { ...chartOptionsBase.plugins.title, text: "Top 5 Categorías por Nº de Diseños Activos" },
-        legend: { display: false },
-        tooltip: {
-          ...chartOptionsBase.plugins.tooltip,
-          callbacks: {
-            label: function (context) {
-              return `Diseños: ${context.parsed.x}`;
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          ...chartOptionsBase.scales.x,
-          suggestedMax: Math.max(...(diseniosPorCategoriaData.datasets[0]?.data || [0])) + 2,
-          title: { display: true, text: "Cantidad de Diseños", color: themeColors.textSecondary },
-        },
-        y: { ...chartOptionsBase.scales.y, ticks: { ...chartOptionsBase.scales.y.ticks, autoSkip: false } },
-      },
-    }),
-    [chartOptionsBase, diseniosPorCategoriaData, themeColors]
-  );
-
-  const visitasMensualesData = useMemo(() => {
-    const endDate = endOfMonth(new Date());
-    const startDate = startOfMonth(subDays(endDate, 365));
-    const monthDateObjects = eachMonthOfInterval({ start: startDate, end: endDate });
-
-    const monthLabels = monthDateObjects.map((date) => format(date, "MMM yyyy", { locale: es }));
-
-    const dataPoints = monthDateObjects.map((dateObj) => {
-      const monthYearKey = format(dateObj, "yyyy-MM");
-      const visitData = dashboardData?.visitasMensuales?.find((v) => v.mes === monthYearKey);
-      return visitData?.total ?? 0;
-    });
-
-    return {
-      labels: monthLabels,
-      datasets: [
-        {
-          label: "Visitas Mensuales",
-          data: dataPoints,
-          backgroundColor: `${themeColors.tertiary}B3`,
+          label: "Vistas de Página",
+          data: vistasData,
           borderColor: themeColors.tertiary,
-          borderWidth: 1,
+          backgroundColor: `${themeColors.tertiary}33`,
+          yAxisID: "y1",
         },
       ],
     };
-  }, [dashboardData?.visitasMensuales, themeColors]);
+  }, [dashboardData?.visitantesDiarios, themeColors]);
 
-  const barChartVisitasMensualesOptions = useMemo(
+  const lineChartVisitantesOptions = useMemo(
     () => ({
       ...chartOptionsBase,
       plugins: {
         ...chartOptionsBase.plugins,
-        title: { ...chartOptionsBase.plugins.title, text: "Visitas Mensuales (Últimos 12 Meses)" },
-        legend: { display: false },
-        tooltip: {
-          ...chartOptionsBase.plugins.tooltip,
-          callbacks: {
-            label: function (context) {
-              return `Visitas: ${context.parsed.y}`;
-            },
-          },
+        title: {
+          ...chartOptionsBase.plugins.title,
+          text: "Actividad Diaria (Últimos 7 Días)",
         },
       },
       scales: {
-        x: { ...chartOptionsBase.scales.x, title: { display: true, text: "Mes", color: themeColors.textSecondary } },
-        y: { ...chartOptionsBase.scales.y, title: { display: true, text: "Número de Visitas", color: themeColors.textSecondary } },
+        ...chartOptionsBase.scales,
+        y: {
+          ...chartOptionsBase.scales.y,
+          position: "left",
+          title: {
+            display: true,
+            text: "Visitantes",
+            color: themeColors.primary,
+          },
+        },
+        y1: {
+          type: "linear",
+          display: true,
+          position: "right",
+          grid: { drawOnChartArea: false },
+          title: { display: true, text: "Vistas", color: themeColors.tertiary },
+        },
       },
     }),
     [chartOptionsBase, themeColors]
   );
 
+  const visitantesPorDispositivoData = useMemo(() => {
+    const labels = dashboardData?.visitantesPorDispositivo?.map((d) => capitalizeWords(d.device_type)) ?? [];
+    const dataPoints = dashboardData?.visitantesPorDispositivo?.map((d) => d.total) ?? [];
+    return {
+      labels,
+      datasets: [
+        {
+          data: dataPoints,
+          backgroundColor: [themeColors.primary, themeColors.secondary, themeColors.tertiary],
+          borderColor: themeColors.background,
+          borderWidth: 2,
+        },
+      ],
+    };
+  }, [dashboardData?.visitantesPorDispositivo, themeColors]);
+
+  const doughnutChartOptions = (title) => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "right",
+        labels: { ...chartOptionsBase.plugins.legend.labels, boxWidth: 15 },
+      },
+      title: { ...chartOptionsBase.plugins.title, text: title },
+    },
+  });
+
+  const topPaginasData = useMemo(() => {
+    const labels = dashboardData?.topPaginas?.map((p) => p.page_path) ?? [];
+    const dataPoints = dashboardData?.topPaginas?.map((p) => p.views) ?? [];
+    return {
+      labels,
+      datasets: [
+        {
+          label: "Vistas",
+          data: dataPoints,
+          backgroundColor: `${themeColors.primary}B3`,
+          borderColor: themeColors.primary,
+          borderWidth: 1,
+        },
+      ],
+    };
+  }, [dashboardData?.topPaginas, themeColors]);
+
+  const barChartOptions = (title, indexAxis = "x") => ({
+    ...chartOptionsBase,
+    indexAxis,
+    plugins: {
+      ...chartOptionsBase.plugins,
+      title: { ...chartOptionsBase.plugins.title, text: title },
+      legend: { display: false },
+    },
+  });
+
+  const citasPorEstadoData = useMemo(() => {
+    const labels = dashboardData?.citasPorEstado?.map((c) => capitalizeWords(c.estado)) ?? [];
+    const dataPoints = dashboardData?.citasPorEstado?.map((c) => c.total) ?? [];
+    return {
+      labels,
+      datasets: [
+        {
+          data: dataPoints,
+          backgroundColor: [themeColors.primary, themeColors.secondary, themeColors.tertiary, "#FFCA28", "#EF5350"],
+          borderColor: themeColors.background,
+          borderWidth: 2,
+        },
+      ],
+    };
+  }, [dashboardData?.citasPorEstado, themeColors]);
+
   const citasDiariasAgendadasData = useMemo(() => {
     const labels = [];
     const dataPoints = [];
     const today = new Date();
-    const thirtyDaysAgo = subDays(today, 29);
-
-    const dateRange = eachDayOfInterval({ start: thirtyDaysAgo, end: today });
-
+    const dateRange = eachDayOfInterval({
+      start: subDays(today, 29),
+      end: today,
+    });
     dateRange.forEach((date) => {
       labels.push(format(date, "dd MMM", { locale: es }));
       const citaData = dashboardData?.citasDiariasAgendadas?.find((c) => c.dia === format(date, "yyyy-MM-dd"));
       dataPoints.push(citaData?.total ?? 0);
     });
-
     return {
       labels,
       datasets: [
@@ -359,31 +466,10 @@ const AdminDashboardPage = () => {
           data: dataPoints,
           borderColor: themeColors.secondary,
           backgroundColor: `${themeColors.secondary}33`,
-          tension: 0.3,
-          fill: true,
         },
       ],
     };
   }, [dashboardData?.citasDiariasAgendadas, themeColors]);
-
-  const lineChartCitasDiariasOptions = useMemo(
-    () => ({
-      ...chartOptionsBase,
-      plugins: {
-        ...chartOptionsBase.plugins,
-        title: { ...chartOptionsBase.plugins.title, text: "Citas Agendadas por Día (Últimos 30 Días)" },
-        tooltip: {
-          ...chartOptionsBase.plugins.tooltip,
-          callbacks: {
-            label: function (context) {
-              return `Citas Agendadas: ${context.parsed.y}`;
-            },
-          },
-        },
-      },
-    }),
-    [chartOptionsBase]
-  );
 
   const serviciosMasSolicitadosData = useMemo(() => {
     const labels = dashboardData?.serviciosMasSolicitados?.map((s) => `${s.nombre_categoria_padre} - ${s.nombre_subcategoria}`) ?? [];
@@ -394,44 +480,30 @@ const AdminDashboardPage = () => {
         {
           label: "Nº de Citas",
           data: dataPoints,
-          backgroundColor: labels.map(
-            (_, i) => [themeColors.primary, themeColors.secondary, themeColors.tertiary, "#FFCA28", "#4CAF50"][i % 5] + "B3"
-          ),
-          borderColor: labels.map((_, i) => [themeColors.primary, themeColors.secondary, themeColors.tertiary, "#FFCA28", "#4CAF50"][i % 5]),
+          backgroundColor: `${themeColors.tertiary}B3`,
+          borderColor: themeColors.tertiary,
           borderWidth: 1,
         },
       ],
     };
   }, [dashboardData?.serviciosMasSolicitados, themeColors]);
 
-  const barChartServiciosOptions = useMemo(
-    () => ({
-      ...chartOptionsBase,
-      indexAxis: "y",
-      plugins: {
-        ...chartOptionsBase.plugins,
-        title: { ...chartOptionsBase.plugins.title, text: "Top 5 Servicios Más Solicitados (Últimos 30 Días)" },
-        legend: { display: false },
-        tooltip: {
-          ...chartOptionsBase.plugins.tooltip,
-          callbacks: {
-            label: function (context) {
-              return `Citas: ${context.parsed.x}`;
-            },
-          },
+  const diseniosPorCategoriaData = useMemo(() => {
+    const labels = dashboardData?.diseniosPorCategoria?.map((d) => d.categoria_padre) ?? [];
+    const dataPoints = dashboardData?.diseniosPorCategoria?.map((d) => d.total_disenios) ?? [];
+    return {
+      labels,
+      datasets: [
+        {
+          label: "Nº de Diseños",
+          data: dataPoints,
+          backgroundColor: `${themeColors.primary}B3`,
+          borderColor: themeColors.primary,
+          borderWidth: 1,
         },
-      },
-      scales: {
-        x: {
-          ...chartOptionsBase.scales.x,
-          title: { display: true, text: "Cantidad de Citas", color: themeColors.textSecondary },
-          suggestedMax: Math.max(...(serviciosMasSolicitadosData.datasets[0]?.data || [0])) + 2,
-        },
-        y: { ...chartOptionsBase.scales.y, ticks: { ...chartOptionsBase.scales.y.ticks, autoSkip: false } },
-      },
-    }),
-    [chartOptionsBase, serviciosMasSolicitadosData, themeColors]
-  );
+      ],
+    };
+  }, [dashboardData?.diseniosPorCategoria, themeColors]);
 
   if (isLoadingData && !dashboardData) {
     return <CRLoader text="Cargando datos del dashboard..." fullScreen={false} style="circle" size="lg" />;
@@ -453,89 +525,84 @@ const AdminDashboardPage = () => {
         <h1 className="text-3xl font-bold text-textPrimary dark:text-white">
           ¡Bienvenido(a), {user ? capitalizeWords(user.nombre ?? user.username) : "Admin"}!
         </h1>
-        <p className="text-textSecondary dark:text-slate-400 mt-3">Aquí tienes un resumen de la actividad de Naye Nails.</p>
+        <p className="text-textSecondary dark:text-slate-400 mt-3">Aquí tienes un resumen de la actividad de tu sitio web.</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-5 mb-8">
         {cardItems.map((item, index) => (
-          <DashboardCard
-            key={index}
-            title={item.title}
-            value={item.value}
-            iconName={item.iconName}
-            iconBgClass={item.iconBgClass}
-            iconColorClass={item.iconColorClass}
-          />
+          <DashboardCard key={index} title={item.title} value={item.value} iconName={item.iconName} />
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-background dark:bg-slate-800 p-4 rounded-xl shadow-lg h-[350px] sm:h-[400px]">
-          {dashboardData?.visitasDiarias?.length > 0 ? (
-            <Line options={lineChartOptionsVisitas} data={visitasDiariasData} />
-          ) : (
-            <div className="flex flex-col justify-center items-center h-full text-textSecondary dark:text-slate-400">
-              <DynamicIcon name="LineChart" className="w-12 h-12 mb-2 opacity-50" />
-              <p>No hay datos de visitas diarias.</p>
-            </div>
-          )}
-        </div>
-        <div className="bg-background dark:bg-slate-800 p-4 rounded-xl shadow-lg h-[350px] sm:h-[400px]">
-          {dashboardData?.citasPorEstado?.length > 0 ? (
-            <Doughnut options={doughnutChartOptions} data={citasPorEstadoData} />
-          ) : (
-            <div className="flex flex-col justify-center items-center h-full text-textSecondary dark:text-slate-400">
-              <DynamicIcon name="PieChart" className="w-12 h-12 mb-2 opacity-50" />
-              <p>No hay datos de citas por estado.</p>
-            </div>
-          )}
-        </div>
+      <div className="border-b border-gray-200 dark:border-slate-700 mb-6">
+        <nav className="-mb-px flex space-x-4" aria-label="Tabs">
+          <TabButton label="General" icon="Activity" isActive={activeTab === "general"} onClick={() => setActiveTab("general")} />
+          <TabButton label="Contenido" icon="FileText" isActive={activeTab === "contenido"} onClick={() => setActiveTab("contenido")} />
+          <TabButton label="Negocio" icon="Briefcase" isActive={activeTab === "negocio"} onClick={() => setActiveTab("negocio")} />
+        </nav>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-background dark:bg-slate-800 p-4 rounded-xl shadow-lg h-[400px] sm:h-[450px]">
-          {dashboardData?.visitasMensuales?.length > 0 ? (
-            <Bar options={barChartVisitasMensualesOptions} data={visitasMensualesData} />
-          ) : (
-            <div className="flex flex-col justify-center items-center h-full text-textSecondary dark:text-slate-400">
-              <DynamicIcon name="BarChartBig" className="w-12 h-12 mb-2 opacity-50" />
-              <p>No hay datos de visitas mensuales.</p>
+      <div>
+        {activeTab === "general" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-background dark:bg-slate-800 p-4 rounded-xl shadow-lg h-[350px] sm:h-[400px]">
+              <Line key="line-visitantes" options={lineChartVisitantesOptions} data={visitantesDiariosData} />
             </div>
-          )}
-        </div>
-        <div className="bg-background dark:bg-slate-800 p-4 rounded-xl shadow-lg h-[400px] sm:h-[450px]">
-          {dashboardData?.citasDiariasAgendadas?.length > 0 ? (
-            <Line options={lineChartCitasDiariasOptions} data={citasDiariasAgendadasData} />
-          ) : (
-            <div className="flex flex-col justify-center items-center h-full text-textSecondary dark:text-slate-400">
-              <DynamicIcon name="CalendarDays" className="w-12 h-12 mb-2 opacity-50" />
-              <p>No hay datos de citas diarias agendadas.</p>
+            <div className="bg-background dark:bg-slate-800 p-4 rounded-xl shadow-lg h-[350px] sm:h-[400px]">
+              <Doughnut
+                key="doughnut-dispositivos"
+                options={doughnutChartOptions("Visitantes por Dispositivo (Mes)")}
+                data={visitantesPorDispositivoData}
+              />
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-background dark:bg-slate-800 p-4 rounded-xl shadow-lg h-[400px] sm:h-[450px]">
-          {dashboardData?.diseniosPorCategoria?.length > 0 ? (
-            <Bar options={barChartDiseniosOptions} data={diseniosPorCategoriaData} />
-          ) : (
-            <div className="flex flex-col justify-center items-center h-full text-textSecondary dark:text-slate-400">
-              <DynamicIcon name="BarChartHorizontalBig" className="w-12 h-12 mb-2 opacity-50" />
-              <p>No hay datos de diseños por categoría.</p>
+        {activeTab === "contenido" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-background dark:bg-slate-800 p-4 rounded-xl shadow-lg h-[400px] sm:h-[450px]">
+              <Bar key="bar-paginas" options={barChartOptions("Páginas Más Vistas (Mes)", "y")} data={topPaginasData} />
             </div>
-          )}
-        </div>
-        <div className="bg-background dark:bg-slate-800 p-4 rounded-xl shadow-lg h-[400px] sm:h-[450px]">
-          {dashboardData?.serviciosMasSolicitados?.length > 0 ? (
-            <Bar options={barChartServiciosOptions} data={serviciosMasSolicitadosData} />
-          ) : (
-            <div className="flex flex-col justify-center items-center h-full text-textSecondary dark:text-slate-400">
-              <DynamicIcon name="Sparkles" className="w-12 h-12 mb-2 opacity-50" />
-              <p>No hay datos de servicios más solicitados.</p>
+            <div className="bg-background dark:bg-slate-800 p-4 rounded-xl shadow-lg h-[400px] sm:h-[450px]">
+              <h3 className="text-lg font-semibold text-textPrimary dark:text-white mb-4">Top Sesiones de Hoy</h3>
+              <TopSessionsTable data={dashboardData?.topSessionsToday} />
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {activeTab === "negocio" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-background dark:bg-slate-800 p-4 rounded-xl shadow-lg h-[350px] sm:h-[400px]">
+              <Doughnut key="doughnut-citas" options={doughnutChartOptions("Citas por Estado (Últimos 30 Días)")} data={citasPorEstadoData} />
+            </div>
+            <div className="bg-background dark:bg-slate-800 p-4 rounded-xl shadow-lg h-[350px] sm:h-[400px]">
+              <Line
+                key="line-citas-diarias"
+                options={{
+                  ...chartOptionsBase,
+                  plugins: {
+                    ...chartOptionsBase.plugins,
+                    title: {
+                      ...chartOptionsBase.plugins.title,
+                      text: "Citas Agendadas por Día (Últimos 30 Días)",
+                    },
+                  },
+                }}
+                data={citasDiariasAgendadasData}
+              />
+            </div>
+            <div className="bg-background dark:bg-slate-800 p-4 rounded-xl shadow-lg h-[400px] sm:h-[450px]">
+              <Bar
+                key="bar-servicios"
+                options={barChartOptions("Top 5 Servicios Más Solicitados (Últimos 30 Días)", "y")}
+                data={serviciosMasSolicitadosData}
+              />
+            </div>
+            <div className="bg-background dark:bg-slate-800 p-4 rounded-xl shadow-lg h-[400px] sm:h-[450px]">
+              <Bar key="bar-disenios" options={barChartOptions("Top 5 Categorías por Nº de Diseños", "y")} data={diseniosPorCategoriaData} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
