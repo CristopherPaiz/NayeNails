@@ -48,7 +48,7 @@ const getDynamicFilterCategories = (dynamicNavItems) => {
 };
 
 function generateWhatsAppLink(name, url) {
-  const baseUrl = "https://wa.me/50230436715";
+  const baseUrl = "https://wa.me/50249425739";
   const message = `🌟 ¡Hola! Estoy interesada en el diseño de uñas "${name}" 💅. Aquí está el enlace para que lo veas: ${url}.
 
 ¿Podrían darme más información? ¡Gracias! 😊`;
