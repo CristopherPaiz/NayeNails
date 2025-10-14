@@ -820,7 +820,7 @@ const Explorar = () => {
                             `Q${parseFloat(selectedNailForModal.precio).toFixed(2)}`
                           ) : (
                             <a
-                              href={`https://wa.me/50212345678?text=Hola, estoy interesado en el diseño de uñas: ${encodeURIComponent(
+                              href={`https://wa.me/50249425739?text=Hola, estoy interesado en el diseño de uñas: ${encodeURIComponent(
                                 selectedNailForModal.nombre
                               )}. ¿Podrían darme más información?`}
                               target="_blank"
