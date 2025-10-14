@@ -80,6 +80,16 @@ const Explorar = () => {
   const tutorialTimerRef = useRef(null);
   const tutorialVisibilityTimerRef = useRef(null);
 
+  const [isInitialPageLoad, setIsInitialPageLoad] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialPageLoad(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const checkMobile = () => window.innerWidth < 768;
@@ -706,10 +716,18 @@ const Explorar = () => {
                                   href={generateWhatsAppLink(una.nombre, una.id)}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-xs font-medium text-white bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 px-3 py-1.5 rounded-full transition-all duration-200 shadow-sm hover:shadow-md"
+                                  className={`inline-flex items-center justify-center font-medium text-white bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 rounded-full shadow-sm hover:shadow-md overflow-hidden transition-all duration-500 ease-in-out
+                                    ${isInitialPageLoad ? "gap-1.5 px-3 py-1.5" : "w-9 h-9"}
+                                  `}
                                 >
-                                  <DynamicIcon name="MessageCircle" className="w-3.5 h-3.5" />
-                                  Consultar
+                                  <DynamicIcon name="MessageCircle" className="w-4 h-4 flex-shrink-0" />
+                                  <span
+                                    className={`transition-all duration-300 ease-in-out whitespace-nowrap
+                                      ${isInitialPageLoad ? "w-auto opacity-100 ml-1 text-xs" : "w-0 opacity-0"}
+                                    `}
+                                  >
+                                    Consultar
+                                  </span>
                                 </a>
                               )}
                             </div>
