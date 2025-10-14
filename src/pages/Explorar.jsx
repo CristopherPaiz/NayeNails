@@ -85,7 +85,7 @@ const Explorar = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitialPageLoad(false);
-    }, 2000);
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -716,14 +716,14 @@ const Explorar = () => {
                                   href={generateWhatsAppLink(una.nombre, una.id)}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className={`inline-flex items-center justify-center font-medium text-white bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 rounded-full shadow-sm hover:shadow-md overflow-hidden transition-all duration-500 ease-in-out
-                                    ${isInitialPageLoad ? "gap-1.5 px-3 py-1.5" : "w-9 h-9"}
+                                  className={`inline-flex items-center justify-center font-medium text-white bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 rounded-full shadow-sm hover:shadow-md overflow-hidden transition-[width] ease-in-out
+                                    ${isInitialPageLoad ? "w-auto px-3 py-1.5 duration-2000" : "w-9 h-9 p-0 duration-2000"}
                                   `}
                                 >
                                   <DynamicIcon name="MessageCircle" className="w-4 h-4 flex-shrink-0" />
                                   <span
-                                    className={`transition-all duration-300 ease-in-out whitespace-nowrap
-                                      ${isInitialPageLoad ? "w-auto opacity-100 ml-1 text-xs" : "w-0 opacity-0"}
+                                    className={`whitespace-nowrap transition-all ease-in-out
+                                      ${isInitialPageLoad ? "w-auto opacity-100 ml-1 text-xs duration-500" : "w-0 opacity-0 ml-0 duration-500"}
                                     `}
                                   >
                                     Consultar
