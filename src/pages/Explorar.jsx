@@ -8,7 +8,6 @@ import useApiRequest from "../hooks/useApiRequest";
 import CRInput from "../components/UI/CRInput";
 import CRButton from "../components/UI/CRButton";
 import CRModal from "../components/UI/CRModal";
-import CRAlert from "../components/UI/CRAlert";
 
 import { capitalizeWords } from "../utils/textUtils";
 import {
@@ -47,6 +46,14 @@ const getDynamicFilterCategories = (dynamicNavItems) => {
   }
   return categories;
 };
+
+function generateWhatsAppLink(name, url) {
+  const baseUrl = "https://wa.me/50230436715";
+  const message = `🌟 ¡Hola! Estoy interesada en el diseño de uñas "${name}" 💅. Aquí está el enlace para que lo veas: ${url}.
+
+¿Podrían darme más información? ¡Gracias! 😊`;
+  return `${baseUrl}?text=${encodeURIComponent(message)}`;
+}
 
 const Explorar = () => {
   useScrollToTop();
@@ -123,6 +130,7 @@ const Explorar = () => {
     try {
       return window.history.length <= 2 || document.referrer === "";
     } catch (e) {
+      console.log("Error:", e);
       return false;
     }
   };
@@ -272,7 +280,9 @@ const Explorar = () => {
 
   const getNombreFiltro = useCallback((tipoKey, slug) => getNombreFiltroFromSlug(availableFilterOptions, tipoKey, slug), [availableFilterOptions]);
   const totalFiltrosActivosGeneral = useMemo(() => calculateTotalFiltrosActivos(parsedFiltersFromUrl), [parsedFiltersFromUrl]);
-  const handleGlobalSearchFiltersChange = (e) => setGlobalSearchTermFilters(e.target.value);
+  const handleGlobalSearchFiltersChange = useCallback((e) => {
+    setGlobalSearchTermFilters(e.target.value);
+  }, []);
   const searchResultsFilters = useMemo(
     () => performGlobalFilterSearch(globalSearchTermFilters, availableFilterOptions),
     [globalSearchTermFilters, availableFilterOptions]
@@ -688,7 +698,14 @@ const Explorar = () => {
                               ) : una.precio ? (
                                 <p className="text-lg font-bold text-primary dark:text-primary-light">{`Q${parseFloat(una.precio).toFixed(2)}`}</p>
                               ) : (
-                                <p className="text-xs text-textTertiary italic"></p>
+                                <a
+                                  href={generateWhatsAppLink(una.nombre, una.imagen_url)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-blue-500 italic hover:underline"
+                                >
+                                  Consultar
+                                </a>
                               )}
                             </div>
                           </div>
@@ -802,7 +819,16 @@ const Explorar = () => {
                           {selectedNailForModal.precio ? (
                             `Q${parseFloat(selectedNailForModal.precio).toFixed(2)}`
                           ) : (
-                            <span className="italic">Consultar</span>
+                            <a
+                              href={`https://wa.me/50212345678?text=Hola, estoy interesado en el diseño de uñas: ${encodeURIComponent(
+                                selectedNailForModal.nombre
+                              )}. ¿Podrían darme más información?`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="italic text-blue-500 hover:underline"
+                            >
+                              Consultar
+                            </a>
                           )}
                         </td>
                       </tr>
