@@ -61,6 +61,7 @@ Aquí está el enlace para que lo veas: ${designUrl}
 
 const Explorar = () => {
   useScrollToTop();
+  const [scrollPosition, setScrollPosition] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
   const { id: urlId } = useParams();
@@ -141,7 +142,8 @@ const Explorar = () => {
 
   const openDetailModal = (nailDesign) => {
     if (!nailDesign) return;
-    // Guardamos la URL actual antes de cambiarla
+    setScrollPosition(window.pageYOffset);
+    document.body.style.overflow = "hidden";
     navigate(`/explorar-unas/${nailDesign.id}${location.search}`);
     setSelectedNailForModal(nailDesign);
     setIsDetailModalOpen(true);
@@ -149,17 +151,20 @@ const Explorar = () => {
 
   const closeDetailModal = () => {
     const baseUrl = `/explorar-unas${location.search}`;
+    document.body.style.overflow = "unset";
 
-    // Si es una URL directa, usamos replace para evitar salir del sitio
     if (isDirectURL()) {
       navigate(baseUrl, { replace: true });
     } else {
-      // Si venimos de navegación normal, también usamos replace para no añadir entradas innecesarias
       navigate(baseUrl, { replace: true });
     }
 
     setIsDetailModalOpen(false);
     setSelectedNailForModal(null);
+
+    setTimeout(() => {
+      window.scrollTo(0, scrollPosition);
+    }, 0);
   };
 
   // Y en el efecto que observa cambios en urlId
@@ -171,6 +176,8 @@ const Explorar = () => {
       const nailToOpen = displayedNails.find((n) => n.id.toString() === urlId);
       if (nailToOpen) {
         console.log("Encontrado diseño para ID en URL, abriendo modal");
+        setScrollPosition(window.pageYOffset);
+        document.body.style.overflow = "hidden";
         setSelectedNailForModal(nailToOpen);
         setIsDetailModalOpen(true);
       } else if (displayedNails.length > 0) {
@@ -179,6 +186,7 @@ const Explorar = () => {
       }
     } else {
       console.log("No hay ID en URL, cerrando modal si estaba abierto");
+      document.body.style.overflow = "unset";
       setIsDetailModalOpen(false);
     }
   }, [urlId, displayedNails, navigate, location.search]);
@@ -318,6 +326,12 @@ const Explorar = () => {
   );
   useEffect(() => {
     window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      document.body.style.overflow = "unset";
+    };
   }, []);
 
   const renderFilterPanelContent = useCallback(() => {
