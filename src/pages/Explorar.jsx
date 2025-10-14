@@ -49,14 +49,14 @@ const getDynamicFilterCategories = (dynamicNavItems) => {
 
 function generateWhatsAppLink(name, designId) {
   const phoneNumber = "50249425739";
-  const baseUrl = `https://wa.me/${phoneNumber}`;
+  const baseUrl = `https://api.whatsapp.com/send`;
   const designUrl = `https://www.nayenails.com/explorar-unas/${designId}`;
   const message = `🌟 ¡Hola! Estoy interesada en el diseño de uñas "${name}" 💅
 
 Aquí está el enlace para que lo veas: ${designUrl}
 
 ¿Podrían darme más información sobre el precio y disponibilidad? ¡Gracias! 😊`;
-  return `${baseUrl}?text=${encodeURIComponent(message)}`;
+  return `${baseUrl}?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
 }
 
 const Explorar = () => {
@@ -709,7 +709,7 @@ const Explorar = () => {
                                   className="inline-flex items-center gap-1 text-xs font-medium text-white bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 px-3 py-1.5 rounded-full transition-all duration-200 shadow-sm hover:shadow-md"
                                 >
                                   <DynamicIcon name="MessageCircle" className="w-3.5 h-3.5" />
-                                  Consultar por WhatsApp
+                                  Consultar
                                 </a>
                               )}
                             </div>
