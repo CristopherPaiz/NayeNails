@@ -47,11 +47,15 @@ const getDynamicFilterCategories = (dynamicNavItems) => {
   return categories;
 };
 
-function generateWhatsAppLink(name, url) {
-  const baseUrl = "https://wa.me/50249425739";
-  const message = `🌟 ¡Hola! Estoy interesada en el diseño de uñas "${name}" 💅. Aquí está el enlace para que lo veas: ${url}.
+function generateWhatsAppLink(name, designId) {
+  const phoneNumber = "50249425739";
+  const baseUrl = `https://wa.me/${phoneNumber}`;
+  const designUrl = `https://www.nayenails.com/explorar-unas/${designId}`;
+  const message = `🌟 ¡Hola! Estoy interesada en el diseño de uñas "${name}" 💅
 
-¿Podrían darme más información? ¡Gracias! 😊`;
+Aquí está el enlace para que lo veas: ${designUrl}
+
+¿Podrían darme más información sobre el precio y disponibilidad? ¡Gracias! 😊`;
   return `${baseUrl}?text=${encodeURIComponent(message)}`;
 }
 
@@ -699,12 +703,13 @@ const Explorar = () => {
                                 <p className="text-lg font-bold text-primary dark:text-primary-light">{`Q${parseFloat(una.precio).toFixed(2)}`}</p>
                               ) : (
                                 <a
-                                  href={generateWhatsAppLink(una.nombre, una.imagen_url)}
+                                  href={generateWhatsAppLink(una.nombre, una.id)}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-xs text-blue-500 italic hover:underline"
+                                  className="inline-flex items-center gap-1 text-xs font-medium text-white bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 px-3 py-1.5 rounded-full transition-all duration-200 shadow-sm hover:shadow-md"
                                 >
-                                  Consultar
+                                  <DynamicIcon name="MessageCircle" className="w-3.5 h-3.5" />
+                                  Consultar por WhatsApp
                                 </a>
                               )}
                             </div>
@@ -820,14 +825,13 @@ const Explorar = () => {
                             `Q${parseFloat(selectedNailForModal.precio).toFixed(2)}`
                           ) : (
                             <a
-                              href={`https://wa.me/50249425739?text=Hola, estoy interesado en el diseño de uñas: ${encodeURIComponent(
-                                selectedNailForModal.nombre
-                              )}. ¿Podrían darme más información?`}
+                              href={generateWhatsAppLink(selectedNailForModal.nombre, selectedNailForModal.id)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="italic text-blue-500 hover:underline"
+                              className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 px-4 py-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md"
                             >
-                              Consultar
+                              <DynamicIcon name="MessageCircle" className="w-4 h-4" />
+                              Consultar por WhatsApp
                             </a>
                           )}
                         </td>
