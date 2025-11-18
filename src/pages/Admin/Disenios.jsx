@@ -16,6 +16,63 @@ import "react-image-crop/dist/ReactCrop.css";
 
 const ITEMS_PER_PAGE_ADMIN = 6;
 
+// NUEVA FUNCIÓN AUXILIAR PARA COMPRIMIR LA IMAGEN
+/**
+ * Comprime una imagen (Blob) si supera un tamaño objetivo.
+ * @param {Blob} blob - El Blob de la imagen a comprimir.
+ * @param {number} targetSizeInMB - El tamaño máximo deseado en megabytes.
+ * @returns {Promise<Blob>} - Una promesa que se resuelve con el Blob de la imagen comprimida.
+ */
+const resizeAndCompressImage = (blob, targetSizeInMB = 14.5) => {
+  return new Promise((resolve, reject) => {
+    const targetSizeInBytes = targetSizeInMB * 1024 * 1024;
+    if (blob.size <= targetSizeInBytes) {
+      console.log(`La imagen ya está por debajo del umbral (${(blob.size / 1024 / 1024).toFixed(2)}MB). No se necesita compresión.`);
+      return resolve(blob);
+    }
+
+    console.log(`Iniciando compresión. Tamaño original: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
+
+    const image = new Image();
+    const url = URL.createObjectURL(blob);
+
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(image, 0, 0);
+      URL.revokeObjectURL(url);
+
+      let quality = 0.9;
+      const compressLoop = () => {
+        canvas.toBlob(
+          (newBlob) => {
+            console.log(`Intentando con calidad ${quality.toFixed(1)}. Tamaño resultante: ${(newBlob.size / 1024 / 1024).toFixed(2)}MB`);
+            if (newBlob.size <= targetSizeInBytes || quality <= 0.2) {
+              console.log("Compresión finalizada.");
+              resolve(newBlob);
+            } else {
+              quality -= 0.1;
+              compressLoop();
+            }
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+      compressLoop();
+    };
+
+    image.onerror = (err) => {
+      URL.revokeObjectURL(url);
+      reject(err);
+    };
+
+    image.src = url;
+  });
+};
+
 const DiseniosAdminPage = () => {
   useScrollToTop();
   const queryClient = useQueryClient();
@@ -86,7 +143,6 @@ const DiseniosAdminPage = () => {
 
   const disenios = apiData?.disenios ?? [];
   const totalPages = apiData?.totalPages ?? 1;
-  // const totalDisenios = apiData?.totalDisenios ?? 0; // No se usa directamente en la UI de esta página
 
   const { data: todasLasCategorias, isLoading: isLoadingCategorias } = useApiRequest({
     queryKey: ["categorias"],
@@ -109,7 +165,6 @@ const DiseniosAdminPage = () => {
   }, [todasLasCategorias]);
 
   useEffect(() => {
-    // Cuando cambia el término de búsqueda, volver a la página 1
     setCurrentPage(1);
   }, [debouncedSearchTerm]);
 
@@ -177,7 +232,7 @@ const DiseniosAdminPage = () => {
 
   const commonMutationOptions = (successMsg) => ({
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["diseniosAdmin"] }); // Invalida todas las páginas
+      queryClient.invalidateQueries({ queryKey: ["diseniosAdmin"] });
       closeFormModal();
       setIsConfirmModalOpen(false);
       CRAlert.alert({ title: "Éxito", message: data?.message || successMsg, type: "success" });
@@ -267,34 +322,39 @@ const DiseniosAdminPage = () => {
     }
   };
 
+  // MODIFICADO: Ahora es async y llama a la función de compresión
   const handleCropComplete = async () => {
     if (imgRef && completedCrop?.width && completedCrop?.height) {
       try {
         const croppedImageBlob = await getCroppedImg(imgRef, completedCrop);
-        const croppedFile = new File([croppedImageBlob], originalImageFile.name, {
-          type: "image/jpeg",
+
+        // -- INICIO DEL CAMBIO --
+        // Comprimir la imagen si es necesario
+        const optimizedBlob = await resizeAndCompressImage(croppedImageBlob);
+        // -- FIN DEL CAMBIO --
+
+        const croppedFile = new File([optimizedBlob], originalImageFile.name, {
+          type: "image/jpeg", // La compresión genera un jpeg
         });
 
         setFormValues((prev) => ({ ...prev, imagen_file: croppedFile }));
 
-        // Limpiar preview anterior si existe
         if (imagePreview && imagePreview.startsWith("blob:")) {
           URL.revokeObjectURL(imagePreview);
         }
 
-        // Crear nuevo preview de la imagen recortada
-        const croppedPreview = URL.createObjectURL(croppedImageBlob);
+        const croppedPreview = URL.createObjectURL(optimizedBlob);
         setImagePreview(croppedPreview);
 
         setShowCropModal(false);
 
-        // Limpiar imagen original
         if (originalImagePreview) {
           URL.revokeObjectURL(originalImagePreview);
           setOriginalImagePreview(null);
         }
       } catch (error) {
-        console.error("Error al recortar la imagen:", error);
+        console.error("Error al recortar o comprimir la imagen:", error);
+        CRAlert.alert({ title: "Error", message: "No se pudo procesar la imagen.", type: "error" });
       }
     }
   };
@@ -308,7 +368,6 @@ const DiseniosAdminPage = () => {
       setOriginalImagePreview(null);
     }
 
-    // Restablecer el input file
     const fileInput = document.getElementById("imagen_file");
     if (fileInput) {
       fileInput.value = "";
@@ -344,7 +403,7 @@ const DiseniosAdminPage = () => {
       newErrors.imagen_file = "La imagen es obligatoria.";
     }
     if (formValues.imagen_file && formValues.imagen_file.size > 15 * 1024 * 1024) {
-      newErrors.imagen_file = "La imagen no debe exceder los 15MB.";
+      newErrors.imagen_file = "El archivo procesado sigue siendo demasiado grande (max 15MB). Esto no debería ocurrir.";
     }
     if (formValues.imagen_file && !formValues.imagen_file.type.startsWith("image/")) {
       newErrors.imagen_file = "El archivo debe ser una imagen.";
@@ -423,14 +482,6 @@ const DiseniosAdminPage = () => {
   const isMutationLoading =
     addDisenioMutation.isPending || editDisenioMutation.isPending || toggleActivoDisenioMutation.isPending || deleteDisenioMutation.isPending;
 
-  // const categorySelectorKey = useMemo(() => {
-  //   return modalMode === "add"
-  //     ? `new-${Date.now()}`
-  //     : currentDisenio?.id
-  //     ? `edit-${currentDisenio.id}-${formValues.subcategorias.join("-")}`
-  //     : `edit-fallback-${Date.now()}`;
-  // }, [modalMode, currentDisenio, formValues.subcategorias]);
-
   const handleCategorySelectorChange = (selectedSubcategoryIds) => {
     setFormValues((prev) => ({ ...prev, subcategorias: selectedSubcategoryIds }));
   };
@@ -450,7 +501,6 @@ const DiseniosAdminPage = () => {
       subcategorias: [],
     });
 
-    // Limpiar estados de crop
     if (imagePreview && imagePreview.startsWith("blob:")) {
       URL.revokeObjectURL(imagePreview);
     }
@@ -510,14 +560,12 @@ const DiseniosAdminPage = () => {
           type="text"
           placeholder="Buscar diseños por nombre o descripción..."
           value={searchTerm}
-          setValue={handleSearchInputChange} // Usar la función que actualiza searchTerm y activa el loader falso
-          className="text-sm py-2.5 !pr-10" // Añadir padding a la derecha para el loader
-          title="" // Sin título para el input de búsqueda principal
+          setValue={handleSearchInputChange}
+          className="text-sm py-2.5 !pr-10"
+          title=""
         />
         {isFakeLoadingSearch && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2 mt-[11px]">
-            {" "}
-            {/* Ajustar mt si es necesario */}
             <DynamicIcon name="Loader2" className="w-4 h-4 animate-spin text-primary" />
           </div>
         )}
