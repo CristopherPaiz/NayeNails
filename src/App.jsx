@@ -6,10 +6,10 @@ import useStoreNails from "./store/store";
 import useAuthStore from "./store/authStore";
 import { useLocation } from "react-router-dom";
 import React, { useEffect, useState } from "react";
-import CRLoader from "./components/UI/CRLoader";
 import { useTheme } from "./context/ThemeProvider";
 import { useAnalytics } from "./hooks/useAnalytics";
-import apiClient from "./api/axios";
+import SplashScreen from "./components/UI/SplashScreen";
+import { useAppInitialization } from "./hooks/useAppInitialization";
 
 const AppContent = () => {
   useAnalytics();
@@ -17,40 +17,13 @@ const AppContent = () => {
   const toggleAdminSidebar = useStoreNails((state) => state.toggleAdminSidebar);
   const textosColoresConfig = useStoreNails((state) => state.textosColoresConfig);
 
-  const fetchDynamicNavItems = useStoreNails((state) => state.fetchDynamicNavItems);
-  const fetchTodasLasUnas = useStoreNails((state) => state.fetchTodasLasUnas);
-  const fetchConfiguracionesSitio = useStoreNails((state) => state.fetchConfiguracionesSitio);
-  const fetchTextosColoresConfig = useStoreNails((state) => state.fetchTextosColoresConfig);
   const { isAuthenticated, checkAuthStatus } = useAuthStore();
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const { theme } = useTheme();
-  const [isServerReady, setIsServerReady] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState("Preparando los esmaltes...");
 
-  // State for smooth fade-out
-  const [showLoader, setShowLoader] = useState(true);
-  const [fadeOpacity, setFadeOpacity] = useState("opacity-100");
-
-  useEffect(() => {
-    // When server becomes ready, trigger fade out
-    if (isServerReady) {
-      // Small timeout to ensure the app behind is rendered/painted before fading
-      const timerSplit = setTimeout(() => {
-        setFadeOpacity("opacity-0");
-      }, 100);
-
-      // Remove from DOM after transition matches duration (e.g. 700ms)
-      const timerRemove = setTimeout(() => {
-        setShowLoader(false);
-      }, 800);
-
-      return () => {
-        clearTimeout(timerSplit);
-        clearTimeout(timerRemove);
-      };
-    }
-  }, [isServerReady]);
+  // Initialization Hook
+  const { isServerReady, loadingMessage } = useAppInitialization();
 
   useEffect(() => {
     const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
@@ -75,115 +48,11 @@ const AppContent = () => {
     }
   }, [textosColoresConfig, theme]);
 
-  // Backend Wakeup / Initialization Logic
-  useEffect(() => {
-    let isMounted = true;
-    let messageInterval = null;
-
-    const messages = [
-      "Aplicando base coat...",
-      "Encendiendo lámpara UV...",
-      "Limando asperezas...",
-      "Eligiendo los mejores diseños para ti...",
-      "Mezclando colores...",
-      "Puliendo detalles...",
-    ];
-    let msgIndex = 0;
-
-    // Start rotating messages only if not ready
-    if (!isServerReady) {
-      messageInterval = setInterval(() => {
-        msgIndex = (msgIndex + 1) % messages.length;
-        if (isMounted) setLoadingMessage(messages[msgIndex]);
-      }, 2500);
-    }
-
-    const initialize = async () => {
-      try {
-        // 1. Wake up Backend
-        let attempts = 0;
-        const maxAttempts = 60;
-        let connected = false;
-
-        // Use a simple delay function
-        const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-        while (!connected && attempts < maxAttempts && isMounted) {
-          try {
-            // Use apiClient to ensure we use the correct Base URL configuration
-            await apiClient.get("/health", { timeout: 5000 });
-            connected = true;
-          } catch (e) {
-            // If error, wait and retry
-            attempts++;
-            if (isMounted) await delay(2000); // Wait 2s between pings (less aggressive)
-          }
-        }
-
-        if (!isMounted) return;
-
-        if (!connected) {
-          console.warn("Backend did not respond after multiple attempts.");
-        }
-
-        // 2. Initialize Data
-        // Execute fetches in parallel to speed up loading once connected
-        await Promise.allSettled([
-          checkAuthStatus(),
-          fetchDynamicNavItems(),
-          fetchTodasLasUnas(),
-          fetchConfiguracionesSitio(),
-          fetchTextosColoresConfig(),
-        ]);
-
-        // 3. Preload Carousel Images
-        const preloadImage = (url) => {
-          return new Promise((resolve) => {
-            const img = new Image();
-            img.src = url;
-            img.onload = resolve;
-            img.onerror = resolve;
-          });
-        };
-
-        const storeState = useStoreNails.getState();
-        const imagesToPreload = storeState.imagenesInicio || [];
-
-        if (imagesToPreload.length > 0) {
-          await Promise.all(imagesToPreload.map((img) => preloadImage(img.url)));
-        }
-
-        if (isMounted) setIsServerReady(true);
-      } catch (error) {
-        console.error("Initialization failed:", error);
-        if (isMounted) setIsServerReady(true);
-      } finally {
-        if (messageInterval) clearInterval(messageInterval);
-      }
-    };
-
-    initialize();
-
-    return () => {
-      isMounted = false;
-      if (messageInterval) clearInterval(messageInterval);
-    };
-  }, []); // Run once on mount
-
   const isAdminRoute = location.pathname.startsWith("/admin");
-
-  // Show loading screen if server not ready OR specific initial content is loading
-  // NOW: We render the Overlay if showLoader is true.
 
   return (
     <>
-      {showLoader && (
-        <div
-          className={`fixed inset-0 bg-backgroundSecondary dark:bg-background flex flex-col justify-center items-center z-[9999] transition-opacity duration-700 ease-in-out ${fadeOpacity}`}
-        >
-          <CRLoader text={loadingMessage} style="nailPaint" size="lg" />
-        </div>
-      )}
+      <SplashScreen isVisible={!isServerReady} message={loadingMessage} />
 
       {/* Main App Content - Rendered behind loader once ready */}
       {isServerReady && (
