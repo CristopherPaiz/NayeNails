@@ -16,17 +16,41 @@ const AppContent = () => {
   const adminSidebarOpen = useStoreNails((state) => state.adminSidebarOpen);
   const toggleAdminSidebar = useStoreNails((state) => state.toggleAdminSidebar);
   const textosColoresConfig = useStoreNails((state) => state.textosColoresConfig);
-  const isLoadingTextosColores = useStoreNails((state) => state.isLoadingTextosColores);
+
   const fetchDynamicNavItems = useStoreNails((state) => state.fetchDynamicNavItems);
   const fetchTodasLasUnas = useStoreNails((state) => state.fetchTodasLasUnas);
   const fetchConfiguracionesSitio = useStoreNails((state) => state.fetchConfiguracionesSitio);
   const fetchTextosColoresConfig = useStoreNails((state) => state.fetchTextosColoresConfig);
-  const { isAuthenticated, isLoading: authIsLoading, checkAuthStatus } = useAuthStore();
+  const { isAuthenticated, checkAuthStatus } = useAuthStore();
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const { theme } = useTheme();
   const [isServerReady, setIsServerReady] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState("Conectando con el servidor...");
+  const [loadingMessage, setLoadingMessage] = useState("Preparando los esmaltes...");
+
+  // State for smooth fade-out
+  const [showLoader, setShowLoader] = useState(true);
+  const [fadeOpacity, setFadeOpacity] = useState("opacity-100");
+
+  useEffect(() => {
+    // When server becomes ready, trigger fade out
+    if (isServerReady) {
+      // Small timeout to ensure the app behind is rendered/painted before fading
+      const timerSplit = setTimeout(() => {
+        setFadeOpacity("opacity-0");
+      }, 100);
+
+      // Remove from DOM after transition matches duration (e.g. 700ms)
+      const timerRemove = setTimeout(() => {
+        setShowLoader(false);
+      }, 800);
+
+      return () => {
+        clearTimeout(timerSplit);
+        clearTimeout(timerRemove);
+      };
+    }
+  }, [isServerReady]);
 
   useEffect(() => {
     const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
@@ -57,11 +81,10 @@ const AppContent = () => {
     let messageInterval = null;
 
     const messages = [
-      "Eligiendo los mejores diseños para ti...",
-      "Preparando los esmaltes...",
-      "Limando asperezas...",
       "Aplicando base coat...",
       "Encendiendo lámpara UV...",
+      "Limando asperezas...",
+      "Eligiendo los mejores diseños para ti...",
       "Mezclando colores...",
       "Puliendo detalles...",
     ];
@@ -150,53 +173,43 @@ const AppContent = () => {
   const isAdminRoute = location.pathname.startsWith("/admin");
 
   // Show loading screen if server not ready OR specific initial content is loading
-  if (!isServerReady) {
-    return (
-      <div className="fixed inset-0 bg-backgroundSecondary dark:bg-background flex flex-col justify-center items-center z-[9999]">
-        <CRLoader text={loadingMessage} style="nailPaint" size="lg" />
-      </div>
-    );
-  }
-
-  // Once server is ready, we might still have some internal loading (like auth),
-  // but usually we want to show the app structure now.
-  // If auth is strictly required for everything, we keep waiting.
-  // But usually public pages should show.
-  // The original code waited for authIsLoading || isLoadingTextosColores.
-  // We can keep that behavior if desired, or assume they are fast now.
-  // Let's keep the original "Global Loading" protection for Auth check if it's still running,
-  // but usually checkAuthStatus finishes in the init block.
-
-  if (authIsLoading || isLoadingTextosColores) {
-    return (
-      <div className="fixed inset-0 bg-backgroundSecondary dark:bg-background flex flex-col justify-center items-center z-[9999]">
-        <CRLoader text="Cargando Naye Nails..." style="nailPaint" size="lg" />
-      </div>
-    );
-  }
+  // NOW: We render the Overlay if showLoader is true.
 
   return (
-    <div className="bg-backgroundSecondary min-h-screen flex flex-col">
-      <Header />
-      <div className="flex w-full -mt-9 sm:mt-0">
-        {isAuthenticated && (
-          <Sidebar isSidebarOpen={adminSidebarOpen} toggleSidebar={toggleAdminSidebar} isMobile={isMobile} isAdminRoute={isAdminRoute} />
-        )}
-        {isAuthenticated && adminSidebarOpen && isMobile && (
-          <div className="fixed inset-0 bg-black/60 md:hidden" onClick={toggleAdminSidebar} aria-hidden="true" style={{ zIndex: 30 }}></div>
-        )}
-        <main
-          className={`
-            flex-grow transition-all duration-300 ease-in-out
-            pt-8 w-full overflow-hidden
-            ${isMobile && adminSidebarOpen ? "overflow-hidden" : ""}
-            ${isAuthenticated && !isMobile && isAdminRoute ? "md:ml-4" : "ml-0"}
-          `}
+    <>
+      {showLoader && (
+        <div
+          className={`fixed inset-0 bg-backgroundSecondary dark:bg-background flex flex-col justify-center items-center z-[9999] transition-opacity duration-700 ease-in-out ${fadeOpacity}`}
         >
-          <AppRouter />
-        </main>
-      </div>
-    </div>
+          <CRLoader text={loadingMessage} style="nailPaint" size="lg" />
+        </div>
+      )}
+
+      {/* Main App Content - Rendered behind loader once ready */}
+      {isServerReady && (
+        <div className="bg-backgroundSecondary min-h-screen flex flex-col">
+          <Header />
+          <div className="flex w-full -mt-9 sm:mt-0">
+            {isAuthenticated && (
+              <Sidebar isSidebarOpen={adminSidebarOpen} toggleSidebar={toggleAdminSidebar} isMobile={isMobile} isAdminRoute={isAdminRoute} />
+            )}
+            {isAuthenticated && adminSidebarOpen && isMobile && (
+              <div className="fixed inset-0 bg-black/60 md:hidden" onClick={toggleAdminSidebar} aria-hidden="true" style={{ zIndex: 30 }}></div>
+            )}
+            <main
+              className={`
+                  flex-grow transition-all duration-300 ease-in-out
+                  pt-8 w-full overflow-hidden
+                  ${isMobile && adminSidebarOpen ? "overflow-hidden" : ""}
+                  ${isAuthenticated && !isMobile && isAdminRoute ? "md:ml-4" : "ml-0"}
+                `}
+            >
+              <AppRouter />
+            </main>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
