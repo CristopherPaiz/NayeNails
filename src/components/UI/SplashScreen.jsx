@@ -20,14 +20,11 @@ const SplashScreen = ({ isVisible, message }) => {
         isVisible ? "opacity-100" : "opacity-0 pointer-events-none"
       }`}
       style={{
-        background: "radial-gradient(circle at center, #fff0f5 0%, #ffe4e1 45%, #ffc1e3 100%)", // Much lighter, pastel pinks
+        background: "radial-gradient(circle at center, #fff0f5 0%, #ffe4e1 45%, #ffe6f4ff 100%)", // Much lighter, pastel pinks
       }}
       onTransitionEnd={onAnimationEnd}
     >
       <div className="flex flex-col items-center space-y-8 p-8">
-        {/* Animated Brand Name */}
-        <h1 className="text-5xl md:text-7xl font-bold text-gray-800 tracking-wider animate-pulse font-serif italic drop-shadow-md">Naye Nails</h1>
-
         {/* Loader Animation */}
         <div className="scale-125">
           <CRLoader text={message} style="nailPaint" size="lg" />
