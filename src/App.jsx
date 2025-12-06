@@ -9,19 +9,18 @@ import React, { useEffect, useState } from "react";
 import CRLoader from "./components/UI/CRLoader";
 import { useTheme } from "./context/ThemeProvider";
 import { useAnalytics } from "./hooks/useAnalytics";
+import apiClient from "./api/axios";
 
 const AppContent = () => {
   useAnalytics();
-  const {
-    adminSidebarOpen,
-    toggleAdminSidebar,
-    textosColoresConfig,
-    isLoadingTextosColores,
-    fetchDynamicNavItems,
-    fetchTodasLasUnas,
-    fetchConfiguracionesSitio,
-    fetchTextosColoresConfig,
-  } = useStoreNails();
+  const adminSidebarOpen = useStoreNails((state) => state.adminSidebarOpen);
+  const toggleAdminSidebar = useStoreNails((state) => state.toggleAdminSidebar);
+  const textosColoresConfig = useStoreNails((state) => state.textosColoresConfig);
+  const isLoadingTextosColores = useStoreNails((state) => state.isLoadingTextosColores);
+  const fetchDynamicNavItems = useStoreNails((state) => state.fetchDynamicNavItems);
+  const fetchTodasLasUnas = useStoreNails((state) => state.fetchTodasLasUnas);
+  const fetchConfiguracionesSitio = useStoreNails((state) => state.fetchConfiguracionesSitio);
+  const fetchTextosColoresConfig = useStoreNails((state) => state.fetchTextosColoresConfig);
   const { isAuthenticated, isLoading: authIsLoading, checkAuthStatus } = useAuthStore();
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -54,86 +53,82 @@ const AppContent = () => {
 
   // Backend Wakeup / Initialization Logic
   useEffect(() => {
+    let isMounted = true;
+    let messageInterval = null;
+
     const messages = [
       "Eligiendo los mejores diseños para ti...",
       "Preparando los esmaltes...",
       "Limando asperezas...",
       "Aplicando base coat...",
       "Encendiendo lámpara UV...",
-      "Despertando a la API...",
       "Mezclando colores...",
       "Puliendo detalles...",
     ];
     let msgIndex = 0;
 
-    // Interval for rotating messages
-    const messageInterval = setInterval(() => {
-      msgIndex = (msgIndex + 1) % messages.length;
-      setLoadingMessage(messages[msgIndex]);
-    }, 2500);
+    // Start rotating messages only if not ready
+    if (!isServerReady) {
+      messageInterval = setInterval(() => {
+        msgIndex = (msgIndex + 1) % messages.length;
+        if (isMounted) setLoadingMessage(messages[msgIndex]);
+      }, 2500);
+    }
 
     const initialize = async () => {
       try {
         // 1. Wake up Backend
         let attempts = 0;
-        const maxAttempts = 50; // Try for quite a while (e.g., 25s - 50s depending on timeout)
+        const maxAttempts = 60;
         let connected = false;
 
-        const checkHealth = async () => {
-          // We use the base URL from Vite env or default to relative if proxied,
-          // but since we need to hit the API, best to rely on how axios is configured or just use relative /api/health
-          // Assuming proxy or configured base URL. Let's try relative first.
-          // Note: If running locally without proxy, this might fail if not fully configured,
-          // but production usually has same origin or configured CORS.
-          // Given existing code uses apiClient, let's try a simple fetch to the presumed API URL.
-          // Actually, let's just use the known endpoint structure.
-          const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-          // Remove trailing slash if present
-          const baseUrl = apiUrl.endsWith("/") ? apiUrl.slice(0, -1) : apiUrl;
+        // Use a simple delay function
+        const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+        while (!connected && attempts < maxAttempts && isMounted) {
           try {
-            const res = await fetch(`${baseUrl}/health`);
-            if (res.ok) return true;
+            // Use apiClient to ensure we use the correct Base URL configuration
+            await apiClient.get("/health", { timeout: 5000 });
+            connected = true;
           } catch (e) {
-            // Ignore error, retry
-          }
-          return false;
-        };
-
-        while (!connected && attempts < maxAttempts) {
-          connected = await checkHealth();
-          if (!connected) {
+            // If error, wait and retry
             attempts++;
-            await new Promise((r) => setTimeout(r, 1000)); // Wait 1s between pings
+            if (isMounted) await delay(2000); // Wait 2s between pings (less aggressive)
           }
         }
 
+        if (!isMounted) return;
+
         if (!connected) {
-          // Fallback or show error? For now, we proceed and let regular error handling take over,
-          // or we could show a "Server Down" screen.
-          // Let's proceed to allow retry via UI or just let auth fail gracefully.
           console.warn("Backend did not respond after multiple attempts.");
         }
 
         // 2. Initialize Data
-        await checkAuthStatus();
-        fetchDynamicNavItems();
-        fetchTodasLasUnas();
-        fetchConfiguracionesSitio();
-        fetchTextosColoresConfig();
+        // Execute fetches in parallel to speed up loading once connected
+        await Promise.allSettled([
+          checkAuthStatus(),
+          fetchDynamicNavItems(),
+          fetchTodasLasUnas(),
+          fetchConfiguracionesSitio(),
+          fetchTextosColoresConfig(),
+        ]);
 
-        setIsServerReady(true);
+        if (isMounted) setIsServerReady(true);
       } catch (error) {
         console.error("Initialization failed:", error);
-        // Even if fail, we might want to let the app try to render or show error
-        setIsServerReady(true);
+        if (isMounted) setIsServerReady(true);
+      } finally {
+        if (messageInterval) clearInterval(messageInterval);
       }
     };
 
     initialize();
 
-    return () => clearInterval(messageInterval);
-  }, [checkAuthStatus, fetchDynamicNavItems, fetchTodasLasUnas, fetchConfiguracionesSitio, fetchTextosColoresConfig]);
+    return () => {
+      isMounted = false;
+      if (messageInterval) clearInterval(messageInterval);
+    };
+  }, []); // Run once on mount
 
   const isAdminRoute = location.pathname.startsWith("/admin");
 
