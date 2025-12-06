@@ -113,6 +113,23 @@ const AppContent = () => {
           fetchTextosColoresConfig(),
         ]);
 
+        // 3. Preload Carousel Images
+        const preloadImage = (url) => {
+          return new Promise((resolve) => {
+            const img = new Image();
+            img.src = url;
+            img.onload = resolve;
+            img.onerror = resolve;
+          });
+        };
+
+        const storeState = useStoreNails.getState();
+        const imagesToPreload = storeState.imagenesInicio || [];
+
+        if (imagesToPreload.length > 0) {
+          await Promise.all(imagesToPreload.map((img) => preloadImage(img.url)));
+        }
+
         if (isMounted) setIsServerReady(true);
       } catch (error) {
         console.error("Initialization failed:", error);
