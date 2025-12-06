@@ -17,7 +17,7 @@ const AppContent = () => {
   const toggleAdminSidebar = useStoreNails((state) => state.toggleAdminSidebar);
   const textosColoresConfig = useStoreNails((state) => state.textosColoresConfig);
 
-  const { isAuthenticated, checkAuthStatus } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const { theme } = useTheme();

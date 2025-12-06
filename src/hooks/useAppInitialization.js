@@ -57,7 +57,7 @@ export const useAppInitialization = () => {
           try {
             await apiClient.get("/health", { timeout: 5000 });
             connected = true;
-          } catch (e) {
+          } catch {
             attempts++;
             if (isMounted) await delay(2000);
           }
@@ -65,37 +65,25 @@ export const useAppInitialization = () => {
 
         if (!isMounted) return;
 
-        // 2. Fetch Configuration & Critical Data FIRST
-        // We need 'fetchConfiguracionesSitio' (or wherever 'imagenesInicio' live) to start loading images.
-        // Assuming 'fetchConfiguracionesSitio' populates 'imagenesInicio' in the store?
-        // Let's verify store usage. Usually configurations come first.
-
-        // Execute fetches that populate store URLs
-        await Promise.allSettled([
-          fetchConfiguracionesSitio(), // Likely contains carousel images
-          fetchTextosColoresConfig(),
-          fetchDynamicNavItems(),
-          checkAuthStatus(),
-        ]);
+        // 2. Fetch Configuration ONLY
+        // We prioritize this to know WHAT to download.
+        await fetchConfiguracionesSitio();
 
         // 3. PRIORITY: Preload Images from the First Carousel
-        // Get the updated state directly to find the URLs
         const storeState = useStoreNails.getState();
         const imagesToPreload = storeState.imagenesInicio || [];
 
         if (imagesToPreload.length > 0) {
-          setLoadingMessage("Descargando galería principal..."); // User feedback
-          // STRICT PRIORITY: We AWAIT these. The app will NOT proceed until these are done.
+          setLoadingMessage("Descargando galería principal...");
+          // STRICT PRIORITY: Await these fully before proceeding
           await Promise.all(imagesToPreload.map((img) => preloadImage(img.url)));
         }
 
-        // 4. Low Priority: Fetch rest of data
-        // Trigger these requests but DO NOT blocking-await them for the loading screen?
-        // OR await them if they are fast JSON.
-        // fetchTodasLasUnas likely fetches a large JSON list of gallery items.
-        // It's usually fast (just text), so we can await it or let it run.
-        // Given 'fetchTodasLasUnas' name, it sounds like the main gallery data.
-        await fetchTodasLasUnas();
+        if (!isMounted) return;
+
+        // 4. Load the rest of the application data
+        setLoadingMessage("Cargando información...");
+        await Promise.allSettled([fetchTextosColoresConfig(), fetchDynamicNavItems(), checkAuthStatus(), fetchTodasLasUnas()]);
 
         if (isMounted) setIsServerReady(true);
       } catch (error) {
@@ -112,6 +100,7 @@ export const useAppInitialization = () => {
       isMounted = false;
       if (messageInterval) clearInterval(messageInterval);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { isServerReady, loadingMessage };

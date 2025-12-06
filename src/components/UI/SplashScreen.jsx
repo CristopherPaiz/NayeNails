@@ -20,7 +20,7 @@ const SplashScreen = ({ isVisible, message }) => {
         isVisible ? "opacity-100" : "opacity-0 pointer-events-none"
       }`}
       style={{
-        background: "radial-gradient(circle at center, #fce4ec 0%, #f8bbd0 40%, #f48fb1 100%)", // Pinkish radial gradient usually fits nails/salon
+        background: "radial-gradient(circle at center, #fff0f5 0%, #ffe4e1 45%, #ffc1e3 100%)", // Much lighter, pastel pinks
       }}
       onTransitionEnd={onAnimationEnd}
     >
